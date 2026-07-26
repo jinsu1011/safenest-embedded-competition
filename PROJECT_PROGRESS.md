@@ -572,3 +572,10 @@
 - 최초 커밋: 업로드 대상 84개, 60,875줄로 `Initialize SafeNest competition repository` 커밋 생성. Pi 단위 테스트 8개와 Python 구문 검사 통과, 소스·설정 파일 공백 검사 통과. 원시 로그/CSV의 CRLF는 원본 불변 원칙에 따라 그대로 보존했다.
 - 최초 push/원격 검증: `main`을 `origin/main`으로 업로드했고 로컬 HEAD와 원격 추적 SHA가 일치함을 확인했다. 로그인된 GitHub 페이지에서 `Private` 표시, SafeNest README, `Initialize SafeNest competition repository` 커밋이 모두 보이며 404가 아님을 확인했다.
 - 다음 단계: 팀원 GitHub 사용자명을 받아 `Settings → Collaborators`에서 초대하고, 각 팀원이 clone/branch/push/PR 흐름을 1회 검증한다.
+
+## 2026-07-26 GitHub 팀원 초대
+
+- 비공개 저장소 Collaborator 초대 4건 발송 완료, 접근 관리 화면에서 `4 invitations`와 각 `Pending Invite` 상태를 확인했다.
+- GitHub 계정으로 확인된 대상: `@sheepmeat`, `@yuseungha`, `@rla1729`.
+- 나머지 1건은 GitHub 사용자명으로 확인되지 않아 제공된 이메일로 직접 초대했으며, 수신자가 해당 이메일로 초대를 수락해야 한다.
+- 초대 수락 후 검증할 항목: private repo 열람, clone, 개인 브랜치 push, pull request 생성.

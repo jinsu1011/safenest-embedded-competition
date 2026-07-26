@@ -570,4 +570,5 @@
 - 저장소 생성: Chrome의 로그인 세션에서 `jinsu1011/safenest-embedded-competition`을 `Private`로 생성 완료. GitHub 쪽 README/.gitignore/license 초기화는 끄고 로컬 이력을 최초 이력으로 사용한다.
 - Git 준비: 원격 `origin`을 비공개 저장소 URL에 연결하고, 업로드 대상 84개 파일을 명시적으로 stage 완료. 원시 JSONL/분석 CSV는 실험 근거로 포함하고 `.pio`, 가상환경, 캐시, 임시 파일은 제외했다.
 - 최초 커밋: 업로드 대상 84개, 60,875줄로 `Initialize SafeNest competition repository` 커밋 생성. Pi 단위 테스트 8개와 Python 구문 검사 통과, 소스·설정 파일 공백 검사 통과. 원시 로그/CSV의 CRLF는 원본 불변 원칙에 따라 그대로 보존했다.
-- 다음 단계: 진행 기록을 최초 커밋에 반영한 뒤 `main`을 push하여 원격 파일과 커밋을 확인한다.
+- 최초 push/원격 검증: `main`을 `origin/main`으로 업로드했고 로컬 HEAD와 원격 추적 SHA가 일치함을 확인했다. 로그인된 GitHub 페이지에서 `Private` 표시, SafeNest README, `Initialize SafeNest competition repository` 커밋이 모두 보이며 404가 아님을 확인했다.
+- 다음 단계: 팀원 GitHub 사용자명을 받아 `Settings → Collaborators`에서 초대하고, 각 팀원이 clone/branch/push/PR 흐름을 1회 검증한다.

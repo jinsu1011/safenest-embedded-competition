@@ -7,6 +7,7 @@ import argparse
 import json
 import math
 import statistics
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -72,6 +73,10 @@ def main() -> None:
     presence_true = sum(item.get("human_detected_raw") is True for item in records)
     presence_false = sum(item.get("human_detected_raw") is False for item in records)
     presence_unknown = len(records) - presence_true - presence_false
+    stable_true = sum(item.get("human_detected_stable") is True for item in records)
+    stable_false = sum(item.get("human_detected_stable") is False for item in records)
+    stable_unknown = len(records) - stable_true - stable_false
+    sensor_states = Counter(str(item.get("sensor_state", "MISSING")) for item in records)
     reboots = sum(
         int(current["ts_monotonic_ms"]) < int(previous["ts_monotonic_ms"])
         or int(current["seq"]) <= int(previous["seq"])
@@ -99,6 +104,23 @@ def main() -> None:
             "unknown_count": presence_unknown,
             "true_rate": presence_true / len(records),
         },
+        "presence_stable": {
+            "true_count": stable_true,
+            "false_count": stable_false,
+            "unknown_count": stable_unknown,
+            "true_rate": stable_true / len(records),
+        },
+        "sensor_states": dict(sorted(sensor_states.items())),
+        "uart_frame_not_ok_count": sum(item.get("uart_frame_ok") is not True for item in records),
+        "checksum_not_ok_count": sum(item.get("checksum_ok") is not True for item in records),
+        "firmware_versions": sorted({
+            str(item["firmware_version"])
+            for item in records if item.get("firmware_version") is not None
+        }),
+        "config_hashes": sorted({
+            str(item["config_hash"])
+            for item in records if item.get("config_hash") is not None
+        }),
         "distance_cm_raw": numeric_stats(positive_values(records, "distance_cm_raw")),
         "breath_rate_raw": numeric_stats(positive_values(records, "breath_rate_raw")),
         "heart_rate_raw": numeric_stats(positive_values(records, "heart_rate_raw")),

@@ -558,6 +558,46 @@
 - 지원 시 → ESP 펌웨어에서 raw phase 추출해 학습 도메인 정렬 가능.
 - 미지원 시 → 팀원이 device-domain calibration Adapter를 검증하는 방향으로 확정.
 
+## 2026-07-25 오후 세션 후반 (거리 매트릭스 + 메트로놈 12rpm)
+
+### 거리 매트릭스 5분 각 (V1 이후 사용자만 이동)
+| 안내 거리 | 실측 중앙값 | 재실 감지율 | 호흡 유효율(감지 순간 대비) | 판정 |
+|---|---|---|---|---|
+| 60cm | 74.62cm (bin 13) | 100% | 99.7% | 최적 |
+| 90cm (V1 기준선) | 97.58cm (bin 17) | 100% | 90.9% | 최적 |
+| 120cm | 132.02cm (bin 23) | **81.4%** | 99.96% | KPI 미달 |
+| 150cm | **183.68cm (bin 32)** | 88.0% | — | 상수 fallback |
+
+원본: `firmware/esp_wroom32_mr60_monitor/logs/matrix/2026-07-25_occupied_d{06,12,15}_v1_360s.jsonl`
+분석: `firmware/esp_wroom32_mr60_monitor/analysis/matrix/2026-07-25_occupied_d{06,12,15}_v1_after60s_summary.json`
+
+### 결정적 발견: 150cm 시험에서 상수 fallback 출력
+- 5분 2,999 샘플 내내 breath_rate_raw 정확히 15.0rpm, heart_rate_raw 정확히 87.0bpm, std 모두 0.0.
+- 살아있는 사람의 생체값은 자연 변동 존재 → std=0은 실측 실패 시 fallback 값 출력 근거.
+- ESP 상태 머신 UNKNOWN 조건에 **"std=0 지속" 규칙 추가 필요.**
+- 대회 관점: PDF의 "센서 결측을 정상으로 숨기지 않는다" 안전 설계 원칙의 실증 사례.
+
+### 도메인 결론 (실측 근거)
+- **mmWave 단일 노드 최적 배치 = 실제 흉부까지 60~100cm**
+- 100cm 초과 시 감지율 95% 미만
+- 1.5m 이상 = 열화상(Thermal-44) 담당 영역
+- PDF 5절 예상 문제점 대응 방안의 다중 노드·센서 융합 근거를 뒷받침
+
+### 메트로놈 12rpm 페이싱 (4분)
+- 원본: `firmware/esp_wroom32_mr60_monitor/logs/breath/2026-07-25_breath_paced_12rpm.jsonl`
+- 메트로놈 정확도: 5.000 ± 0.003s (신호 완벽)
+- 센서 breath_rate_raw: 평균 5.63rpm, 중앙값 4.0rpm (목표 12rpm과 큰 괴리)
+- 유효율 67.8%, |센서−목표| 평균 오차 7.24rpm
+- **KPI ±2rpm 통과율 16.8%** (원본 무필터 상태)
+- 원인 후보: (a) MR60 내부 호흡 추정 창이 짧아 12rpm 못 잡음, (b) breath_rate_raw 반응 지연
+- 필터·모델 없이는 KPI 통과 불가 → 한준우가 위상 신호 기반 재추정 방향으로 처리 필요.
+
+### 세션 종료 및 다음 재개 (2026-07-25 → 2026-07-26)
+- 사용자가 하드웨어 뽑기 결정. 원본 데이터는 모두 파일로 보존.
+- 사진 3장(정면·측면·사용자 시점) + 배선 사진 1장 촬영 요청.
+- 남은 pending 태스크: 15rpm, 20rpm 메트로놈, 종합 CSV 배치 재출력.
+- 재개 시 필요 순서: USB 재연결 → 포트 확인 → healthcheck 15초 → 빈 공간 게이트 60초 → 남은 시험.
+
 ## 2026-07-26 GitHub 비공개 저장소 준비
 
 - 대상 계정/저장소: `jinsu1011/safenest-embedded-competition` (비공개, 사용자 승인 완료).
@@ -579,3 +619,229 @@
 - GitHub 계정으로 확인된 대상: `@sheepmeat`, `@yuseungha`, `@rla1729`.
 - 나머지 1건은 GitHub 사용자명으로 확인되지 않아 제공된 이메일로 직접 초대했으며, 수신자가 해당 이메일로 초대를 수락해야 한다.
 - 초대 수락 후 검증할 항목: private repo 열람, clone, 개인 브랜치 push, pull request 생성.
+
+## 2026-07-28 MR60BHA2 작업 재개
+
+### 재개 체크리스트
+
+- [x] 전임 인수인계와 `PROJECT_PROGRESS.md`, `MMWAVE_HANDOFF.md`, `HARDWARE_RUNBOOK.md`, `MMWAVE_TUNING.md`, `TEAM_OPERATING_MODEL.md` 재확인.
+- [x] 기존 ESP-WROOM-32 UART2 raw collector, 캡처·페이싱·CSV 변환 코드와 원본 로그 보존 상태 확인.
+- [x] 전임자가 추가한 2026-07-25 거리 매트릭스·12rpm 결과 40줄이 미커밋 상태임을 확인하고 그대로 보존.
+- [x] `/dev/cu.usbserial-110` 존재 및 포트 점유 프로세스 없음 확인.
+- [ ] 필터 없는 15초 healthcheck 수행 및 ESP JSON/UART/checksum/parse/reboot 지표 계산.
+- [ ] 재연결 설치의 빈 공간 60초 게이트 재검증.
+- [ ] 게이트 통과 후 0.9m 안정 자세에서 15rpm 페이싱 3분 수집.
+- [ ] 동일 조건에서 20rpm 페이싱 3분 수집.
+- [ ] 거리 매트릭스와 12/15/20rpm 로그를 포함한 한준우 전달 CSV v2 생성·검증.
+
+### 현재 판단
+
+- 코드와 과거 로그는 인수인계 내용과 일치한다. 현재 펌웨어는 필터 없는 `sensor_state=RAW` 텔레메트리를 10Hz로 내보내며 위험 판정은 하지 않는다.
+- 실제 필터나 유효성 임계값은 이번 재개 단계에서 변경하지 않는다. 먼저 UART 상태와 설치 게이트를 확인한다.
+- 다음 단일 행동: 새 원본 `logs/diagnostics/2026-07-28_healthcheck_15s.jsonl`을 수집하고 통신 지표를 판정한다.
+
+## 2026-07-28 팀 GitHub OnDevice_AI 자료 감사
+
+### 원격 상태와 병합 판단
+
+- `git fetch --prune origin`으로 병합 없이 원격을 확인했다. 로컬 `main`은 `origin/main`보다 3커밋 뒤이며 새 브랜치는 `origin/Ondevice_AI`, `origin/3D_Print`이다.
+- `origin/3D_Print`는 STL 4개만 포함해 mmWave 튜닝과 직접 관계없다.
+- `origin/main`과 `origin/Ondevice_AI`에는 `SafeNest_V4_OnDevice_AI/` 패키지가 추가됐지만, 루트 `README.md` 삭제와 기존 `config/risk_rules.json` 이동도 포함한다. 현재 미커밋 진행 기록과 충돌 위험이 있으므로 전체 pull/merge는 보류한다.
+- 최신 `origin/Ondevice_AI`는 `/private/tmp/safenest-ondevice-review` 분리 worktree에서 읽기·테스트했다. 현재 작업 브랜치에는 병합하지 않았다.
+
+### mmWave 호환성 검증
+
+- 팀 가이드는 학습 입력을 `rFFT → phase unwrap → clutter 제거/BPF → 10Hz, 300샘플` 파형으로 정의하고, MR60 vendor 호흡수·상태를 같은 입력으로 사용하지 말라고 명시한다.
+- 배포 manifest의 mmWave 항목도 `real_sensor_csv_validation=false`, Raspberry Pi 5 benchmark 미완료다.
+- 기존 한준우 전달용 0.9m MR60 정상 CSV를 팀 `MMWaveCSVAdapter`에 넣었을 때 30초 윈도우 90개가 생성되어 파일 계약·타임스탬프 계약은 호환됐다.
+- 그러나 MR60 `breath_phase` 윈도우 전체 표준편차는 `0.12227`(윈도우 중앙값 `0.11777`)이고 배포 NPZ train 표준편차는 `1.71715`로 약 14배 차이다. 입력 도메인이 일치한다고 볼 근거가 없다.
+- 배포 `sensor_stats_metadata_v0.1.0.json`은 mean/std=`0.00609/2.50138`인데 실제 NPZ train mean/std=`0.17212/1.71715`로 서로 불일치한다.
+- `datasets/build_processed_npz.py`는 source path가 있어도 실제 Zenodo 원본을 읽지 않고 난수/합성 사인파를 생성한다. README/MANIFEST의 실데이터 출처·피험자 분할 설명과 재생성 코드가 일치하지 않는다.
+
+### 안전 결함과 테스트
+
+- 가이드는 300개 미만 window를 zero-padding하지 말고 `WARMING_UP, valid=false`로 반환하라고 명시하지만 `sensors/mmwave/mmwave_adapter.py`는 부족한 버퍼를 0으로 채워 즉시 정상 추론한다.
+- 통합 위험도 코드에서는 잘못 `valid=true`로 들어온 `breath_rpm=0`이 2초 뒤 `EMERGENCY_APNEA`가 될 수 있다. `0/null/timeout을 무호흡으로 변환하지 않는다`는 SafeNest 규칙과 충돌한다.
+- 분리 환경에서 CSV/stream adapter 단위 테스트 9개는 통과했다.
+- 전체 테스트는 현재 검증 환경에 `ai_edge_litert`, `tflite_runtime`, `tensorflow`가 없어 24개 발견 중 8개 모듈 import 단계에서 중단됐다. 코드 실패로 단정하지 않지만 문서의 74개 PASS를 이번 감사에서 재현하지 못했다.
+
+### 튜닝 결론
+
+- ESP 필터·임계값을 이 모델에 맞춰 변경하지 않는다. 먼저 Pi에서 `input_mode=vendor_rule` 또는 `MMWAVE_CLASS_UNVERIFIED/DEGRADED`로 운용해야 한다.
+- 첫 변경 후보는 Pi mmWave 입력 안전 게이트 하나다: `300 미만/재연결/gap/stale/0/null/NaN/presence=0 → WARMING_UP 또는 UNKNOWN`, 모델 APNEA 비상 오버라이드 비활성화.
+- 모델 모드는 12/15/20rpm 실측 로그와 실제 NORMAL 다피험자 로그로 도메인 검증하고 metadata를 다시 산출한 뒤에만 승인한다.
+- 코드 변경은 사용자 승인 전 보류한다.
+
+## 2026-07-28 MR60 순차 재검증
+
+### 작업 체크리스트
+
+- [x] 필수 문서 4개와 ESP-WROOM-32 원시 수집 코드 확인
+  - 결과: UART2 GPIO16/17, 115200 8-N-1, Tiny Frame checksum/parse 누계와 10Hz 무필터 JSONL 출력 구조를 확인했다.
+- [x] 현재 USB 직렬 포트와 점유 상태 확인
+  - 결과: `/dev/cu.usbserial-110`, CH340 계열 `VID:PID=1A86:7523`으로 열거됐고 포트 점유 프로세스는 없었다.
+- [x] 15초 원시 healthcheck 및 UART·필드 유효성 판정
+  - 원본: `firmware/esp_wroom32_mr60_monitor/logs/diagnostics/2026-07-28_healthcheck_15s_v2.jsonl`, SHA-256 `4ceed1327eeda150d00352e2150438a8a400102d670775680672b9b8d5f1567d`.
+  - 결과: 14.81초, 149레코드(10.06Hz), MR60 UART 1,118프레임(75.49Hz), checksum/parse 오류 0, 재부팅 0.
+  - 현재 raw presence는 149/149 true이고 거리 중앙값 51.66cm였다. 호흡·심박 양수값도 전 구간 출력됐지만 시험 조건이 확인되지 않아 정확도나 재실 성능 근거로 사용하지 않는다.
+  - 분석: `firmware/esp_wroom32_mr60_monitor/analysis/diagnostics/2026-07-28_healthcheck_15s_v2_summary.json`.
+- [x] 빈 공간 5분 무필터 기준선 수집
+  - 사전 게이트: `logs/diagnostics/2026-07-28_empty_preflight_20s.jsonl`, 200/200 presence=false, UART checksum/parse 오류 0.
+  - 원본: `firmware/esp_wroom32_mr60_monitor/logs/baseline/2026-07-28_empty_v2_360s.jsonl`, SHA-256 `db3418ca632c29d8edac55a22b892a3a2dcff1b4333307c175673e1d23854618`.
+  - 전체 359.924초 3,599레코드, 10.00Hz, MR60 UART 21,637프레임, checksum/parse 오류 0, 재부팅 0.
+  - 앞 60초 제외 순수 5분은 2,999/2,999 presence=false, 거짓 재실 0건, 양수 거리·호흡·심박 0건이었다.
+  - 분석: `analysis/baseline/2026-07-28_empty_v2_360s_summary.json`, `analysis/baseline/2026-07-28_empty_v2_after60s_summary.json`.
+- [x] 0.8~1.0m 정지 인체 5분 무필터 기준선 수집
+  - 위치 게이트: 3차 확인에서 100/100 presence=true, 거리 중앙값 80.36cm(80.36~86.10cm), UART 오류 0으로 통과했다.
+  - 원본: `firmware/esp_wroom32_mr60_monitor/logs/baseline/2026-07-28_occupied_d09_v2_360s.jsonl`, SHA-256 `db47b6092151edad253fc7dc990f3304c053335cd14077b795feee1f4125abe3`.
+  - 전체 359.853초 3,598레코드, MR60 UART 27,279프레임, checksum/parse 오류 0, 재부팅 0.
+  - 앞 60초 제외 순수 5분은 presence=true 2,998/2,998(100%), 거리 중앙값 86.10cm, 호흡 양수 유효률 100%, 평균/중앙값/std 22.68/24.0/4.88rpm, 심박 평균/중앙값/std 83.56/84.0/13.38bpm이었다.
+  - 기준 호흡·심박 정답이 없는 자연호흡 조건이므로 정확도나 정상/이상 판정은 확정하지 않는다.
+  - 분석: `analysis/baseline/2026-07-28_occupied_d09_v2_360s_summary.json`, `analysis/baseline/2026-07-28_occupied_d09_v2_after60s_summary.json`.
+- [x] 진입→정지→퇴장 20회 재검증
+  - 원본: `firmware/esp_wroom32_mr60_monitor/logs/kpi/2026-07-28_entry_exit_20_v2.jsonl`, SHA-256 `f28c41166a0da3104c74b207014aae4ff7be508876175f4881eb72bdb94d5164`.
+  - 프로토콜: 5초 진입 카운트, 12초 정지, 30초 감지 범위 밖 대기, 20회. 센서 원시 11,354샘플과 enter/exit 마커 40개를 같은 host monotonic clock으로 기록했다.
+  - UART 프레임 증가 63,893, checksum/parse 오류 0, 재부팅 0.
+  - enter 마커부터 첫 YES까지 평균 1.134초, 중앙값 1.073초, 최대 2.449초, 2초 이내 16/20. 보행·반응 후보 0.8초를 차감한 참고값은 평균 0.493초, 최대 1.649초, 20/20 통과다.
+  - exit 마커부터 연속 NO 5샘플까지 19/20 검출, 평균 15.491초, 중앙값 15.814초, 범위 10.515~17.713초. 1회는 30초 안에 해제되지 않았다.
+  - 결론: raw 진입 검출 자체는 빠르지만 MR60 vendor presence 해제 hysteresis가 약 15초로 2초 요구를 만족하지 못한다. ESP에서 거짓 NO를 만들지 않고 Pi의 Thermal/PIR 융합으로 퇴장 상태를 보완해야 한다.
+- [x] 15rpm 안전 페이싱 호흡 3분 수집
+  - 원본: `firmware/esp_wroom32_mr60_monitor/logs/breath/2026-07-28_breath_paced_15rpm_v2.jsonl`, SHA-256 `00ddd3ee6d962d3cdad1ecc79c0f30b76f8fd56946c1d1c622e81aeb3007d20a`.
+  - 프로토콜: 거리 중앙값 80.36cm, 30초 박자 적응 후 4초 주기 신호로 180초 측정. 숨참기나 강제 과호흡은 하지 않았다.
+  - 본 측정 1,799샘플, presence=true 100%, 양수 호흡 유효률 77.32%. 센서 호흡 평균/중앙값/std 9.69/7.0/8.16rpm, 15rpm 대비 MAE 8.86rpm, ±2rpm 통과율 8.99%였다.
+  - UART 프레임 증가 13,659, checksum/parse 오류 0, 재부팅 0.
+  - 판정: vendor `breath_rate_raw`는 현재 조건에서 ±2rpm KPI를 통과하지 못한다. 20rpm 동일 프로토콜과 위상 기반 오프라인 분석 전에는 임계값이나 필터를 확정하지 않는다.
+- [x] 15rpm 재시험 및 방법 전환 판정
+  - 원본: `firmware/esp_wroom32_mr60_monitor/logs/breath/2026-07-28_breath_paced_15rpm_retry_v2.jsonl`, SHA-256 `19fe9266e44f87932f26cfc926f470bbf033dd2c67f4eca68a6998e0d11b9722`.
+  - 위치 게이트: 거리 중앙값 86.10cm, 범위 86.10~91.84cm, presence=true 100/100, UART 오류 0. 60초 박자 적응 후 180초를 기록했다.
+  - 본 측정 1,799샘플에서 presence=true 100%, 거리 중앙값 91.84cm였으나 `breath_rate_raw`는 1,799/1,799 모두 0rpm이었다. 이를 무호흡으로 해석하지 않고 유효률 0%, UNKNOWN으로 판정한다.
+  - 같은 구간 `breath_phase`는 1,799개 모두 존재했고 표준편차 0.450, 범위 -1.08~1.15, 고유 양자값 183개로 살아 있었다.
+  - 동일 vendor 호흡수 방법이 15rpm 1차와 재시험에서 두 번 실패했으므로 반복을 중단한다. 이후 20rpm은 vendor rate 정확도 시험이 아니라 라벨된 phase 비교용으로만 수집하고, 분석 방법을 위상 기반 주기 추정으로 전환한다.
+- [x] 15rpm 30초 즉시 확인
+  - 원본: `firmware/esp_wroom32_mr60_monitor/logs/diagnostics/2026-07-28_breath15_quickcheck_30s.jsonl`.
+  - 300샘플, presence=true 100%, 거리 중앙값 80.36cm, checksum/parse 오류 0.
+  - 양수 호흡수 161/300(53.67%), 나머지 139개는 0rpm. 양수값 평균/중앙값/std 8.15/7.0/5.90rpm, 13~17rpm 비율 26.71%, 15rpm MAE 7.47rpm이었다.
+  - `breath_phase` 표준편차 0.525, 범위 -0.96~1.03으로 위상은 계속 변화했다. 짧은 재확인에서도 vendor 호흡수는 정상 출력 기준을 통과하지 못했다.
+
+### 2026-07-28 15rpm 실패 원인 분석
+
+- 공식 Seeed 라이브러리의 enum과 parser를 대조해 ESP의 `0x0A13` phase, `0x0A14` breath rate, `0x0A15` heart rate, `0x0A16` distance 해석이 일치함을 확인했다. UART checksum/parse 오류도 반복해서 0이므로 현재 증거상 프레임 타입 오해 가능성은 낮다.
+- 공식 Seeed 설치 문서는 MR60BHA2 생체 기능을 수면 시나리오에만 권장하며 책상 착석·운동에서는 큰 부정확성이 발생할 수 있다고 경고한다. 권장 설치는 침상 머리 위 약 1m, 흉부를 향한 45도 하향, 흉부까지 1.5m 이내다.
+- 공식 문서는 진동 설치, 움직이는 커튼/식물, 금속·거울 반사, 저품질 전원을 간섭원으로 명시한다. 에어컨 자체보다 직접 바람에 움직이는 옷·커튼·물체와 책상/센서 진동 여부가 중요하다.
+- 공식 펌웨어 이력에는 안정된 인체에서 호흡·심박이 검출되지 않는 문제(v1.6.5 수정 항목)와 이전 호흡·심박 알고리즘의 근본 문제 및 지속 최적화가 기록돼 있다. 현재 센서 firmware frame은 `null`이라 실제 버전을 아직 모른다. 승인 없이 업데이트하지 않고 버전 조회만 필요하다.
+- 15rpm 세 로그의 `breath_phase` FFT 지배 주기는 각각 7.34rpm, 7.67rpm, 8.0rpm이었다. 이는 vendor 호흡수 중앙값 7rpm과 일치하며, 목표 15rpm의 절반이다.
+- 가장 먼저 확인할 가설은 사용자가 한 신호에서 들이쉬고 다음 신호에서 내쉬어 한 호흡 주기를 8초로 수행했는지 여부다. 한 신호부터 다음 신호까지 들숨+날숨을 모두 끝냈다면 4초/15rpm이므로, 그 경우에는 책상 착석·진동·안테나 정렬·센서 firmware 알고리즘을 우선 의심한다.
+- [ ] 기준선 통계와 다음 실험 조건 확정
+
+### 2026-07-28 명시적 호흡 안내 재시험
+
+- [x] 기존 `breath_pace_capture.py`의 단일 4초 신호 방식은 보존하고 `--explicit-phases` 옵션을 추가했다.
+  - 결과: 15rpm에서 `들이쉬세요`와 `내쉬세요`를 각각 2초 간격으로 안내하고, 두 이벤트를 동일 JSONL에 monotonic timestamp로 기록한다.
+  - 검증: 가상환경 Python의 `py_compile` 및 `--help` 실행 성공.
+- [x] 거리·재실·UART 사전 게이트
+  - 1차는 거리 중앙값 74.62cm여서 약 10~15cm 후방 이동을 음성 안내했다.
+  - 2차 `logs/diagnostics/2026-07-28_breath15_explicit_preflight02_10s.jsonl`은 100샘플 모두 presence=true, 거리 86.10cm, checksum/parse 오류 증가 0으로 통과했다.
+- [x] 명시적 15rpm 30초 원시 로그 수집
+  - 원본: `firmware/esp_wroom32_mr60_monitor/logs/diagnostics/2026-07-28_breath15_explicit_quickcheck_30s.jsonl`.
+  - SHA-256: `af0137c773a5b6ad6140d05e516008b81ef07e96383f74acb3865152605132f1`.
+  - 2초 간격 들숨/날숨 음성 안내와 cue marker를 기록했으며 불편을 유발하는 숨참기·과호흡은 지시하지 않았다.
+- [x] vendor rate와 breath phase 주기 분석
+  - 분석: `analysis/diagnostics/2026-07-28_breath15_explicit_quickcheck_30s_summary.json`.
+  - 300샘플/29.91초, presence=true 100%, 거리 중앙값 86.10cm, UART 2,265프레임 증가, checksum/parse 오류 0.
+  - 들숨 간격 평균 4.0007초, 모든 위상 안내 간격 평균 2.0004초로 목표 페이싱을 검증했다.
+  - `breath_phase` FFT 지배 주기는 14.00rpm이었다. 30초 FFT 분해능이 약 2rpm이므로 목표 15rpm과 일치하는 구간으로 판정하며, 이전 7~8rpm 절반 주기 문제는 해소됐다.
+  - 반면 vendor `breath_rate_raw`는 양수 유효률 100%지만 평균/중앙값 19.47/19.0rpm, 표준편차 1.27rpm, 목표 ±2rpm 비율 4%, MAE 4.47rpm으로 정확도 기준을 통과하지 못했다.
+  - 결론: 이전 저주파 문제에는 안내 방식이 영향을 줬지만, 안내만 수정해 vendor 호흡수까지 정상화되지는 않았다. 다음은 동일 명시적 방식으로 충분한 워밍업을 포함한 3분 로그를 확보해 위상 기반 추정과 vendor rate를 비교한다.
+
+### 2026-07-28 명시적 호흡 안내 재생 오류 수정
+
+- [x] 첫 명시적 시험에서 사용자가 중간 음성 신호를 듣지 못했다고 확인했다.
+- [x] 비동기 `say` 호출을 각 안내가 종료될 때까지 기다리는 동기 호출로 변경했다.
+- [x] 들숨에는 Tink, 날숨에는 Pop 구분음을 음성 안내와 함께 재생하도록 변경했으며 `py_compile`을 통과했다.
+- [x] 동기 음성 방식 재측정은 30초 중 약 10초, 들숨 3회/날숨 2회만 기록돼 무효 처리했다.
+  - 원인: 매 단계의 동기 TTS 실행 시간이 실시간 페이싱 루프를 점유했다.
+  - 원본은 `logs/diagnostics/2026-07-28_breath15_explicit_audible_retry_30s.jsonl`로 보존하되 정확도 통계에는 사용하지 않는다.
+- [x] 동일 음성 방식을 반복하지 않고, 측정 전 음성 설명 후 Tink(들숨)/Pop(날숨) 구분음만 비동기로 재생하도록 전환했다.
+  - 검증: 두 시스템 음원 파일 존재 및 `py_compile` 통과.
+- [x] 구분음 방식으로 30초 재측정 및 신호 간격 검증
+  - 원본: `logs/diagnostics/2026-07-28_breath15_tones_retry_30s.jsonl`, SHA-256 `ae9a81e27223f3fb783368303ce174e9134078305ca9e64e6e12d0e5b28befc6`.
+  - 안내 검증: 들숨 Tink 8회, 날숨 Pop 7회, 전체 간격 평균 2.00036초, 들숨 간격 평균 4.00072초로 30초 페이싱을 완주했다.
+  - 센서 검증: 300샘플/29.92초, presence=true 100%, 거리 중앙값 86.10cm, checksum/parse 오류 0.
+  - `breath_phase` 지배 주기 14.00rpm으로 30초 FFT 분해능 내에서 목표 15rpm과 일치했다.
+  - vendor `breath_rate_raw` 평균/중앙값 17.61/19.0rpm, 표준편차 2.10rpm, 목표 ±2rpm 전체 비율 27%, MAE 3.12rpm으로 개선됐지만 정확도 기준은 아직 미달이다.
+
+### 2026-07-28 다중 속도 보정 로그 수집
+
+- [x] `breath_pace_capture.py` cue에 `stage=warmup|measurement`를 추가했다.
+- [x] `analyze_paced_breathing.py`가 본 측정 cue만 선택하고 기존 stage 없는 로그도 분석하도록 호환성을 검증했다.
+- [x] 12rpm: 사전 게이트 통과, 워밍업 60초, 본 측정 180초, 분석
+  - 사전 로그 `logs/diagnostics/2026-07-28_breath12_preflight_10s.jsonl`: 100/100 presence=true, 거리 중앙값 86.10cm, checksum/parse 오류 증가 0.
+  - 첫 장기 측정 시도는 긴 macOS 음성 안내 단계에서 종료됐다. `logs/breath/2026-07-28_breath_paced_12rpm_explicit_v2.jsonl`에는 23.8초 센서값과 cue 0개만 있어 무효로 보존한다.
+  - 반복 방식 전환: 긴 TTS와 음성 카운트다운을 제거하는 `--tones-only`를 추가하고 Glass(준비), Tink/Pop(호흡), Ping(본 측정), Hero(종료) 신호만 사용한다.
+  - 두 번째 장기 시도 `logs/breath/2026-07-28_breath_paced_12rpm_explicit_v2_attempt02.jsonl`도 센서 19.6초, warmup cue 6개, measurement cue 0개로 무효 처리했다.
+  - 원인 확정: 장기 `exec_command`가 반환한 session ID를 보존·폴링하지 않아 호출 컨텍스트 종료 시 측정 프로세스가 유지되지 않았다. 다음 시도는 persistent exec session을 `write_stdin`으로 30초마다 폴링한다.
+  - 유효 원본: `logs/breath/2026-07-28_breath_paced_12rpm_explicit_v2_attempt03.jsonl`, SHA-256 `c8d989607aa7dc4499c217d3614fc6c39f4ce767cc82b8d5f69b65d1b0f3093f`.
+  - 프로토콜 완주: warmup 들숨/날숨 각 12회, 본 측정 각 36회. 본 측정 1,799샘플/179.89초, 들숨 간격 평균 5.00002초, 전체 신호 간격 2.50017초.
+  - 센서 상태: presence=true 100%, 거리 중앙값 80.36cm, UART 13,686프레임 증가, checksum/parse 오류 0.
+  - 정확도: `breath_phase` 지배 주기 12.34rpm으로 목표와 일치. vendor rate 평균/중앙값/std 14.52/14.0/1.33rpm, 목표 ±2rpm 전체 비율 70.04%, MAE 2.61rpm.
+  - 판정: 위상 기반 주기 추정은 12rpm을 재현했지만 vendor rate는 약 +2.5rpm 편향되어 단독 정확도 기준에 미달한다.
+- [x] 15rpm: 사전 게이트 통과, 워밍업 60초, 본 측정 180초, 분석
+  - 사전 로그 `logs/diagnostics/2026-07-28_breath15_full_preflight_10s.jsonl`: 99/99 presence=true, 거리 중앙값 86.10cm, checksum/parse 오류 증가 0.
+  - 유효 원본: `logs/breath/2026-07-28_breath_paced_15rpm_explicit_full_v3.jsonl`, SHA-256 `f5e9d92449ea966d075d46b0b499afdfc58534193eeba1ed1e7f09f34b7a113a`.
+  - 프로토콜 완주: warmup 들숨/날숨 각 15회, 본 측정 각 45회. 본 측정 1,799샘플/179.87초, 들숨 간격 평균 4.00011초, 전체 신호 간격 2.00011초.
+  - 센서 상태: presence=true 100%, 거리 중앙값 86.10cm, UART 13,641프레임 증가, checksum/parse 오류 0.
+  - 정확도: `breath_phase` 지배 주기 15.01rpm으로 목표와 일치. vendor rate 평균/중앙값/std 18.80/19.0/1.27rpm, 목표 ±2rpm 전체 비율 11.23%, MAE 3.80rpm.
+  - 판정: 위상 기반 주기 추정은 15rpm을 정확히 재현했지만 vendor rate는 약 +3.8rpm 편향되어 단독 정확도 기준에 미달한다.
+- [x] 20rpm: 사전 게이트 통과, 워밍업 60초, 본 측정 180초, 분석
+  - 사전 로그 `logs/diagnostics/2026-07-28_breath20_full_preflight_10s.jsonl`: 100/100 presence=true, 거리 중앙값 86.10cm, checksum/parse 오류 증가 0.
+  - 유효 원본: `logs/breath/2026-07-28_breath_paced_20rpm_explicit_full_v2.jsonl`, SHA-256 `7ec04ab21e08740de840d1f9f6f58c362293cb3ce9a2d243657225fe246b4b88`.
+  - 프로토콜 완주: warmup 들숨/날숨 각 20회, 본 측정 각 60회. 본 측정 1,799샘플/179.87초, 들숨 간격 평균 3.00002초, 전체 신호 간격 1.50007초.
+  - 센서 상태: presence=true 98.61%, 거리 중앙값 86.10cm, UART 13,038프레임 증가, checksum/parse 오류 0.
+  - 25샘플/2.5초의 단일 presence=false 구간이 있었고 25개 모두 호흡 0과 겹쳤다. 0은 무호흡으로 해석하지 않고 UNKNOWN으로 유지한다.
+  - 정확도: `breath_phase` 지배 주기 20.01rpm으로 목표와 일치. vendor 양수 rate 평균/중앙값/std 19.40/22.0/6.39rpm, 목표 ±2rpm 전체 비율 20.90%, MAE 5.02rpm.
+  - 판정: 위상 기반 추정은 20rpm을 재현했지만 vendor rate 분산과 결측이 커 단독 정확도 기준에 미달한다.
+  - 12/15/20 비교: `analysis/breath/2026-07-28_breath_calibration_12_15_20_comparison.json`. 목표별 편향이 일정하지 않아 고정 오프셋 보정은 채택하지 않는다.
+  - 생체값 비교: `analysis/breath/2026-07-28_vitals_measured_vs_reference.json`.
+  - MR60 심박 출력은 12/15/20rpm 조건에서 평균 75.12/78.73/85.06bpm, 중앙값 74/79/82bpm이었다. 유효률은 100/100/98.55%였지만 동시 기준 심박계가 없으므로 정확도·MAE는 계산하지 않는다.
+  - `heart_phase` 최상위 후보는 47.69/78.04/87.71bpm이었다. 12rpm 조건에서 vendor 중앙값 74bpm과 불일치하므로 phase와 vendor 값의 내부 일치만으로도 심박을 검증할 수 없다.
+  - 심박은 외부 기준기기 동시 측정 전까지 `UNVERIFIED` 또는 `UNKNOWN`으로 유지하고 위험 판정의 단독 근거로 사용하지 않는다.
+
+### 작업 경계
+
+- 기준선 전에는 필터·유효성 임계값·MR60 펌웨어를 변경하지 않는다.
+- 기존 미커밋 진행 기록과 원본 로그를 보존하고, 이번 단계의 새 원본·파생 분석만 별도 경로에 추가한다.
+
+### 최종 인수 완료 기준
+
+- 실측 원본, 익명화된 학습·검증용 CSV/NPZ, 조건·라벨·SHA256 manifest를 함께 제공한다.
+- ESP 텔레메트리와 팀 `SafeNest_V4_OnDevice_AI` 입력 사이의 Pi 어댑터를 구현하고 `0/null/NaN/timeout/presence=0` 안전 게이트를 포함한다.
+- WARMUP/VALID/UNKNOWN/FAULT, 모델 미검증 시 `vendor_rule` 폴백, 실행 명령과 테스트를 문서화한다.
+- 팀원이 별도 설명 없이 clone 후 테스트하고 통합할 수 있는 브랜치/PR 상태로 GitHub에 게시한다.
+
+### 2026-07-29 Pi 통합 안전 계약 및 필터 선택
+
+- [x] 동일한 12/15/20rpm 유효 원본 로그에 raw/MA5/median5/EMA0.3/median+EMA를 재생 비교했다.
+  - 결과: `firmware/esp_wroom32_mr60_monitor/analysis/breath/2026-07-28_breath_filter_comparison.json`.
+  - raw pooled 표준편차/MAE는 4.396/3.804rpm이었다. median+EMA는 4.359/3.791rpm이지만 평균 0.433초 추가 지연과 추가 이상치를 만들었다.
+  - 결론: vendor rate 평활은 채택하지 않는다. 원시는 진단용으로 보존하고 Pi의 30초 phase FFT를 최종 호흡수로 사용한다.
+- [x] `SafeNest_V4_OnDevice_AI/adapters/mr60_esp_adapter.py`에 60초 WARMUP, distance/presence/age/UART 안전 게이트와 phase 기반 호흡 추정을 구현했다.
+- [x] 0·NaN·결측·부재를 무호흡 또는 정상값으로 바꾸던 팀 코드 경로를 차단했다.
+  - 미검증 심박은 위험도에 기여하지 않으며 `heart_verified=false`로 전달한다.
+  - 미검증 무호흡 후보는 DEGRADED이며, `apnea_verified=true`인 별도 검증 입력만 응급으로 승격한다.
+- [x] 핵심 단위/재생 테스트 18개 통과.
+  - 명령: `python3 -m unittest SafeNest_V4_OnDevice_AI/tests/test_mr60_esp_adapter.py SafeNest_V4_OnDevice_AI/tests/test_risk_rules.py SafeNest_V4_OnDevice_AI/tests/test_mmwave_stream_adapter.py -v`.
+  - 12/15/20rpm 유효 로그 재생 중앙값은 각 목표 대비 1rpm 이내였다.
+- [ ] 전체 팀 테스트에서 변경된 안전 계약과 충돌하는 기존 시험을 정리하고 재검증한다.
+- [ ] ESP WARMUP/VALID/UNKNOWN/FAULT 텔레메트리와 재현 가능한 config hash를 구현·빌드한다.
+- [ ] 유효 원본 manifest·재현 절차·통합 문서를 완성한다.
+- [ ] 실제 빈 공간/정지 인체 30분 검증은 장비 연결 상태에서 별도 실행한다.
+
+### 2026-07-29 구현·재현 검증 완료
+
+- [x] ESP `safenest-mr60-esp/1.1.0` 상태 머신, raw/stable 텔레메트리, config SHA-256을 구현했다.
+- [x] PlatformIO 빌드 성공: espressif32 7.0.1, Arduino-ESP32 3.20017.241212, RAM 6.7%, Flash 20.3%.
+- [x] 유효 원본 6개만 선별한 SHA-256 manifest와 생성/검증 스크립트를 추가했다.
+- [x] ESP JSONL→Pi 표준 패킷 CLI를 실측 15rpm 로그 끝까지 재생해 VALID/14.85rpm 출력을 확인했다.
+- [x] LiteRT 2.1.6 임시 환경에서 팀 전체 테스트 80개 통과, 원본 Thermal NPZ 부재 테스트 2개 skip.
+- [x] 최종 상태·결과·제약·다음 행동을 `MMWAVE_TUNING_REPORT_2026-07-29.md`에 기록했다.
+- [ ] 현재 `/dev/cu.usb*`가 없어 새 ESP 펌웨어 업로드 및 30분 물리 검증은 BLOCKED.

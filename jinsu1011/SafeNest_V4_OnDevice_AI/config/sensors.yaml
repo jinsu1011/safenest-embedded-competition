@@ -1,0 +1,53 @@
+# SafeNest V4 On-Device AI Sensor Configuration
+
+system:
+  environment: "mac" # "mac" or "raspberry_pi5"
+  mode: "mock"       # "mock" or "real"
+  loop_interval_sec: 0.2
+
+sensors:
+  thermal44:
+    sensor_id: "thermal44"
+    type: "thermal_camera"
+    enabled: true
+    i2c_bus: 1
+    i2c_address: 0x33
+    spi_bus: 0
+    spi_device: 0
+    width: 80
+    height: 62
+    fps: 10
+    timeout_sec: 2.0
+    stale_sec: 3.0
+
+  mmwave:
+    sensor_id: "mmwave"
+    type: "mr60bha2_radar"
+    enabled: true
+    serial_port: "/dev/ttyAMA0"
+    baudrate: 115200
+    sample_rate_hz: 10
+    window_samples: 300
+    window_seconds: 30.0
+    timeout_sec: 2.0
+    stale_sec: 3.0
+
+  co2:
+    sensor_id: "co2"
+    type: "scd40_co2"
+    enabled: true
+    i2c_bus: 1
+    i2c_address: 0x62
+    sample_rate_hz: 0.2
+    timeout_sec: 5.0
+    stale_sec: 10.0
+
+  pir:
+    sensor_id: "pir"
+    type: "gpio_pir"
+    enabled: true
+    gpio_pin: 17
+    active_high: true
+    no_motion_threshold_sec: 15.0
+    timeout_sec: 5.0
+    stale_sec: 10.0

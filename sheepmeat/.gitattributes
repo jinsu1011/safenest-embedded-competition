@@ -1,0 +1,8 @@
+# Binary files
+*.tflite binary
+*.npz binary
+*.joblib binary
+*.zlib binary
+*.png binary
+*.jpg binary
+*.jpeg binary

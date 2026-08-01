@@ -24,8 +24,8 @@ ESP는 Mac 또는 Pi USB에서 전원을 받을 수 있다. MR60 5V와 ESP GND�
 ## 재현 가능한 설정
 
 - ESP 설정 원본: `firmware/esp_wroom32_mr60_monitor/config/mmwave_sensor_config.json`
-- ESP 설정 SHA-256: `db2e2b0b87c093531b7312d09925d987d089c6cb344e166a094b2f41af64f0b2`
-- ESP 펌웨어: `safenest-mr60-esp/1.1.0`
+- ESP 설정 SHA-256: `b817e8bfd5e52b18275626f7b6a9bd60098ea4b108428a5aaf63600dbc987834`
+- ESP 펌웨어: `safenest-mr60-esp/1.2.0`
 - Pi 설정: `config/mmwave_processing.json`
 - ESP UART: 115200 baud, 8N1, RX=GPIO16, TX=GPIO17
 - ESP 상태: 1초 frame timeout, 연속 UART 오류 5회 FAULT, 재실 3개 중 2개, WARMUP 60초, 거리 40–150cm.
@@ -82,11 +82,14 @@ python3 adapters/run_mr60_serial_adapter.py \
 
 필터 비교에서 median+EMA는 raw 대비 pooled 표준편차 4.396→4.359rpm, MAE 3.804→3.791rpm에 그쳤고 평균 0.433초 지연과 추가 이상치를 만들었다. 따라서 단순성과 지연 기준에 따라 vendor rate 필터를 채택하지 않았다.
 
-## 아직 완료되지 않은 물리 검증
+## 최종 물리 검증 상태
 
-- 빈 공간 30분, 안정된 정지 인체 30분에서 ESP 재부팅 0회 확인.
-- 거리 0.6/0.9/1.2/1.5m 반복 검증.
-- 새 ESP 펌웨어 업로드 뒤 UART 오류율과 상태 전환 지연 재측정.
-- Apple Watch 등 동기 기준 심박계로 심박 MAE 검증.
+- schema 1.2 업로드·healthcheck: PASS.
+- 빈 공간 30분: presence·생체·freeze 오탐 0, reboot·UART 오류 0으로 PASS.
+- 정지 1인 30분: stable presence 98.77%, reboot·UART 오류 0으로 재실 KPI PASS.
+- 자연호흡 장기 filtered 유효률: 21.58%로 FAIL. 유효하지 않은 구간은 DEGRADED/UNKNOWN으로 유지한다.
+- 거리 0.6/0.9/1.2/1.5m와 진입·퇴장 20회: 기존 원본·해시·분석 검증 완료, 재수집 금지.
+- 심박: 동기 기준기기가 없어 `UNVERIFIED`; 무호흡: 검증 데이터가 없어 `UNVERIFIED`.
+- 남은 필수 통합 작업: 팀 통합 노드에서 실제 ESP USB JSONL 입력 확인.
 
-이 네 항목이 끝나기 전 최종 상태는 `BLOCKED(실장비 검증 대기)`이며, 의료 정확도나 무호흡 검출 완료로 발표하면 안 된다.
+의료 정확도, 심박 정확도, 무호흡 검출 완료로 발표하면 안 된다. 최종 근거는 `firmware/esp_wroom32_mr60_monitor/analysis/final/2026-08-01_mr60_final_validation_manifest.json`을 사용한다.

@@ -13,7 +13,7 @@
 - [x] 원본 로그를 보존하고 기준선 지표 계산
 - [x] 동일 원본 로그에서 필터 또는 유효성 조건을 한 번에 하나씩 비교
 - [x] 실측 근거로 ESP 상태기계와 텔레메트리 구현
-- [ ] 빈 공간/정지 인체 각 30분, 거리 4종, 진입·퇴장 20회 최종 검증
+- [x] 빈 공간/정지 인체 각 30분, 거리 4종, 진입·퇴장 20회 최종 검증(재실 PASS, 자연호흡 지속성 FAIL 한계 포함)
 
 ### 단계 0 점검 결과
 
@@ -900,6 +900,62 @@
   - 전역 Python에는 패키지를 설치하지 않았다. `/opt/anaconda3`의 기존 numpy 1.26.4/pandas 2.2.2를 사용하는 `/private/tmp/safenest-pi-regression-venv` 임시 환경에서 실행했다.
   - 명령: `python -m unittest SafeNest_V4_OnDevice_AI/tests/test_mr60_esp_adapter.py SafeNest_V4_OnDevice_AI/tests/test_mmwave_stream_adapter.py SafeNest_V4_OnDevice_AI/tests/test_mmwave_input_adapter.py -v`.
   - 결과: 13개 테스트 전부 통과. `0/null`·부재·NaN/Inf·timestamp 중복/역행·gap·stale 안전 게이트와 실제 페이싱 로그 재생이 정상이며, schema 1.2 호환을 위한 추가 Pi 코드 수정은 필요 없었다.
+- [x] schema 1.2 빈 공간 설치 게이트 및 30분 연속 검증
+  - 60초 사전 확인은 600/600패킷에서 raw/stable presence=false, 생체 양수값·재부팅·checksum/parse 오류 0으로 통과했다.
+  - 사전 로그: `logs/final/2026-08-01_empty_v120_preflight_60s.jsonl`, SHA-256 `2f3d0b6657381f697f50dab396cb0dfb8a44354f6e86c30ab0ccde5ee7a95dfd`.
+  - 본 로그: `logs/final/2026-08-01_empty_v120_30min.jsonl`, SHA-256 `32ee3ae455ccf46029840f71268fdda37a88a963eed7ac7c7f9dfb269d00b3b2`.
+  - 17,995패킷/1,799.781초, 9.998Hz, UART 108,416프레임/60.238fps, seq 결손·timestamp 중복/역행·JSON 오류 0.
+  - raw/stable presence=true, `vital_presence_detected`, raw/filtered 생체 유효, freeze 오탐이 모두 0건이었다.
+  - ESP reboot·checksum/parse 증가·UART/checksum 불량도 모두 0이고, 전 패킷이 `UNKNOWN/PRESENCE_NOT_DETECTED`로 안전하게 처리됐다.
+- [x] schema 1.2 정지 1인 31분 측정 — 재실 KPI 미통과
+  - 조건: 센서 정면 약 0.9m 착석, 자연호흡, 총 1,860초 수집 후 첫 60초를 제외해 분석했다.
+  - 원본: `logs/final/2026-08-01_occupied_d09_v120_31min.jsonl`, SHA-256 `bcd947ed341944065fe47ca21b7cfedd30a37064eea78b5c496ef1c190597f0d`.
+  - 분석: `analysis/final/2026-08-01_occupied_d09_v120_after60s_summary.json`, SHA-256 `4664117267d2c51a74f5eaff974d695e64716b425ea17f1f909ab5186a0b0f29`.
+  - 분석 17,988패킷/1,799.839초, ESP reboot·checksum/parse 증가·UART/checksum 불량 0으로 통신 안정성은 통과했다.
+  - stable presence 감지율은 84.84%(15,261/17,988)로 목표 95%에 미달했다. 해제 구간은 9개, 총 271.858초이며 최장 구간은 176.041초였다.
+  - filtered breath 유효률 29.76%, 중앙값 15.66rpm, 표준편차 2.51rpm이었다. 저진폭 DEGRADED는 43.22%, 재실 재확립 WARMUP은 24.39%, 부재 UNKNOWN은 15.16%였다.
+  - `freeze_detected=true`는 165패킷, `LOCK_LOSS_FREEZE` 상태는 5패킷이었다. 신호 해제와 재확립이 반복됐으므로 정상 1인 연속 검증으로 PASS 처리하지 않는다.
+  - 원본 18,589줄 중 9,000번째 줄 1개가 `breath_window_ready` 뒤 일부 바이트가 누락된 불완전 JSON이다. 원본은 수정하지 않고 분석기가 1개 invalid line으로 제외한 사실을 함께 기록한다.
+  - 같은 설치·방법으로 즉시 재측정하지 않는다. 다음 단계는 재실 해제 9구간과 위상 진폭 저하의 시간 정렬, 설치 각도·가슴 중심 높이·실측 거리 확인, USB 출력 1줄 손실 원인 진단이다.
+- [x] 센서 위치 조정 후 정지 1인 3분 게이트 — 미통과
+  - 가슴 앞 물체를 치우고 팔짱을 풀어 손을 허벅지 위에 둔 조건에서 센서를 더 가까이 정렬해 180초 측정했다.
+  - 원본: `logs/final/2026-08-01_occupied_d09_v120_positioncheck_180s.jsonl`, SHA-256 `60e5c2515a161387cf3ef934a5f47532653fc2e02284a127ff2c5b6652ad8b2c`.
+  - 전체 1,799패킷/179.887초의 stable presence는 90.77%, 첫 60초 제외 1,199패킷에서는 86.16%였다.
+  - 재실 해제는 15.902초와 0.5초 두 구간이었고, 전체 filtered breath 유효률 13.67%, 저진폭 42.41%였다.
+  - 첫 60초 제외 센서 거리 중앙값은 74.62cm로 권장 범위였지만 재실 95% 게이트를 통과하지 못했다. reboot·checksum/parse 오류·freeze는 0이었다.
+  - 거리 조정만으로 해결되지 않았으므로 같은 방식으로 반복하지 않는다. 센서 안테나의 상하 각도·가슴 중심 정렬 및 MR60 vendor presence의 정지 인체 해제 한계를 분리 진단한다.
+- [x] 높이·각도 정렬 후 정지 1인 최종 3분 게이트 — 재실 통과, 호흡 미통과
+  - 안테나 면을 가슴 중앙과 같은 높이에 두고 위·아래/좌·우 기울기를 제거했으며, 약 75cm와 가슴 앞 무장애 조건을 유지했다.
+  - 원본: `logs/final/2026-08-01_occupied_d09_v120_positioncheck_attempt02_180s.jsonl`, SHA-256 `fd061477c81702adffc50b06253de5ab0c362474fdde2241b8f7d695f9e95144`.
+  - 전체 1,798패킷/179.804초와 첫 60초 제외 1,198패킷 모두 raw/stable presence 100%, vital presence 100%, reboot·checksum/parse 오류·freeze 0이었다.
+  - 첫 60초 제외 거리 중앙값 74.62cm로 재실 95% 게이트는 통과했다.
+  - 전체 filtered breath 유효률은 9.57%, 저진폭 `BREATH_PHASE_LOW_AMPLITUDE`는 90.43%였다. 필터 유효 구간 중앙값은 14.62rpm이지만 유효률이 너무 낮아 호흡 게이트는 미통과다.
+  - 높이·각도 조정으로 재실은 개선됐지만 위상 결합은 악화됐다. 이 상태로 31분을 반복하지 않고 재실 100% 정렬을 유지한 채 흉부 위상 진폭을 확보할 설치 축을 별도로 찾아야 한다.
+- [x] 사용자 재배치 상태 정지 1인 1분 확인 — 재실·호흡 통과
+  - 원본: `logs/final/2026-08-01_occupied_d09_v120_positioncheck_attempt03_60s.jsonl`, SHA-256 `13bc4ebc2468e065f42601df75fd3e6ee4286189e7899ca537493eaeba46cb5d`.
+  - 599패킷/59.887초에서 raw/stable/vital presence와 filtered breath 유효가 모두 599/599(100%)였다.
+  - 전 패킷 `VALID`, 저진폭·freeze·reboot·checksum/parse 오류·불완전 JSON은 모두 0건이었다.
+  - 센서 거리 중앙값은 97.58cm였고 filtered breath는 15.20~20.87rpm, 평균 17.88rpm이었다.
+  - 직전 75cm 조건보다 위상 결합이 뚜렷하게 개선됐다. 다만 1분 단기 게이트이므로 장기 KPI 통과 근거로 확대 해석하지 않고, 다음 장기 측정 전 현재 설치 상태를 유지한다.
+- [x] 사용자 재배치 상태 정지 1인 31분 재검증 — 재실 통과, 호흡 지속성 미통과
+  - 원본: `logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl`, SHA-256 `7f9e9ac65377c6dc217af92f9dee2401b6162540e2245fce97acf2ed49368a34`.
+  - 첫 60초 제외 분석: `analysis/final/2026-08-01_occupied_d09_v120_31min_attempt02_after60s_summary.json`, SHA-256 `b8c6fb33436bd2999861b591607c99a8435a3c958a37042f84adc06789b10942`.
+  - 분석 17,974패킷/1,799.751초에서 stable presence는 98.77%(17,753/17,974)로 95% 기준을 통과했다. 부재는 22.004초 한 구간이었다.
+  - filtered breath 유효률은 21.58%, 저진폭은 58.92%, filtered breath 중앙값/평균은 17.23/16.79rpm이었다. 따라서 호흡 지속성은 미통과다.
+  - 첫 25분의 5분 구간별 stable presence는 첫 구간 92.62%, 이후 네 구간 100%였고 거리 중앙값은 모두 97.58cm였다. 마지막 5분에는 거리 중앙값이 166.46cm로 바뀌고 vital presence 4.10%, freeze 85.59%가 되어 장기 저하가 집중됐다.
+  - reboot·checksum/parse 오류·불완전 JSON은 0이었다. 재실 KPI는 통과했지만 마지막 5분 거리 변화와 전반적인 저진폭 때문에 전체 장기 검증 PASS로 처리하지 않는다.
+  - 사용자 요청에 따라 마지막 5분을 제외한 60~1,560초의 가운데 25분도 별도 재분석했다. `analysis/final/2026-08-01_occupied_d09_v120_31min_attempt02_middle25min_summary.json`에 결과를 보존했다.
+  - 가운데 25분은 14,976패킷/1,499.828초, stable/vital presence 98.52%(14,755/14,976), 거리 중앙값 97.58cm(86.10~103.32cm), freeze·reboot·checksum/parse 오류 0으로 재실 기준은 통과했다.
+  - 그러나 filtered breath 유효률은 25.90%(3,879/14,976), 저진폭은 69.95%(10,476/14,976)여서 마지막 5분을 제외해도 호흡 지속성 및 전체 판정은 미통과다. 마지막 거리 점프는 호흡 저진폭의 유일한 원인이 아니다.
+- [x] 2026-08-01 MR60 전체 완료 상태 재감사
+  - PlatformIO 빌드를 재실행해 RAM 32,356B(9.9%), Flash 268,765B(20.5%)로 통과했다. Python 수집·분석·CSV 도구 `py_compile`도 통과했다.
+  - schema 1.2 Pi 어댑터·stream/input 안전 게이트·manifest 단위 테스트 15개를 재실행해 모두 통과했다.
+  - CSV delivery v2의 원본 9개·사본 9개·CSV 9개 중 manifest가 관리하는 18개 항목의 SHA-256이 모두 일치했다.
+  - 거리 D06/D09/D12/D15 원본 4개와 진입·퇴장 20회 원본의 SHA-256을 재검증했다. 진입·퇴장 분석기도 다시 실행해 기존 평균 1.134초, 퇴장 평균 15.491초 결과를 재현했다.
+  - 완료 판정: firmware/schema/통신, 빈 공간 30분, 정지 인체 재실 30분, 거리 4종, 진입·퇴장 20회, 페이싱 phase 12/15/20rpm, Pi 회귀, CSV 전달은 완료되어 재수집하지 않는다.
+  - 제한 판정: 자연호흡 장기 filtered 유효률은 FAIL, 심박 정확도와 무호흡은 기준기기·안전한 정답 데이터가 없어 UNVERIFIED다. 이 값을 정상/위험의 단독 근거로 사용하지 않는다.
+  - 최신 증거 목록과 SHA-256은 `analysis/final/2026-08-01_mr60_final_validation_manifest.json`에 고정했다.
+  - 남은 필수 작업은 팀 통합 노드에서 실제 ESP USB JSONL을 입력해 end-to-end 경로를 확인하는 것과 현재 최종 검증 산출물을 커밋·푸시하는 것이다.
 
 #### 파일명 날짜 주의
 

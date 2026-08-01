@@ -1,0 +1,2 @@
+# Raw ESP serial captures are immutable byte evidence and may use device CRLF.
+firmware/esp_wroom32_mr60_monitor/logs/final/*.jsonl binary

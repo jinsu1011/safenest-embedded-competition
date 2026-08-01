@@ -5,12 +5,13 @@
 ## 0. 시작 상태
 
 - Git branch: `codex/mmwave-phase-integration`
-- 기준 commit: `f0561d688807b5ec4cd3f2dd7b82fb1ee228b77a`
+- 기준 commit: `41af82b89ef8b47a15e380583ea0eac37384406e`
 - ESP 대상: ESP-WROOM-32 (`esp32dev`), MR60은 UART2 RX=GPIO16/TX=GPIO17
-- 새 ESP firmware: `safenest-mr60-esp/1.1.0`
-- ESP config SHA-256: `db2e2b0b87c093531b7312d09925d987d089c6cb344e166a094b2f41af64f0b2`
+- 새 ESP firmware: `safenest-mr60-esp/1.2.0`
+- ESP config SHA-256: `b817e8bfd5e52b18275626f7b6a9bd60098ea4b108428a5aaf63600dbc987834`
 - 2026-08-01 해소: A·B단계 완료. 포트 `/dev/cu.usbserial-10` (CH340 `1A86:7523`), 칩 ESP32-D0WD-V3 rev v3.1, MAC `cc:7b:5c:f2:1f:ec`.
-- 현재 blocker: 없음. C단계(빈 공간 30분)부터 이어서 진행한다.
+- 현재 상태: C단계 빈 공간 30분 PASS. D단계 최신 정지 1인 30분은 stable presence 98.77%로 재실 KPI PASS이나 filtered breath 유효률 21.58%로 자연호흡 지속성은 FAIL이다.
+- 최신 인수인계 우선 규칙: 12/15/20rpm, 거리 4종, 진입·퇴장 20회는 재측정하지 않는다. 심박 하강은 기준기기 없이는 탐색용이며 정확도 근거로 사용하지 않는다.
 - 주의: 2026-08-01 세션 중 ESP32-C6(`cu.usbmodem101`, ESP32-C6FH4)를 잠시 연결했으나 본 펌웨어와 비호환(`board=esp32dev`, `HardwareSerial(2)`, USB CDC 미설정)이라 원래 WROOM-32으로 되돌렸다. 보드를 바꾸려면 펌웨어 포팅과 config 해시 갱신이 선행되어야 한다.
 - MR60 센서 자체 firmware는 승인 없이 업데이트하지 않는다.
 
@@ -80,18 +81,18 @@ pio run -t upload --upload-port /dev/cu.usbserial-XXXX
 cd ../..
 ```
 
-- [x] 2026-08-01 완료: `logs/final/2026-08-01_healthcheck_v110_15s.jsonl`, 통과 기준 5개 전부 충족. 업로드 후 15초 health check를 저장한다.
+- [x] 2026-08-01 완료: schema 1.2 최종 로그 `logs/final/2026-08-01_healthcheck_v120_75s.jsonl`, SHA-256 `eb4c57a16ea00d6b4314364f298cac2420a0f9cf3023eed15d02dcdd95835382`, 통과 기준 충족.
 
 ```bash
 firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
   firmware/esp_wroom32_mr60_monitor/capture_serial.py \
   --port /dev/cu.usbserial-XXXX --duration 15 \
-  --output firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_healthcheck_v110_15s.jsonl
+  --output firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_healthcheck_v120_75s.jsonl
 ```
 
 통과 기준:
 
-- boot event의 firmware가 `safenest-mr60-esp/1.1.0`
+- boot event의 firmware가 `safenest-mr60-esp/1.2.0`
 - config hash가 이 문서 0절과 동일
 - JSON이 연속 출력됨
 - `checksum_errors`, `parse_errors`가 증가하지 않음
@@ -99,83 +100,98 @@ firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
 
 실패 시: RX/TX 교차, 공통 GND, 5V, 포트 점유를 한 번씩 확인한다. 같은 업로드/배선을 두 번 확인해도 실패하면 반복하지 말고 로그와 원인을 `PROJECT_PROGRESS.md`에 기록한다.
 
-### C. 빈 공간 30분
+### C. 빈 공간 30분 — 2026-08-01 완료
 
-- [ ] 감지 원뿔에서 사람과 반려동물이 완전히 벗어난 상태로 1,800초 수집한다.
+- [x] 감지 원뿔에서 사람과 반려동물이 완전히 벗어난 상태로 1,800초 수집했다.
+  - 사전 확인: `logs/final/2026-08-01_empty_v120_preflight_60s.jsonl`, 600패킷, raw/stable presence 오탐 0.
+  - 본 로그: `logs/final/2026-08-01_empty_v120_30min.jsonl`, SHA-256 `32ee3ae455ccf46029840f71268fdda37a88a963eed7ac7c7f9dfb269d00b3b2`.
+  - 17,995패킷/1,799.781초, reboot·checksum/parse 오류·raw/stable presence·생체신호·freeze 오탐 전부 0.
 
 ```bash
 firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
   firmware/esp_wroom32_mr60_monitor/capture_serial.py \
   --port /dev/cu.usbserial-XXXX --duration 1800 \
-  --output firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_empty_v110_30min.jsonl
+  --output firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_empty_v120_30min.jsonl
 
 firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
   firmware/esp_wroom32_mr60_monitor/analyze_mmwave_log.py \
-  firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_empty_v110_30min.jsonl \
-  --output firmware/esp_wroom32_mr60_monitor/analysis/final/YYYY-MM-DD_empty_v110_30min_summary.json
+  firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_empty_v120_30min.jsonl \
+  --output firmware/esp_wroom32_mr60_monitor/analysis/final/YYYY-MM-DD_empty_v120_30min_summary.json
 ```
 
 통과 기준: ESP reboot 0, UART checksum/parse 오류율 보고, stable presence 오탐 0 목표, 호흡·심박 0을 유효값으로 세지 않음.
 
-### D. 정지 1인 30분
+### D. 정지 1인 30분 — 2026-08-01 재실 KPI 통과, 호흡 지속성 미통과
 
-- [ ] 센서 안테나 면–가슴 0.9m, 정면, 평소 호흡으로 1,860초 수집한다. 처음 60초는 warmup이고 분석에서 제외한다.
+- [x] 센서 안테나 면–가슴 약 0.9m, 정면, 평소 호흡으로 1,860초 수집했다. 처음 60초는 제외했다.
+  - 원본: `logs/final/2026-08-01_occupied_d09_v120_31min.jsonl`, SHA-256 `bcd947ed341944065fe47ca21b7cfedd30a37064eea78b5c496ef1c190597f0d`.
+  - 분석 17,988패킷/1,799.839초, reboot·checksum/parse 오류 0, stable presence 84.84%로 95% 기준 미달.
+  - 해제 9구간/총 271.858초/최장 176.041초, filtered breath 유효률 29.76%, 저진폭 43.22%.
+  - 불완전 JSON 1줄은 원본 그대로 보존하고 분석에서 제외했다. 같은 설치로 즉시 반복하지 않고 해제 구간·위상 진폭·설치 정렬을 먼저 진단한다.
+  - 위치 조정 후 3분 게이트도 전체 stable presence 90.77%, 첫 60초 제외 86.16%로 미통과했다. 거리 중앙값 74.62cm, 저진폭 42.41%였으므로 단순 거리 조정 반복은 중단한다.
+  - 높이·각도 정렬 후 최종 3분 게이트는 raw/stable presence 100%, 오류·freeze 0으로 재실 기준을 통과했다. 그러나 저진폭 90.43%, filtered breath 유효률 9.57%로 호흡 기준은 미통과해 31분 반복은 보류한다.
+  - 이후 사용자 재배치 상태의 1분 확인(`positioncheck_attempt03_60s`)은 599패킷 모두 raw/stable/vital presence 및 filtered breath 유효 100%, 전 패킷 VALID, 오류·freeze·저진폭 0으로 통과했다. 거리 중앙값은 97.58cm였다. 이 설치 상태를 유지하되 1분 결과만으로 30분 KPI를 통과 처리하지 않는다.
+  - 같은 상태로 수행한 31분 재검증(`occupied_d09_v120_31min_attempt02`, 첫 60초 제외)은 stable presence 98.77%로 재실 95% 기준을 통과했다. 그러나 filtered breath 유효률 21.58%, 저진폭 58.92%였고 마지막 5분에 거리 중앙값이 97.58cm에서 166.46cm로 바뀌며 vital presence 4.10%, freeze 85.59%가 되어 전체 장기 검증은 미통과다.
+  - 마지막 5분을 제외한 가운데 25분 재분석에서도 stable/vital presence 98.52%, freeze·통신 오류 0으로 재실은 통과했지만 filtered breath 유효률 25.90%, 저진폭 69.95%로 호흡 지속성은 미통과다. 따라서 마지막 5분만 제외해 전체 PASS로 바꾸지 않는다.
 
 ```bash
 firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
   firmware/esp_wroom32_mr60_monitor/capture_serial.py \
   --port /dev/cu.usbserial-XXXX --duration 1860 \
-  --output firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_occupied_d09_v110_31min.jsonl
+  --output firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_occupied_d09_v120_31min.jsonl
 
 firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
   firmware/esp_wroom32_mr60_monitor/analyze_mmwave_log.py \
-  firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_occupied_d09_v110_31min.jsonl \
+  firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_occupied_d09_v120_31min.jsonl \
   --skip-seconds 60 \
-  --output firmware/esp_wroom32_mr60_monitor/analysis/final/YYYY-MM-DD_occupied_d09_v110_after60s_summary.json
+  --output firmware/esp_wroom32_mr60_monitor/analysis/final/YYYY-MM-DD_occupied_d09_v120_after60s_summary.json
 ```
 
 통과 기준: 분석 30분, ESP reboot 0, stable presence 감지율 95% 이상, UART 오류율 보고. 자연호흡 vendor 값은 정확도 기준으로 사용하지 않고 Pi phase 추정의 유효률·표준편차를 함께 계산한다.
 
-### E. 거리 4종
+### E. 거리 4종 — 기존 원본 검증 완료, 재측정 금지
 
-- [ ] 0.6/0.9/1.2/1.5m에서 각각 120초 수집한다. 각 거리의 처음 60초는 warmup, 뒤 60초만 비교한다.
-- [ ] 자세, 높이, 방향은 고정하고 거리만 한 번에 하나씩 바꾼다.
+- [x] 0.6/0.9/1.2/1.5m에서 워밍업 60초+본 측정 약 300초 원본을 확보했다. 기존 6분 원본이 계획된 2분보다 길어 재수집하지 않는다.
+- [x] D06/D09/D12/D15 원본 SHA-256이 CSV delivery v2 manifest와 일치함을 2026-08-01 재검증했다.
+  - D06: 거리 중앙값 74.62cm, 재실 100%.
+  - D09: 거리 중앙값 97.58cm 기준선, 재실 100%.
+  - D12: 거리 중앙값 132.02cm, 재실 81.4%로 범위 한계 사례.
+  - D15: 거리 중앙값 183.68cm, 재실 88.0% 및 lock-loss 사례.
 
 파일명:
 
 ```text
-YYYY-MM-DD_occupied_d06_v110_120s.jsonl
-YYYY-MM-DD_occupied_d09_v110_120s.jsonl
-YYYY-MM-DD_occupied_d12_v110_120s.jsonl
-YYYY-MM-DD_occupied_d15_v110_120s.jsonl
+YYYY-MM-DD_occupied_d06_v120_120s.jsonl
+YYYY-MM-DD_occupied_d09_v120_120s.jsonl
+YYYY-MM-DD_occupied_d12_v120_120s.jsonl
+YYYY-MM-DD_occupied_d15_v120_120s.jsonl
 ```
 
 각 파일은 `capture_serial.py --duration 120`으로 수집하고 `analyze_mmwave_log.py --skip-seconds 60`으로 분석한다.
 
 기록할 값: 줄자 거리, 센서 거리 평균/중앙값/표준편차, stable presence 감지율, phase 호흡 유효률, UART 오류율. 40–150cm 범위는 이 결과를 보기 전에는 변경하지 않는다.
 
-### F. 새 firmware 진입·퇴장 20회
+### F. 진입·퇴장 20회 — 기존 원본 재검증 완료, 재측정 금지
 
-- [ ] 한 명만 진입하고 정지한 뒤 완전히 감지 원뿔 밖으로 나가는 시험을 20회 수행한다.
+- [x] `logs/kpi/2026-07-28_entry_exit_20_v2.jsonl`의 20회 원본과 SHA-256 `f28c41166a0da3104c74b207014aae4ff7be508876175f4881eb72bdb94d5164`를 확인하고 분석기를 재실행했다.
+  - 진입 지연 평균/중앙값/최대 1.134/1.073/2.449초, 2초 이내 16/20.
+  - 보행·반응 0.8초 차감 참고값은 20/20이 2초 이내다.
+  - 퇴장 해제는 19/20, 평균 15.491초이며 2초 기준 0/19이다. MR60 vendor hysteresis 한계로 기록하고 Pi Thermal/PIR 융합으로 보완한다.
 
 ```bash
 firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
   firmware/esp_wroom32_mr60_monitor/entry_exit_trial.py \
   --port /dev/cu.usbserial-XXXX --trials 20 \
-  --output firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_entry_exit_v110_20.jsonl
+  --output firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_entry_exit_v120_20.jsonl
 ```
 
 기록할 값: raw와 stable 진입 지연, raw와 stable 퇴장 해제 지연, 미탐 횟수. 진입 전달 2초 목표를 확인한다. MR60 자체 퇴장 해제가 약 15초면 ESP 필터를 억지로 바꾸지 말고 `센서 한계/PI 융합 필요`로 기록한다.
 
-### G. Apple Watch 심박 검증
+### G. 외부 기준 심박 검증 — 기준기기 없음, UNVERIFIED 유지
 
-- [ ] 위 C–F가 끝난 다음에만 수행한다.
-- [ ] 0.9m 정면 고정, 60초 warmup 후 10분 자연호흡.
-- [ ] ESP JSONL과 Apple Watch 심박을 같은 시계 기준으로 기록한다.
-- [ ] Watch 심박은 최소 5초 간격으로 `timestamp, watch_bpm` CSV에 기록한다.
-- [ ] MR60 표본과 최근접 시간으로 결합해 MAE, median absolute error, bias, Pearson correlation, 유효률을 계산한다.
-- [ ] 데이터 확인 전 고정 오프셋이나 보정식을 만들지 않는다.
-- [ ] 보정 전/후를 동일 원본으로 비교하고 개선될 때만 config/version을 갱신한다.
+- [x] 사용자가 Apple Watch 등 동시 기준기기를 보유하지 않아 정확도 시험을 수행하지 않는 것으로 확정했다.
+- [x] `heart_verified=false`, `UNVERIFIED`를 유지하고 MR60 심박 bpm을 위험도·심정지·사람 없음의 단독 근거로 사용하지 않는다.
+- [ ] 향후 외부 기준기기를 확보할 때만 0.9m 정면, 60초 warmup+10분 동시 측정으로 MAE·bias·상관·유효률을 계산한다. 현재 MR60 완료를 막는 필수 항목은 아니다.
 
 심박 채택 기준은 팀과 합의해 보고서에 명시한다. 기준을 통과하지 못하면 `heart_verified=false`를 유지하고 표시용으로만 사용한다.
 
@@ -192,19 +208,19 @@ firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
 
 ## 5. 최종 완료 조건
 
-- [x] 새 ESP firmware 1.1.0 업로드 증거 (2026-08-01, 헬스체크 로그의 `firmware_version`·`config_hash`가 증거)
-- [ ] 빈 공간 30분 reboot 0
-- [ ] 정지 1인 30분 reboot 0, presence ≥95%
-- [ ] UART frame/parse/checksum 오류율 계산
-- [ ] 거리 4종 결과표
-- [ ] 새 firmware 진입·퇴장 20회 결과
-- [ ] 필터 전후 표준편차·결측률·유효률·지연표
-- [ ] Apple Watch 심박 검증 또는 `UNVERIFIED 유지` 결론
-- [ ] 새 로그 SHA-256 manifest 갱신
-- [ ] `MMWAVE_TUNING_REPORT_2026-07-29.md` 결과 갱신
+- [x] 새 ESP firmware 1.2.0 업로드 증거 (2026-08-01, 헬스체크 로그의 `firmware_version`·`config_hash`가 증거)
+- [x] 빈 공간 30분 reboot 0, raw/stable presence·생체신호·freeze 오탐 0
+- [x] 정지 1인 최신 30분 reboot 0, stable presence 98.77%로 ≥95% 통과. 자연호흡 filtered 유효률 21.58%는 별도 FAIL 한계로 명시
+- [x] UART frame/parse/checksum 오류율 계산: 최신 빈 공간·정지 인체 장기 로그 모두 checksum/parse 증가 0
+- [x] 거리 4종 결과표와 원본·CSV manifest 해시 재검증
+- [x] 진입·퇴장 20회 결과 재분석
+- [x] 필터 전후 표준편차·결측률·유효률·지연표
+- [x] Apple Watch 없음에 따른 `UNVERIFIED 유지` 결론
+- [x] 새 로그 SHA-256 최종 검증 manifest: `analysis/final/2026-08-01_mr60_final_validation_manifest.json`
+- [x] `MMWAVE_TUNING_REPORT_2026-07-29.md`에 schema 1.2 최종 물리 검증 결과 갱신
 - [ ] 팀 통합 노드에서 실제 ESP USB JSONL 입력 확인
 
-이 목록이 모두 끝나기 전 상태는 `BLOCKED`, 모두 근거와 함께 끝나면 `PASS`다.
+팀 통합 노드 실 USB 입력 확인 전 통합 상태는 `BLOCKED`. MR60 단독 재실 검증은 PASS지만 자연호흡 지속성·심박·무호흡은 각각 FAIL/UNVERIFIED/UNVERIFIED로 제한해 보고한다.
 
 ## 6. 다음 세션에 보낼 한 줄
 

@@ -1,14 +1,14 @@
 # SafeNest MR60BHA2 ESP 안정화 보고서
 
-STATUS: **BLOCKED**
+STATUS: **CONDITIONAL PASS — 재실 검증 완료, 팀 통합 USB 확인 대기**
 
-코드·재생 검증은 완료했으나 현재 Mac에서 ESP USB 장치가 인식되지 않아 새 펌웨어 업로드 후 30분 물리 검증을 수행하지 못했다. 의료 정확도 또는 무호흡 검출 완료 상태가 아니다.
+ESP firmware 1.2.0 업로드, schema 1.2 회귀, 빈 공간·정지 인체 장기 물리 검증까지 완료했다. 재실 KPI는 통과했으나 자연호흡 위상 유효률은 장시간 유지되지 않아 FAIL이며, 의료 정확도·심박 정확도·무호흡 검출 완료 상태가 아니다. 팀 통합 노드의 실제 USB 입력 확인만 남았다.
 
 ## BASELINE
 
 - 센서: Seeed MR60BHA2, ESP-WROOM-32 UART2(GPIO16 RX, GPIO17 TX), 115200 8N1.
 - MR60 펌웨어 버전: 현재 protocol 응답과 기존 로그에서 값을 받지 못해 `UNKNOWN`. 승인 없는 MR60 펌웨어 업데이트는 하지 않았다.
-- 기존 ESP collector: `tiny-frame-v1`; 새 ESP firmware: `safenest-mr60-esp/1.1.0`.
+- 기존 ESP collector: `tiny-frame-v1`; 최종 ESP firmware: `safenest-mr60-esp/1.2.0`.
 - 빌드 환경: PlatformIO Core, espressif32 7.0.1, Arduino-ESP32 3.20017.241212, Xtensa toolchain 8.4.0+2021r2-patch5.
 - 수집 조건:
   - 빈 공간 360초(워밍업 60초 뒤 299.893초 분석).
@@ -54,11 +54,13 @@ STATUS: **BLOCKED**
 | 진입 raw 지연 | 평균 1.134초, 최대 2.449초 | 2-of-3 계산상 20/20이 2초 이내 |
 | 퇴장 raw 해제 | 평균 약 15.49초 | MR60 내부 지연 한계, 19/20 완료 |
 | UART checksum/parse 오류율 | 채택 로그 | 0% / 0% |
-| 30분 ESP 안정성 | 미수행 | BLOCKED |
+| 빈 공간 30분 ESP 안정성 | reboot/UART 오류/오탐 0 | PASS |
+| 정지 1인 30분 재실 | stable presence 98.77% | PASS |
+| 정지 1인 자연호흡 지속성 | filtered 유효률 21.58% | FAIL/DEGRADED 유지 |
 
 테스트 결과:
 
-- ESP PlatformIO build 성공: RAM 22,088/327,680 bytes(6.7%), Flash 266,577/1,310,720 bytes(20.3%).
+- ESP PlatformIO build 성공: RAM 32,356/327,680 bytes(9.9%), Flash 268,765/1,310,720 bytes(20.5%).
 - Pi 전체 회귀: LiteRT 2.1.6 환경에서 80 tests PASS, Thermal NPZ 미포함 테스트 2개 SKIP.
 - 실측 로그 replay: 12/15/20rpm 중앙 추정값이 각 목표 ±1rpm 이내.
 
@@ -83,4 +85,15 @@ STATUS: **BLOCKED**
 
 ## NEXT
 
-다음 세션은 `MMWAVE_NEXT_SESSION_CHECKLIST.md`만 기준으로 진행한다. 완료된 기존 로그를 재수집하지 않고 USB 포트 확인부터 시작해 ESP 1.1.0 업로드→빈 공간 30분→정지 1인 30분→거리 4종→진입·퇴장 20회→Apple Watch 심박 검증 순서로 끝낸다. MR60 센서 자체 펌웨어는 업데이트하지 않는다.
+다음 세션은 `MMWAVE_NEXT_SESSION_CHECKLIST.md`와 `MR60_FINAL_HANDOFF_PROMPT_2026-08-01.md`만 기준으로 진행한다. 완료된 빈 공간·정지 인체 장기 로그, 거리 4종, 진입·퇴장 20회, 12/15/20rpm은 재수집하지 않는다. 팀 통합 노드에서 실제 ESP USB JSONL 입력만 확인하며 MR60 센서 자체 펌웨어는 업데이트하지 않는다.
+
+## 2026-08-01 SCHEMA 1.2 최종 물리 검증
+
+- ESP `safenest-mr60-esp/1.2.0`, config SHA-256 `b817e8bfd5e52b18275626f7b6a9bd60098ea4b108428a5aaf63600dbc987834` 업로드와 75초 healthcheck를 통과했다.
+- 빈 공간 30분은 17,995패킷에서 raw/stable presence·생체신호·freeze 오탐, reboot, checksum/parse 오류가 전부 0으로 PASS다.
+- 최신 정지 1인 30분은 stable presence 98.77%(17,753/17,974), reboot·checksum/parse 오류 0으로 재실 ≥95% KPI를 PASS했다.
+- 같은 30분의 filtered breath 유효률은 21.58%, 저진폭은 58.92%여서 자연호흡 지속성은 FAIL이다. 마지막 5분을 제외해도 유효률 25.90%, 저진폭 69.95%로 결론이 바뀌지 않는다.
+- 마지막 5분의 센서 보고 거리 166.46cm는 피험자 이동 증거로 단정하지 않고 MR60의 타깃 전환 또는 거리 추적 이상 후보로 기록한다.
+- 심박은 동시 기준기기가 없어 `heart_verified=false/UNVERIFIED`, 무호흡은 안전한 정답 데이터가 없어 `apnea_verified=false/UNVERIFIED`를 유지한다.
+- 거리 4종, 진입·퇴장 20회, 페이싱 12/15/20rpm 원본과 SHA-256은 재검증했으며 재측정하지 않는다.
+- 최종 증거 manifest: `firmware/esp_wroom32_mr60_monitor/analysis/final/2026-08-01_mr60_final_validation_manifest.json`.

@@ -9,7 +9,9 @@
 - ESP 대상: ESP-WROOM-32 (`esp32dev`), MR60은 UART2 RX=GPIO16/TX=GPIO17
 - 새 ESP firmware: `safenest-mr60-esp/1.1.0`
 - ESP config SHA-256: `db2e2b0b87c093531b7312d09925d987d089c6cb344e166a094b2f41af64f0b2`
-- 현재 blocker: 2026-07-29 확인 당시 `/dev/cu.usb*` 없음. USB 데이터 케이블로 ESP를 다시 연결해야 한다.
+- 2026-08-01 해소: A·B단계 완료. 포트 `/dev/cu.usbserial-10` (CH340 `1A86:7523`), 칩 ESP32-D0WD-V3 rev v3.1, MAC `cc:7b:5c:f2:1f:ec`.
+- 현재 blocker: 없음. C단계(빈 공간 30분)부터 이어서 진행한다.
+- 주의: 2026-08-01 세션 중 ESP32-C6(`cu.usbmodem101`, ESP32-C6FH4)를 잠시 연결했으나 본 펌웨어와 비호환(`board=esp32dev`, `HardwareSerial(2)`, USB CDC 미설정)이라 원래 WROOM-32으로 되돌렸다. 보드를 바꾸려면 펌웨어 포팅과 config 해시 갱신이 선행되어야 한다.
 - MR60 센서 자체 firmware는 승인 없이 업데이트하지 않는다.
 
 ## 1. 다시 하지 않을 작업
@@ -52,14 +54,14 @@ firmware/esp_wroom32_mr60_monitor/.venv/bin/python
 
 ### A. USB 포트 확인과 점유 해제
 
-- [ ] 다음 명령에서 `/dev/cu.usb...` 포트 1개를 확인한다.
+- [x] 2026-08-01 확인 완료: `/dev/cu.usbserial-10` 1개. 다음 명령에서 `/dev/cu.usb...` 포트 1개를 확인한다.
 
 ```bash
 pio device list
 ls /dev/cu.usb*
 ```
 
-- [ ] 대시보드·시리얼 모니터가 실행 중이면 `Ctrl+C`로 종료한다. 캡처와 대시보드는 같은 포트를 동시에 열지 않는다.
+- [x] 2026-08-01 `lsof` 결과 점유 프로세스 없음. 대시보드·시리얼 모니터가 실행 중이면 `Ctrl+C`로 종료한다. 캡처와 대시보드는 같은 포트를 동시에 열지 않는다.
 
 ```bash
 lsof /dev/cu.usb*
@@ -69,7 +71,7 @@ lsof /dev/cu.usb*
 
 ### B. 새 ESP firmware 업로드
 
-- [ ] MR60 firmware가 아니라 ESP firmware만 업로드한다.
+- [x] 2026-08-01 업로드 완료(해시 검증 통과, RAM 6.7%/Flash 20.3%). MR60 firmware가 아니라 ESP firmware만 업로드한다.
 
 ```bash
 cd firmware/esp_wroom32_mr60_monitor
@@ -78,7 +80,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-XXXX
 cd ../..
 ```
 
-- [ ] 업로드 후 15초 health check를 저장한다.
+- [x] 2026-08-01 완료: `logs/final/2026-08-01_healthcheck_v110_15s.jsonl`, 통과 기준 5개 전부 충족. 업로드 후 15초 health check를 저장한다.
 
 ```bash
 firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
@@ -190,7 +192,7 @@ firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
 
 ## 5. 최종 완료 조건
 
-- [ ] 새 ESP firmware 1.1.0 업로드 증거
+- [x] 새 ESP firmware 1.1.0 업로드 증거 (2026-08-01, 헬스체크 로그의 `firmware_version`·`config_hash`가 증거)
 - [ ] 빈 공간 30분 reboot 0
 - [ ] 정지 1인 30분 reboot 0, presence ≥95%
 - [ ] UART frame/parse/checksum 오류율 계산

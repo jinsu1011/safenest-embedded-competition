@@ -853,3 +853,17 @@
 - [x] USB 확인→ESP 1.1.0 업로드→빈 공간 30분→정지 1인 30분→거리 4종→진입·퇴장 20회→Apple Watch 순서를 고정했다.
 - [x] 각 단계의 명령, 파일명, 통과·중단 기준과 두 번 실패 시 대응을 기록했다.
 - [ ] 실제 실행은 ESP USB 연결 후 체크리스트 A단계부터 시작한다.
+
+### 2026-08-01 하드웨어 재연결 및 체크리스트 A·B단계 통과
+
+- [x] 보드 오연결 1회 확인 후 정정했다.
+  - 처음 연결된 장치는 `/dev/cu.usbmodem101`, VID:PID `303A:1001`, ESP32-C6FH4 (QFN32) rev v0.2였다.
+  - 현재 펌웨어는 이 칩에서 빌드되지 않는다. `board=esp32dev`, `HardwareSerial radarSerial(2)`(C6는 HP UART 0·1뿐), 네이티브 USB CDC 미설정 세 가지가 동시에 걸린다.
+  - 보드를 C6로 옮기려면 펌웨어 포팅과 `kConfigSha256` 갱신이 선행되어야 하므로 원래 WROOM-32으로 되돌렸다. 코드는 수정하지 않았다.
+- [x] A단계 통과. 포트 `/dev/cu.usbserial-10` (CH340 `1A86:7523`), 칩 ESP32-D0WD-V3 rev v3.1 Dual Core 240MHz, MAC `cc:7b:5c:f2:1f:ec`, 점유 프로세스 없음.
+- [x] B단계 통과. `pio run` 성공(espressif32 7.0.1, RAM 6.7%, Flash 20.3%), `pio run -t upload` 해시 검증 통과.
+  - 15초 헬스체크 원본: `firmware/esp_wroom32_mr60_monitor/logs/final/2026-08-01_healthcheck_v110_15s.jsonl`.
+  - `firmware_version=safenest-mr60-esp/1.1.0`, `config_hash=db2e2b0b87c093531b7312d09925d987d089c6cb344e166a094b2f41af64f0b2`로 기준과 일치.
+  - 150 레코드, `seq` 결손 0, `checksum_errors`/`parse_errors` 증가 0, UART 프레임 15초에 1,128개(75fps).
+  - `sensor_state`는 150개 전부 `WARMUP`, `error_code=TARGET_WARMUP`. `kWarmupMs=60000` 설계대로이며 FAULT 아님.
+- [ ] C단계 전 확인 필요. 헬스체크 15초 내내 `human_detected_raw=true`였고 거리는 45.92cm(115샘플)와 51.66cm(35샘플) 두 값만 나왔다. 센서 정면 약 0.46~0.52m에 사람 또는 정지 반사체가 있었다는 뜻이므로, 빈 공간 30분을 시작하기 전에 감지 원뿔을 반드시 비워야 한다.

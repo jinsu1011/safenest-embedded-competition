@@ -1092,7 +1092,8 @@ Phase 2B S1의 확정 FAIL(MAE 16.6bpm, bias +14.4bpm)을 뒤집지 않고, 자�
   - 결과: `analysis/hr_sideband/STAGE2_REPORT.md`에 185.598초 단축, 첫 점 회귀 제외, 원본 invalid 1행, Apple Watch 비의료 기준 제한을 명시.
 - [x] Phase 2C-HR 최종 검증 게이트
   - 결과: `git diff --check` PASS, 새 분석기 3개 `py_compile` PASS, 지정 4파일 unittest 19 PASS, 기존 핵심 원본 4종 SHA-256 불변, aggregate manifest 24항목 해시 PASS.
-- [ ] 관련 변경만 커밋하고 `codex/mmwave-phase-integration` push
+- [x] 관련 변경만 커밋하고 `codex/mmwave-phase-integration` push
+  - 결과: Phase 2B/2C 관련 45파일만 `770c4772d3613eba42ebaf3a1085dcd74c409b34`(`analysis: reject MR60 heart sideband hypothesis`)로 커밋해 origin push 완료. 본 체크리스트 상태는 후속 closure 커밋으로 기록한다.
 
 ## 결정 기억
 

@@ -353,6 +353,49 @@ breath_rpm, range_m, quality, signal_source, device_id
 
 ## 11. 바로 시작하는 법
 
+### 11-0. 다른 컴퓨터에서 처음 받는 경우
+
+저장소는 **private**이다. `jinsu1011` 계정으로 로그인돼 있거나 개인 액세스 토큰이 있어야 clone된다.
+
+```bash
+git clone -b codex/mmwave-phase-integration \
+  https://github.com/jinsu1011/safenest-embedded-competition.git
+cd safenest-embedded-competition
+```
+
+작업 브랜치는 `codex/mmwave-phase-integration`이다. `main`이 아니므로 `-b` 옵션을 빠뜨리지 말 것.
+
+**Python 환경 재생성** (`.venv`는 `.gitignore`로 제외돼 저장소에 없다):
+
+```bash
+cd firmware/esp_wroom32_mr60_monitor
+python3 -m venv .venv
+.venv/bin/pip install pyserial rich
+```
+
+단, **`analysis_tools/`의 분석 스크립트는 표준 라이브러리만 쓰므로 venv 없이 `python3`로 바로 돌아간다.**
+pyserial·rich는 실측 캡처(`capture_serial.py`, `breath_pace_capture.py`, `mmwave_dashboard.py`)에만 필요하다.
+
+**저장소에 없어서 따로 챙겨야 하는 것**
+- 한준우 v3 배포본 — `~/Downloads/SafeNest_team_distribution_20260725_v3/`
+  (CSV 작업 #2의 스펙 참고용: `current/walkthrough/P0-6_mmwave_input_adapter.md`,
+   `models/mmwave_sensor_stats_metadata_v0.1.0.json`)
+- ESP + MR60BHA2 실물 (실측 캡처에만 필요)
+
+**OS별 제약**
+| 작업 | macOS | Windows/Linux |
+|------|-------|--------------|
+| 분석 스크립트 (`analysis_tools/`) | ✅ | ✅ |
+| 펌웨어 구현 (PlatformIO) | ✅ | ✅ |
+| CSV 변환·문서 | ✅ | ✅ |
+| 음성 안내 캡처 (`say`/`afplay` 사용) | ✅ | ❌ |
+| 실측 캡처 | 하드웨어 필요 | 하드웨어 필요 |
+
+**하드웨어 없이도 남은 작업 #1(펌웨어 구현), #2(CSV), #3(문서), #4(중복 확인)를 전부 진행할 수 있다.**
+가장 큰 덩어리인 #1이 하드웨어 없이 가능하다.
+
+### 11-1. 하드웨어가 있는 경우 (기존 맥 기준)
+
 ```bash
 cd "/Users/kimjinsu/Documents/임베디드 소프트웨어 경진대회"
 find /dev -maxdepth 1 -name 'cu.usb*' -print          # 포트 확인 (매번 바뀜)

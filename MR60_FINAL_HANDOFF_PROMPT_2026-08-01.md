@@ -91,7 +91,7 @@ git log -3 --oneline --decorate
   - `f28c41166a0da3104c74b207014aae4ff7be508876175f4881eb72bdb94d5164`
 - 전체 증거 manifest: `analysis/final/2026-08-01_mr60_final_validation_manifest.json`
 
-첫 정지 31분 로그 `2026-08-01_occupied_d09_v120_31min.jsonl`에는 불완전 JSON 1줄이 있다. 원본을 수정하지 말고 분석에서만 제외한다. 모든 원본 JSONL은 수정·삭제·이름 변경 금지다.
+전체 `logs/` 전수 감사 결과는 JSONL 68개·154,413줄, 빈 파일 0개다. 파싱 불가 줄은 정확히 2개다. `2026-07-13_empty_desk_collector_v1_30s.jsonl` 1행은 여는 `{`가 없는 최초 부분 수신 줄이고, 첫 정지 31분 실패본 `2026-08-01_occupied_d09_v120_31min.jsonl` 9,000행은 직렬 1줄 손실이다. 둘 다 원본을 수정하지 말고 분석에서만 제외한다. 모든 원본 JSONL은 수정·삭제·이름 변경 금지다.
 
 ## 실제 남은 필수 작업
 

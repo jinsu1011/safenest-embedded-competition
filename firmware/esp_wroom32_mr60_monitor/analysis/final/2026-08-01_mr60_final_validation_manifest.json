@@ -82,6 +82,27 @@
       "phase_estimates_rpm": [12.34, 15.01, 20.01]
     }
   },
+  "file_audit": {
+    "jsonl_files": 68,
+    "total_lines": 154413,
+    "empty_files": 0,
+    "invalid_json_lines": [
+      {
+        "path": "firmware/esp_wroom32_mr60_monitor/logs/baseline/2026-07-13_empty_desk_collector_v1_30s.jsonl",
+        "line": 1,
+        "reason": "initial partial serial line missing opening brace"
+      },
+      {
+        "path": "firmware/esp_wroom32_mr60_monitor/logs/final/2026-08-01_occupied_d09_v120_31min.jsonl",
+        "line": 9000,
+        "reason": "known corrupted serial line; original preserved and excluded from analysis"
+      }
+    ],
+    "analysis_and_csv_json_files": 46,
+    "analysis_and_csv_invalid_json_files": 0,
+    "csv_delivery_v2_manifest_entries_checked": 27,
+    "csv_delivery_v2_issues": 0
+  },
   "limitations": {
     "heart_rate": "UNVERIFIED because no simultaneous external reference device is available",
     "apnea": "UNVERIFIED and must not be inferred from zero, null, absence, or timeout",

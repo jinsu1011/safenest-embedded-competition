@@ -997,3 +997,106 @@
 
 - 수정: `SafeNest_V4_OnDevice_AI/adapters/mr60_esp_adapter.py`, `adapters/run_mr60_serial_adapter.py`, `integrated_node/run_mr60_usb_node.py`, `integrated_node/safenest_risk_engine.py`, 관련 config/tests/docs와 본 진행 기록.
 - 원본 JSONL은 수정·이동·이름 변경하지 않는다. 시작 해시는 최종 manifest와 핸드오프의 고정 SHA-256을 기준으로 재검증한다.
+
+# 2026-08-01 MR60 Phase 2B Apple Watch 심박 탐색 검증
+
+## 목표와 해석 경계
+
+현재 ESP 1.2.0에서 MR60 vendor 심박과 Apple Watch 표시 심박을 동시에 기록해 반복성·절대오차·추종성을 탐색한다. Apple Watch는 의료용 기준기가 아니며, 결과와 관계없이 `heart_verified=false`를 유지하고 위험 판정의 단독 근거로 사용하지 않는다.
+
+## 사전등록 프로토콜
+
+- 정정 이력: 저장소에서 이전 6개 기준 원문을 찾지 못했다는 이유로 안정 상태 5분을 두 번 반복하는 안을 잠시 기록했으나, 이는 사용자와 앞서 합의한 회복 추종 프로토콜을 잘못 덮어쓴 것이므로 측정 전에 철회했다.
+- S1 안정 기준선: 기존 설치 조건(흉부 정면 약 0.9m), 상체 고정·안정 상태 300초. 30초마다 신호 직후 Apple Watch 표시값 10개 기록.
+- 전이: 사용자가 평소 무리 없이 하는 가벼운 활동으로 Watch 심박을 기준선보다 올린다. 활동 중 MR60 정확도는 평가하지 않는다.
+- S2 회복 추종: 활동 직후 같은 위치에 앉아 상체를 고정하고 300초 동안 회복한다. 시작 시점과 이후 30초마다 Watch 표시값을 기록해 MR60이 하강 방향과 시간 변화를 추종하는지 평가한다.
+- S3: 심박 상승 폭이 부족하거나 S1/S2 대조점·통신 품질이 판정 불가일 때만 1회 추가한다.
+- 숨참기·과호흡은 하지 않는다. 센서 firmware와 ESP 임계값도 변경하지 않는다. 활동에 불편이 있으면 즉시 중단하고 해당 세션은 무효로 보존한다.
+
+## 사전등록 6개 판정 게이트
+
+1. 세션 완주: 295초 이상, sensor record 2,950개 이상, Watch 기준점 10개.
+2. 전송 무결성: ESP reboot 0, checksum/parse error 증가 0, sequence 결손률 0.1% 이하.
+3. 재실 안정성: `human_detected_stable=true` 95% 이상.
+4. 심박 가용성: `heart_raw_valid=true` 90% 이상, ±5초 대조 가능 기준점 9/10 이상.
+5. 절대오차: paired MAE 5bpm 이하이며 |error|≤5bpm 비율 80% 이상.
+6. 회복 추종: S2에서 Apple Watch와 MR60의 전체 하강 방향이 일치하고 Pearson r 0.5 이상, max |error| 10bpm 이하. 시간 지연과 각 구간 기울기는 함께 보고한다.
+
+최종 판정은 각 세션의 6개 게이트를 개별 PASS/FAIL로 보고한다. 오프셋 보정 결과는 탐색값으로만 병기하고 채택 판정에는 raw 값을 사용한다.
+
+## 생활 체크리스트
+
+- [x] 기존 Apple Watch 로그·분석 도구 확인
+  - 결과: schema 1.1의 5분 로그 2개 존재. 1차 MAE 14.50bpm, 2차 ±15초 r=-0.35·raw MAE 7.40bpm으로 기존 심박 절대값 폐기 근거이며 ESP 1.2.0 검증을 대체하지 않음.
+- [x] S1 안정 기준선→S2 활동 후 회복 추종(+조건부 S3)과 6개 판정 기준 사전등록
+  - 결과: 안정 상태 반복안은 사용자 지적에 따라 측정 전에 철회하고 기존 회복 하강 추종 합의를 복원함.
+- [x] USB 포트·설치·Watch 기록 준비 확인
+  - 결과: 15초 preflight 150 records, stable presence 100%, 거리 중앙값 91.84cm, firmware 1.2.0/config hash 일치, reboot/checksum/parse 오류 0, heart positive 100%.
+- [x] S1 캡처와 Watch 기준값 기록·분석
+  - 캡처: 301.813초, 3,013 records, cue 10/10, invalid JSON/reboot/checksum/parse 0, sequence 결손 0, stable presence 100%, heart valid 100%.
+  - Apple Watch 기준값: 68/71/75/70/75/73/77/71/81/71bpm. 각 cue ±5초 MR60 중앙값: 86/88/84/83/64/89/96/96/109/81bpm.
+  - 판정: gate 1~4 PASS, gate 5 FAIL. paired 10/10, raw MAE 16.6bpm, bias +14.4bpm, max |error| 28bpm, |error|≤5bpm 0/10, Pearson r=0.413. gate 6은 S2 전까지 N/A.
+  - 결론: 안정 상태 심박 절대값 정확도 FAIL. `heart_verified=false` 유지하며 위험도·심정지·사람 없음의 단독 근거로 사용하지 않음.
+  - 원본 SHA-256: `9bf5fbfedb22cfcf17590cd37c6fd2313eddb9af0c48c9a22905d49726841e40` (`logs/kpi/2026-08-01_heartrate_watch_s1_v120_300s.jsonl`).
+  - host receipt SHA-256: `614db96d9d8acd113dfa38af4111017a2e17c9cd098a43a200de930abdc95e6d`; watch prompt SHA-256: `b593054c3f7a5006c3f01aeb389ddbdd90ba4c8106b5c694d8d7e9598f9958bb`.
+- [x] S2 캡처와 Watch 기준값 기록·분석
+  - 결과: 7점 단축 S2에서 Watch-vendor MAE 20.43bpm, r=−0.1963, max |error| 67bpm으로 recovery gate FAIL.
+- [x] 필요 시 S3 실행 여부 판정
+  - 결과: S2는 단축됐지만 H1 사전등록 회귀와 직접 스펙트럼이 모두 명확히 FAIL하여 판정을 바꾸기 위한 S3는 실시하지 않는다.
+- [x] 결과·원본 SHA-256·제한·`heart_verified=false` 기록
+  - 결과: Phase 2C aggregate manifest 24항목 해시 PASS, 본/attempt02 원본 해시와 185.598초 제한 기록, `heart_verified=false` 유지.
+
+# 2026-08-01 MR60 Phase 2C-HR 심박 측대파 가설 검정
+
+## 목표와 성공 기준
+
+Phase 2B S1의 확정 FAIL(MAE 16.6bpm, bias +14.4bpm)을 뒤집지 않고, 자체 phase 호흡 추정과 raw phase 스펙트럼으로 `f_heart ± f_resp`, `±2f_resp` 측대파 가설을 직접 검정한다. Stage 1은 신규 측정·시리얼 포트 오픈 없이 완료하고, S2는 별도 사용자 승인 후 홀드아웃으로만 사용한다.
+
+## 사전등록 기준
+
+- H1 지지: S1+S2 통합 오차-vs-호흡수 회귀 기울기 0.7~1.3, Pearson r≥0.6.
+- 직접 증거: 선택 피크 및 Watch 기본파 예측 위치와 `±f_resp`, `±2f_resp` 위치의 스펙트럼 강도비가 부호·차수 가설과 일치.
+- +25/+28bpm은 `+2f_resp`, −11bpm은 `−f_resp` 근방 매칭 여부를 별도 판정.
+- 해결: S1로만 파라미터를 고정한 notch의 S2 홀드아웃 MAE≤5 해결, ≤8 부분 해결, 그 외 미해결.
+- notch가 기존 자체 호흡 유효률을 조금이라도 낮추면 해당 파라미터 기각.
+- 어떤 결과에도 `heart_verified=false`; vendor 심박·호흡 고정 오프셋 금지, 결측 보간·전방채움 금지.
+
+## 생활 체크리스트
+
+- [x] Phase 2C-HR 목표·가설·반증 조건·사전등록 기준 수용
+- [x] Stage 1 입력·시간 정렬·phase source 계약 고정
+  - 결과: host receipt/prompt cue 정렬, 직전 30초 causal window, `breath_phase` 자체 FFT, `total_phase` raw source, `heart_phase` 보조 source로 고정.
+- [x] cue별 자체 호흡 추정·회귀·제외율·이상치 매칭
+  - 결과: 10/10 valid, 제외율 0%. error-vs-resp slope 0.340, r=0.117로 S1 예비 기준 FAIL. vendor 오차 sideband 3bpm 매칭 5/10.
+- [x] raw spectrum 대표 구간 3개 이상과 측대파 강도비 산출
+  - 결과: cue 3(+9), cue 5(−11), cue 9(+28) PNG 생성. vendor 오차 차수와 raw 지배피크 차수 동시 일치 0/10.
+- [x] 심박 오염과 호흡 강도/유효성 시간 상관 분석
+  - 결과: |오차|-breath std r=−0.147, sideband/base-breath std r=+0.323, sideband/base-breath peak ratio r=+0.116, firmware breath-valid rate와 r=−0.378. 강한 결합 증거 없음.
+- [x] Stage 1 산출물·manifest·문서·테스트 검증
+  - 결과: `analysis/hr_sideband/`에 scatter, coupling, 대표 spectrum cue 3/5/9, CSV, JSON, Stage 1 보고서와 별도 manifest 생성. manifest 전 항목 SHA-256 일치, `py_compile`/`git diff --check` PASS, 지정 4파일 unittest 19 PASS, 기존 핵심 원본 4개 SHA-256 불변.
+- [x] Stage 1 결론 후 S2 사용자 절차 안내 및 사용자 실행 승인
+  - 결과: 가벼운 활동 후 Watch 125bpm에서 시작을 요청받았으며, 이후에는 추가 운동 없이 자연 회복하도록 안내했다.
+- [x] S2 입실 기준점 및 단축 회복구간 캡처
+  - 결과: 사용자가 17:39:00 KST에 입실과 Watch 135bpm을 알렸고, 인접 receipt `seq=177721`, `host_monotonic_ns=603398075344583`와 함께 t=0으로 고정했다. 본 캡처 4,815패킷 완료 후 attempt02 1,071패킷을 추가 저장했으며 사용자 요청으로 인터럽트해 음성·시리얼을 종료했다. 포트 점유 없음 확인.
+- [x] S2 종료 후 원본·receipt·prompt 무결성 및 패킷 품질 검증
+  - 결과: 본 캡처 raw/receipt/prompt 4,815/4,815/16행, attempt02 1,071/1,071/3행. attempt02와 모든 receipt/prompt는 전 행 표준 JSON PASS. 본 raw는 입실 이전 `seq=175386` 한 행(607행)이 UART 문자열 결손으로 invalid(1/4,815, 0.0208%)이며 원본 불변 유지; 입실 `seq=177721` 이후 본 캡처 구간은 영향 없음. 본 캡처 끝 `seq=179594`→attempt02 시작 `seq=179597` 사이 핸드오프 2패킷 공백을 제한으로 기록한다. 원본 SHA-256은 본 캡처 `c7518086111a4d9c6aef1b6ad517115f3cbb491f368364e07abdf6bb41a0dfc6`, attempt02 `5036ea6200dfd1fd291567ef226b7247da189888a572d76690b061900e2083cb`.
+- [x] S2 Watch 기준값 7개 확정 및 시간 정렬
+  - 결과: `135, 100, 92, 92, 94, 86, 91`을 entry t=0과 기존 prompt 11~16에 정렬했다. 첫 post-entry prompt는 5.606초로 너무 빨라 사전 안내대로 제외했다. 유효 관찰 길이는 185.598초로 계획한 8분보다 짧으므로 단축 S2로 제한을 명시한다.
+- [x] 단축 S2를 이용한 S1+S2 통합 가설 판정
+  - 결과: S1+S2 n=16, error-vs-self-resp slope=0.3625, r=0.1191로 사전등록 기준 둘 다 FAIL. S2 직접 스펙트럼 동일 차수 일치 0/6. H1 기각.
+- [x] S2 회복 추종 및 시간동기 감사
+  - 결과: Watch 135→91(−44), vendor 68→90(+22), MAE 20.43, bias −14.43, max |error| 67, r=−0.1963으로 Phase 2B recovery gate FAIL. ±10초 스캔 최고점이 +10초 경계(r=0.4363)여서 단일 내부 피크 조건 불충족, 보정 미적용.
+- [x] H1 지지 시에만 notch 구현·S2 1회 홀드아웃 평가
+  - 결과: H1 기각으로 Stage 3 notch 구현·평가 금지. vendor 고정 오프셋/스케일 보정도 적용하지 않음.
+- [x] `heart_verified=false` 유지 및 단축 S2 제한 문서화
+  - 결과: `analysis/hr_sideband/STAGE2_REPORT.md`에 185.598초 단축, 첫 점 회귀 제외, 원본 invalid 1행, Apple Watch 비의료 기준 제한을 명시.
+- [x] Phase 2C-HR 최종 검증 게이트
+  - 결과: `git diff --check` PASS, 새 분석기 3개 `py_compile` PASS, 지정 4파일 unittest 19 PASS, 기존 핵심 원본 4종 SHA-256 불변, aggregate manifest 24항목 해시 PASS.
+- [ ] 관련 변경만 커밋하고 `codex/mmwave-phase-integration` push
+
+## 결정 기억
+
+- 직접 raw source는 MR60 `total_phase`; vendor가 분리한 `heart_phase`는 보조 비교로만 사용한다.
+- 자체 호흡 추정은 `breath_phase`의 30초 causal window, 10Hz, 5~40rpm FFT, phase std≥0.05, gap≤0.5초 계약을 재사용한다.
+- cue 정렬은 Phase 2B host monotonic receipt/prompt를 사용하며 각 cue 직전 30초 창을 분석한다.
+- S1의 Watch 범위가 68~81bpm으로 좁으므로 S1 회귀는 예비 증거이며, H1 최종 기준은 사전등록대로 S1+S2 통합에서만 판정한다.

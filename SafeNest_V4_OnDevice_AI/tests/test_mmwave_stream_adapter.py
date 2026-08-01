@@ -25,6 +25,7 @@ class TestMMWaveStreamAdapter(unittest.TestCase):
         self.adapter = MMWaveStreamAdapter(window_samples=300, sample_rate_hz=10.0, max_gap_seconds=0.5)
 
     def test_nan_inf_rejection(self):
+        self.adapter.push_sample(0.1, timestamp_s=0.9)
         res1 = self.adapter.push_sample(np.nan, timestamp_s=1.0)
         self.assertFalse(res1.accepted)
         self.assertEqual(res1.reason, "MMWAVE_VALUE_NAN_OR_INF")
@@ -40,10 +41,13 @@ class TestMMWaveStreamAdapter(unittest.TestCase):
         res_dup = self.adapter.push_sample(0.2, timestamp_s=10.0)
         self.assertFalse(res_dup.accepted)
         self.assertEqual(res_dup.reason, "MMWAVE_TIMESTAMP_NON_MONOTONIC")
+        self.assertEqual(len(self.adapter.buffer), 0)
 
+        self.adapter.push_sample(0.2, timestamp_s=10.0)
         res_rev = self.adapter.push_sample(0.3, timestamp_s=9.5)
         self.assertFalse(res_rev.accepted)
         self.assertEqual(res_rev.reason, "MMWAVE_TIMESTAMP_NON_MONOTONIC")
+        self.assertEqual(len(self.adapter.buffer), 0)
 
     def test_duplicate_timestamp_is_rejected_when_stream_starts_at_zero(self):
         """timestamp 0.0에서 시작하는 세션의 0.0 -> 0.0 중복 거부 검증"""
@@ -89,6 +93,7 @@ class TestMMWaveStreamAdapter(unittest.TestCase):
         self.assertTrue(self.adapter.is_ready())
         current_now = start_ts + 29.9 + 5.0
         self.assertTrue(self.adapter.is_stale(current_time_s=current_now))
+        self.assertEqual(len(self.adapter.buffer), 0)
         self.assertIsNone(self.adapter.get_window(current_time_s=current_now))
 
 

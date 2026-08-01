@@ -15,15 +15,27 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from adapters.mr60_esp_adapter import MR60ESPAdapter
+from integrated_node.run_mr60_usb_node import MR60IntegratedPipeline
 
 
 LOG_ROOT = REPO_ROOT / "firmware" / "esp_wroom32_mr60_monitor" / "logs" / "breath"
 
 
 class TestMR60ESPAdapter(unittest.TestCase):
+    @staticmethod
+    def current_record(overrides: dict | None = None, **keyword_overrides) -> dict:
+        record = {
+            "schema_version": "1.2",
+            "firmware_version": "safenest-mr60-esp/1.2.0",
+            "config_hash": "b817e8bfd5e52b18275626f7b6a9bd60098ea4b108428a5aaf63600dbc987834",
+        }
+        record.update(overrides or {})
+        record.update(keyword_overrides)
+        return record
+
     def test_zero_is_unknown_not_apnea(self) -> None:
         adapter = MR60ESPAdapter()
-        packet = adapter.process({
+        packet = adapter.process(self.current_record({
             "seq": 1, "ts_monotonic_ms": 1000,
             "uart_frame_ok": True, "checksum_ok": True,
             "checksum_errors": 0, "parse_errors": 0,
@@ -31,7 +43,7 @@ class TestMR60ESPAdapter(unittest.TestCase):
             "breath_rate_raw": 0.0, "heart_rate_raw": 0.0,
             "breath_phase": None, "phase_age_ms": 10, "heart_age_ms": 10,
             "sensor_state": "RAW",
-        })
+        }))
         mmwave = packet["mmwave_mr60"]
         self.assertFalse(mmwave["valid"])
         self.assertIsNone(mmwave["breath_rpm"])
@@ -42,7 +54,7 @@ class TestMR60ESPAdapter(unittest.TestCase):
         adapter = MR60ESPAdapter()
         adapter.estimator.timestamps.extend([0.0, 0.1])
         adapter.estimator.values.extend([0.1, 0.2])
-        packet = adapter.process({
+        packet = adapter.process(self.current_record({
             "seq": 1, "ts_monotonic_ms": 1000,
             "uart_frame_ok": True, "checksum_ok": True,
             "checksum_errors": 0, "parse_errors": 0,
@@ -50,7 +62,7 @@ class TestMR60ESPAdapter(unittest.TestCase):
             "breath_rate_raw": 18.0, "heart_rate_raw": 80.0,
             "breath_phase": 0.2, "phase_age_ms": 10, "heart_age_ms": 10,
             "sensor_state": "RAW",
-        })
+        }))
         mmwave = packet["mmwave_mr60"]
         self.assertEqual(mmwave["state"], "UNKNOWN")
         self.assertIsNone(mmwave["breath_rpm"])
@@ -62,7 +74,7 @@ class TestMR60ESPAdapter(unittest.TestCase):
         packet = None
         for index in range(620):
             timestamp_s = index / 10.0
-            packet = adapter.process({
+            packet = adapter.process(self.current_record({
                 "seq": index, "ts_monotonic_ms": int(timestamp_s * 1000),
                 "uart_frame_ok": True, "checksum_ok": True,
                 "checksum_errors": 0, "parse_errors": 0,
@@ -71,7 +83,7 @@ class TestMR60ESPAdapter(unittest.TestCase):
                 "breath_phase": float(np.sin(2.0 * np.pi * 0.25 * timestamp_s)),
                 "heart_phase": 0.1, "phase_age_ms": 10, "heart_age_ms": 10,
                 "sensor_state": "RAW",
-            })
+            }))
         self.assertIsNotNone(packet)
         mmwave = packet["mmwave_mr60"]
         self.assertEqual(mmwave["state"], "VALID")
@@ -87,7 +99,7 @@ class TestMR60ESPAdapter(unittest.TestCase):
         ]
         for target, filename in cases:
             with self.subTest(target=target):
-                adapter = MR60ESPAdapter()
+                adapter = MR60ESPAdapter(strict_provenance=False)
                 estimates = []
                 with (LOG_ROOT / filename).open(encoding="utf-8") as stream:
                     for line in stream:
@@ -100,6 +112,81 @@ class TestMR60ESPAdapter(unittest.TestCase):
                             estimates.append(float(value))
                 self.assertTrue(estimates)
                 self.assertAlmostEqual(float(np.median(estimates)), target, delta=1.0)
+
+    def test_provenance_mismatch_is_fault_and_clears_window(self) -> None:
+        cases = (
+            ("schema_version", "9.9", "MMWAVE_SCHEMA_MISMATCH"),
+            ("firmware_version", "safenest-mr60-esp/9.9.9", "MMWAVE_FIRMWARE_MISMATCH"),
+            ("config_hash", "bad-hash", "MMWAVE_CONFIG_HASH_MISMATCH"),
+        )
+        for field, bad_value, expected_reason in cases:
+            with self.subTest(field=field):
+                adapter = MR60ESPAdapter()
+                adapter.estimator.timestamps.extend([0.0, 0.1])
+                adapter.estimator.values.extend([0.1, 0.2])
+                record = self.current_record(
+                    seq=1, ts_monotonic_ms=1000, human_detected_stable=True,
+                )
+                record[field] = bad_value
+                packet = adapter.process(record)
+                mmwave = packet["mmwave_mr60"]
+                self.assertEqual(mmwave["state"], "FAULT")
+                self.assertEqual(mmwave["fault_reason"], expected_reason)
+                self.assertEqual(mmwave["window_samples"], 0)
+                self.assertFalse(mmwave["heart_verified"])
+                self.assertFalse(mmwave["apnea_verified"])
+
+    def test_timeout_is_explicit_stale_unknown(self) -> None:
+        adapter = MR60ESPAdapter()
+        adapter.estimator.timestamps.extend([0.0, 0.1])
+        adapter.estimator.values.extend([0.1, 0.2])
+        mmwave = adapter.timeout_packet()["mmwave_mr60"]
+        self.assertEqual(mmwave["state"], "UNKNOWN")
+        self.assertTrue(mmwave["stale"])
+        self.assertEqual(mmwave["fault_reason"], "MMWAVE_SERIAL_TIMEOUT")
+        self.assertEqual(mmwave["window_samples"], 0)
+
+    def test_e2e_timeout_clears_integration_buffer_and_degrades_mmwave(self) -> None:
+        pipeline = MR60IntegratedPipeline()
+        stream = pipeline.risk_engine.mmwave_stream_adapter
+        stream.push_sample(0.1, timestamp_s=1.0, presence=1)
+        self.assertEqual(len(stream.buffer), 1)
+        output = pipeline.process_timeout()
+        self.assertEqual(output["integration"]["mmwave_status"], "DEGRADED")
+        self.assertEqual(output["integration"]["buffer_samples"], 0)
+        self.assertEqual(len(stream.buffer), 0)
+        safety = output["integration"]["safety"]
+        self.assertEqual(safety["state"], "UNKNOWN")
+        self.assertEqual(safety["fault_reason"], "MMWAVE_SERIAL_TIMEOUT")
+        self.assertFalse(safety["heart_verified"])
+        self.assertFalse(safety["apnea_verified"])
+
+    def test_e2e_valid_packet_reaches_integration_buffer(self) -> None:
+        pipeline = MR60IntegratedPipeline()
+        output = None
+        for index in range(620):
+            timestamp_s = index / 10.0
+            record = self.current_record({
+                "seq": index, "ts_monotonic_ms": int(timestamp_s * 1000),
+                "uart_frame_ok": True, "checksum_ok": True,
+                "checksum_errors": 0, "parse_errors": 0,
+                "human_detected_raw": True, "human_detected_stable": True,
+                "distance_cm_raw": 90.0, "breath_rate_raw": 19.0,
+                "heart_rate_raw": 78.0,
+                "breath_phase": float(np.sin(2.0 * np.pi * 0.25 * timestamp_s)),
+                "heart_phase": 0.1, "phase_age_ms": 10, "heart_age_ms": 10,
+                "sensor_state": "RAW",
+            })
+            output = pipeline.process_line(json.dumps(record))
+        self.assertIsNotNone(output)
+        mmwave = output["mmwave_mr60"]
+        integration = output["integration"]
+        self.assertEqual(mmwave["state"], "VALID")
+        self.assertEqual(integration["mmwave_status"], "OK")
+        self.assertGreater(integration["buffer_samples"], 0)
+        self.assertFalse(integration["buffer_ready"])
+        self.assertFalse(integration["safety"]["heart_verified"])
+        self.assertFalse(integration["safety"]["apnea_verified"])
 
 
 if __name__ == "__main__":

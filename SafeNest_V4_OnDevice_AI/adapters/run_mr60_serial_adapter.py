@@ -22,6 +22,10 @@ def parse_args() -> argparse.Namespace:
     source.add_argument("--replay", type=Path, help="Recorded ESP JSONL")
     parser.add_argument("--baud", type=int, default=115200)
     parser.add_argument("--config", type=Path)
+    parser.add_argument(
+        "--allow-legacy-provenance", action="store_true",
+        help="Allow archived records without the current ESP schema/firmware/config identifiers",
+    )
     return parser.parse_args()
 
 
@@ -44,7 +48,9 @@ def replay_lines(path: Path):
 
 def main() -> int:
     args = parse_args()
-    adapter = MR60ESPAdapter(args.config)
+    adapter = MR60ESPAdapter(
+        args.config, strict_provenance=not args.allow_legacy_provenance,
+    )
     lines = serial_lines(args.port, args.baud) if args.port else replay_lines(args.replay)
     for line in lines:
         try:

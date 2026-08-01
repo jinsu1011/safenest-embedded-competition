@@ -135,13 +135,15 @@ class PhaseRateEstimator:
 class MR60ESPAdapter:
     """Stateful ESP JSONL adapter for the Raspberry Pi integration layer."""
 
-    def __init__(self, config_path: str | Path | None = None) -> None:
+    def __init__(self, config_path: str | Path | None = None,
+                 strict_provenance: bool = True) -> None:
         if config_path is None:
             config_path = Path(__file__).resolve().parents[1] / "config" / "mmwave_processing.json"
         self.config_path = Path(config_path)
         self.config = json.loads(self.config_path.read_text(encoding="utf-8"))
         canonical = json.dumps(self.config, sort_keys=True, separators=(",", ":")).encode()
         self.config_hash = hashlib.sha256(canonical).hexdigest()[:16]
+        self.strict_provenance = strict_provenance
         self.estimator = PhaseRateEstimator(self.config)
         self.last_sequence: int | None = None
         self.last_checksum_errors: int | None = None
@@ -177,7 +179,9 @@ class MR60ESPAdapter:
                 "stale": reason.endswith("STALE") or "TIMEOUT" in reason,
                 "fault_reason": reason,
                 "window_samples": len(self.estimator.values),
-                "config_hash": self.config_hash,
+                "pi_config_hash": self.config_hash,
+                "esp_schema_version": record.get("schema_version"),
+                "esp_config_hash": record.get("config_hash"),
                 "esp_firmware_version": record.get("firmware_version"),
                 "sensor_firmware_version": record.get("sensor_firmware_version"),
             },
@@ -188,6 +192,19 @@ class MR60ESPAdapter:
         timestamp_s = float(timestamp_ms) / 1000.0 if _finite_number(timestamp_ms) else None
         presence_value = record.get("human_detected_stable", record.get("human_detected_raw"))
         presence = presence_value if isinstance(presence_value, bool) else None
+
+        if self.strict_provenance:
+            provenance_checks = (
+                ("schema_version", "expected_esp_schema_version", "MMWAVE_SCHEMA_MISMATCH"),
+                ("firmware_version", "expected_esp_firmware_version", "MMWAVE_FIRMWARE_MISMATCH"),
+                ("config_hash", "expected_esp_config_hash", "MMWAVE_CONFIG_HASH_MISMATCH"),
+            )
+            for record_key, config_key, reason in provenance_checks:
+                if record.get(record_key) != self.config[config_key]:
+                    self.estimator.reset(reason)
+                    return self._unknown_packet(
+                        record, "FAULT", reason, False, presence, timestamp_s,
+                    )
 
         sequence = record.get("seq")
         if not isinstance(sequence, int) or isinstance(sequence, bool):
@@ -290,7 +307,9 @@ class MR60ESPAdapter:
             "stale": False,
             "fault_reason": None,
             "window_samples": estimate.window_samples,
-            "config_hash": self.config_hash,
+            "pi_config_hash": self.config_hash,
+            "esp_schema_version": record.get("schema_version"),
+            "esp_config_hash": record.get("config_hash"),
             "esp_firmware_version": record.get("firmware_version"),
             "sensor_firmware_version": record.get("sensor_firmware_version"),
         }
@@ -306,6 +325,14 @@ class MR60ESPAdapter:
             self.estimator.reset("MMWAVE_JSON_NOT_OBJECT")
             return self._unknown_packet({}, "FAULT", "MMWAVE_JSON_NOT_OBJECT", False, None, None)
         return self.process(record)
+
+    def timeout_packet(self) -> dict:
+        """Emit an explicit stale packet when the serial source times out."""
+        self.estimator.reset("MMWAVE_SERIAL_TIMEOUT")
+        self.presence_started_s = None
+        return self._unknown_packet(
+            {}, "UNKNOWN", "MMWAVE_SERIAL_TIMEOUT", False, None, None,
+        )
 
     @staticmethod
     def to_json(packet: dict) -> str:

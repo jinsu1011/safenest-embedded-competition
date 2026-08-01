@@ -964,3 +964,34 @@
 `2026-07-26_heartrate_ref_applewatch*.jsonl`과 `2026-07-26_breath_paced_*.jsonl` 중
 인수인계에서 지정한 일부 파일은 실제 2026-08-01 캡처다. 기존 분석·매니페스트 참조를
 깨지 않도록 원본 파일명은 변경하지 않는다.
+# 2026-08-01 MR60 Phase 2 USB JSONL E2E 통합
+
+## 목표와 성공 기준
+
+실제 ESP-WROOM-32 schema 1.2 JSONL을 Pi 통합 노드까지 안전하게 전달하고, 불일치·결측·부재·stale·중복/역행을 숨기지 않으며 최종 게이트 후 관련 변경만 커밋·푸시한다.
+
+## 생활 체크리스트
+
+- [x] 1. 기준 브랜치·작업트리·선행 커밋·관련 코드 확인
+  - 결과: 작업트리는 깨끗하고 `codex/mmwave-phase-integration` HEAD/origin은 `454de765`; 기준 `41af82b` 이후 하드웨어 증거(`c643aba`)와 전수 감사(`454de76`)가 이미 원격 반영됨.
+- [x] 2. E2E 요구 조건별 보장/누락 추적 및 원본 로그 해시 기준 고정
+  - 결과: 핵심 원본 4개 SHA-256이 handoff/manifest와 일치. strict provenance와 invalid-packet integration buffer reset이 누락된 핵심 계약으로 확정됨.
+- [x] 3. 누락 통합 로직과 테스트 최소 구현
+  - 결과: schema/firmware/ESP config hash strict 검사, timeout stale packet, 실제 통합 엔진 bridge, 모든 invalid mmWave 입력의 통합 buffer 초기화 및 안전 metadata를 구현. 표적 14 tests PASS.
+- [x] 4. 포트 단독 점유 확인 후 실제 USB 장치 E2E 검증
+  - 결과: `/dev/cu.usbserial-10` 점유 없음 확인 후 실제 schema 1.2 스트림 수신. 첫 부분 줄은 `MMWAVE_JSON_INVALID`로 비은폐, 이후 firmware/config hash 일치와 표준 패킷 변환 확인. 60초 끝에도 자연호흡 창은 `MMWAVE_WINDOW_NOT_READY`(10 samples)로 mmWave DEGRADED/buffer 0 유지; 동일 물리조건 반복 금지. 합성 15rpm E2E에서 VALID와 통합 buffer 수신을 별도 PASS.
+- [x] 5. 최종 게이트(`git diff --check`, build, compile, unittest 4파일)
+  - 결과: diff-check/py_compile PASS, PlatformIO RAM 32,356B(9.9%)·Flash 268,765B(20.5%), 지정 4파일 unittest 19 PASS. 임시 venv의 TFLite runtime 부재는 기존 fallback 경고이며 표적 계약 테스트는 PASS.
+- [ ] 6. 원본 해시·diff 범위 재검증 후 관련 변경 커밋·푸시
+- [ ] 7. 헤더 전달용 5절 통합 보고
+
+## 현재 상태와 결정
+
+- `run_mr60_serial_adapter.py`는 USB/replay JSONL을 `mmwave_mr60` stdout으로 변환하지만 `SafeNestRiskEngine` 소비 경로와 직접 연결되지 않는다.
+- `MR60ESPAdapter`는 sequence/UART/presence/distance/phase 안전 게이트는 구현했으나 ESP schema/firmware/config hash 기대값 검증이 없어 불일치를 현재 숨긴다.
+- 최소 변경 원칙으로 ESP 원본 스키마·임계값은 유지하고, 어댑터 provenance 검증과 통합 엔진 bridge/API 및 회귀 테스트만 추가한다.
+
+## 파일/결정 기억
+
+- 수정: `SafeNest_V4_OnDevice_AI/adapters/mr60_esp_adapter.py`, `adapters/run_mr60_serial_adapter.py`, `integrated_node/run_mr60_usb_node.py`, `integrated_node/safenest_risk_engine.py`, 관련 config/tests/docs와 본 진행 기록.
+- 원본 JSONL은 수정·이동·이름 변경하지 않는다. 시작 해시는 최종 manifest와 핸드오프의 고정 SHA-256을 기준으로 재검증한다.

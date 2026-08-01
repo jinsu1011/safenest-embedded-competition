@@ -162,6 +162,13 @@ class SafeNestRiskEngine:
             sample_ts = time.time()
         q_gate = self.calculate_quality_gate(packet)
 
+        # Any invalid MR60 packet represents a hard continuity boundary. Clear
+        # the integration buffer for absence, stale data, provenance faults,
+        # timestamp faults, zero/null phase, and UART/parse failures alike.
+        mmwave_input = packet.get("mmwave_mr60", {})
+        if isinstance(mmwave_input, dict) and q_gate["mmwave"] == 0.0:
+            self.mmwave_stream_adapter.clear()
+
         # ⭐ 빈 패킷 / 센서 미수신 특수 검사
         all_missing = (q_gate["thermal"] == 0.0 and q_gate["mmwave"] == 0.0 and q_gate["co2"] <= 0.2 and q_gate["pir"] <= 0.5)
         if all_missing or len(packet) == 0:

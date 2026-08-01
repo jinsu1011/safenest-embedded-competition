@@ -54,16 +54,19 @@ class MMWaveStreamAdapter:
         self.presence = 1
 
         if resp_phase_val is None or not np.isfinite(resp_phase_val):
+            self.clear()
             return PushResult(accepted=False, reason="MMWAVE_VALUE_NAN_OR_INF", buffer_size=len(self.buffer))
 
         ts = timestamp_s if timestamp_s is not None else time.time()
         if not np.isfinite(ts):
+            self.clear()
             return PushResult(accepted=False, reason="MMWAVE_TIMESTAMP_NON_FINITE", buffer_size=len(self.buffer))
 
         # timestamp 0.0 경계 정밀 검사
         if self.last_timestamp is not None:
             dt = ts - self.last_timestamp
             if dt <= 0:
+                self.clear()
                 return PushResult(accepted=False, reason="MMWAVE_TIMESTAMP_NON_MONOTONIC", buffer_size=len(self.buffer))
             elif dt > self.max_gap_seconds:
                 self.clear()
@@ -86,7 +89,10 @@ class MMWaveStreamAdapter:
             return True
         now = current_time_s if current_time_s is not None else time.time()
         age_ms = (now - self.last_push_time) * 1000.0
-        return age_ms > max_age_ms or self.presence == 0
+        stale = age_ms > max_age_ms or self.presence == 0
+        if stale:
+            self.clear()
+        return stale
 
     def get_window(self, current_time_s: float | None = None) -> np.ndarray | None:
         if not self.is_ready() or self.is_stale(current_time_s=current_time_s):

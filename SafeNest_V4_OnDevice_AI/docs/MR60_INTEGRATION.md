@@ -50,10 +50,23 @@ python3 -m pip install -r requirements-pi.txt
 python3 adapters/run_mr60_serial_adapter.py --port /dev/ttyUSB0
 ```
 
+실제 ESP 입력을 통합 위험 엔진까지 전달하고 buffer·안전 metadata를 함께 확인:
+
+```bash
+python3 integrated_node/run_mr60_usb_node.py --port /dev/ttyUSB0
+```
+
+이 경로는 schema `1.2`, ESP firmware `safenest-mr60-esp/1.2.0`, ESP config
+SHA-256을 엄격히 검사한다. 불일치·serial timeout·잘못된 JSON·timestamp
+중복/역행·presence=false·0/null phase는 `UNKNOWN/FAULT`와 `DEGRADED`로
+노출하고 통합 window를 비운다. 보존된 구형 로그만 재생할 때에는
+`--allow-legacy-provenance`를 명시한다.
+
 기존 실측 로그를 장비 없이 재생:
 
 ```bash
 python3 adapters/run_mr60_serial_adapter.py \
+  --allow-legacy-provenance \
   --replay ../firmware/esp_wroom32_mr60_monitor/logs/breath/2026-07-28_breath_paced_15rpm_explicit_full_v3.jsonl
 ```
 

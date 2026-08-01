@@ -4,11 +4,11 @@
 
 namespace safenest::mmwave_config {
 
-constexpr char kSchemaVersion[] = "1.1";
+constexpr char kSchemaVersion[] = "1.2";
 constexpr char kDeviceId[] = "safenest-node-01";
-constexpr char kEspFirmwareVersion[] = "safenest-mr60-esp/1.1.0";
+constexpr char kEspFirmwareVersion[] = "safenest-mr60-esp/1.2.0";
 constexpr char kConfigSha256[] =
-    "db2e2b0b87c093531b7312d09925d987d089c6cb344e166a094b2f41af64f0b2";
+    "b817e8bfd5e52b18275626f7b6a9bd60098ea4b108428a5aaf63600dbc987834";
 
 constexpr uint32_t kUsbBaud = 115200;
 constexpr uint32_t kRadarBaud = 115200;
@@ -26,6 +26,12 @@ constexpr uint32_t kDistanceMaxAgeMs = 1000;
 constexpr uint32_t kVitalMaxAgeMs = 2000;
 constexpr float kDistanceMinCm = 40.0F;
 constexpr float kDistanceMaxCm = 150.0F;
+constexpr uint32_t kBreathWindowMs = 30000;
+constexpr size_t kBreathWindowCapacity = 640;
+constexpr float kBreathHysteresisFraction = 0.15F;
+constexpr float kBreathMinPhaseStd = 0.2F;
+constexpr size_t kBreathMinCrossings = 2;
+constexpr uint32_t kWindowReadyToleranceMs = 200;
 
 static_assert(kPresenceWindowSamples <= 8, "presence history uses uint8_t");
 static_assert(kPresenceRequiredTrue <= kPresenceWindowSamples,

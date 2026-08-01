@@ -55,7 +55,105 @@ uint32_t phasesUpdatedMs = 0;
 uint32_t firmwareRaw = 0;
 bool firmwareKnown = false;
 
-enum class SensorState { kWarmup, kValid, kUnknown, kFault };
+struct TimedSample {
+  uint32_t timestampMs;
+  float value;
+};
+
+TimedSample breathWindow[kBreathWindowCapacity];
+TimedSample distanceWindow[kBreathWindowCapacity];
+size_t breathWindowStart = 0;
+size_t breathWindowCount = 0;
+size_t distanceWindowStart = 0;
+size_t distanceWindowCount = 0;
+uint32_t lastBreathWindowSampleMs = 0;
+uint32_t lastDistanceWindowSampleMs = 0;
+
+struct WindowStats {
+  bool ready;
+  float stddev;
+  float rate;
+  size_t crossings;
+};
+
+enum class SensorState { kWarmup, kValid, kDegraded, kUnknown, kFault };
+
+void appendSample(TimedSample* window, size_t* start, size_t* count,
+                  uint32_t timestampMs, float value) {
+  while (*count > 0 &&
+         timestampMs - window[*start].timestampMs > kBreathWindowMs) {
+    *start = (*start + 1) % kBreathWindowCapacity;
+    --(*count);
+  }
+  if (*count == kBreathWindowCapacity) {
+    *start = (*start + 1) % kBreathWindowCapacity;
+    --(*count);
+  }
+  const size_t end = (*start + *count) % kBreathWindowCapacity;
+  window[end] = {timestampMs, value};
+  ++(*count);
+}
+
+bool windowReady(const TimedSample* window, size_t start, size_t count) {
+  if (count < 2) return false;
+  const size_t last = (start + count - 1) % kBreathWindowCapacity;
+  return window[last].timestampMs - window[start].timestampMs >=
+         kBreathWindowMs - kWindowReadyToleranceMs;
+}
+
+float windowStddev(const TimedSample* window, size_t start, size_t count) {
+  if (count == 0) return NAN;
+  double sum = 0.0;
+  for (size_t i = 0; i < count; ++i) {
+    sum += window[(start + i) % kBreathWindowCapacity].value;
+  }
+  const double mean = sum / count;
+  double squared = 0.0;
+  for (size_t i = 0; i < count; ++i) {
+    const double delta =
+        window[(start + i) % kBreathWindowCapacity].value - mean;
+    squared += delta * delta;
+  }
+  return static_cast<float>(sqrt(squared / count));
+}
+
+WindowStats breathStats() {
+  WindowStats result = {false, NAN, NAN, 0};
+  result.ready = windowReady(breathWindow, breathWindowStart, breathWindowCount);
+  if (!result.ready) return result;
+  result.stddev =
+      windowStddev(breathWindow, breathWindowStart, breathWindowCount);
+  if (!std::isfinite(result.stddev) || result.stddev == 0.0F) return result;
+
+  double sum = 0.0;
+  for (size_t i = 0; i < breathWindowCount; ++i) {
+    sum += breathWindow[(breathWindowStart + i) % kBreathWindowCapacity].value;
+  }
+  const float mean = static_cast<float>(sum / breathWindowCount);
+  const float hysteresis = kBreathHysteresisFraction * result.stddev;
+  int8_t state = 0;
+  uint32_t firstCrossingMs = 0;
+  uint32_t lastCrossingMs = 0;
+  for (size_t i = 0; i < breathWindowCount; ++i) {
+    const TimedSample& sample =
+        breathWindow[(breathWindowStart + i) % kBreathWindowCapacity];
+    const float centered = sample.value - mean;
+    if (state <= 0 && centered > hysteresis) {
+      state = 1;
+      if (result.crossings == 0) firstCrossingMs = sample.timestampMs;
+      lastCrossingMs = sample.timestampMs;
+      ++result.crossings;
+    } else if (state >= 0 && centered < -hysteresis) {
+      state = -1;
+    }
+  }
+  if (result.crossings >= kBreathMinCrossings &&
+      lastCrossingMs > firstCrossingMs) {
+    result.rate = 60000.0F * static_cast<float>(result.crossings - 1) /
+                  static_cast<float>(lastCrossingMs - firstCrossingMs);
+  }
+  return result;
+}
 
 uint8_t checksum(const uint8_t* data, size_t length) {
   uint8_t value = 0;
@@ -134,7 +232,9 @@ void printAge(bool known, uint32_t updatedAt, uint32_t now) {
   else Serial.print("null");
 }
 
-SensorState sensorState(uint32_t now, const char** errorCode) {
+SensorState sensorState(uint32_t now, bool heartRawValid,
+                        const WindowStats& breath, float distanceStd,
+                        bool distanceWindowReady, const char** errorCode) {
   const bool uartTimedOut =
       (lastValidFrameMs == 0 && now > kFrameTimeoutMs) ||
       (lastValidFrameMs != 0 && now - lastValidFrameMs > kFrameTimeoutMs);
@@ -178,6 +278,22 @@ SensorState sensorState(uint32_t now, const char** errorCode) {
     *errorCode = "TARGET_WARMUP";
     return SensorState::kWarmup;
   }
+  if (!breath.ready) {
+    *errorCode = "BREATH_WINDOW_NOT_READY";
+    return SensorState::kUnknown;
+  }
+  if (distanceWindowReady && distanceStd == 0.0F && !heartRawValid) {
+    *errorCode = "LOCK_LOSS_FREEZE";
+    return SensorState::kDegraded;
+  }
+  if (breath.stddev < kBreathMinPhaseStd) {
+    *errorCode = "BREATH_PHASE_LOW_AMPLITUDE";
+    return SensorState::kDegraded;
+  }
+  if (!std::isfinite(breath.rate)) {
+    *errorCode = "BREATH_RATE_UNAVAILABLE";
+    return SensorState::kDegraded;
+  }
   *errorCode = nullptr;
   return SensorState::kValid;
 }
@@ -186,21 +302,36 @@ const char* stateName(SensorState state) {
   switch (state) {
     case SensorState::kWarmup: return "WARMUP";
     case SensorState::kValid: return "VALID";
+    case SensorState::kDegraded: return "DEGRADED";
     case SensorState::kFault: return "FAULT";
     default: return "UNKNOWN";
   }
 }
 
 void emitTelemetry(uint32_t now) {
-  const char* errorCode = nullptr;
-  const SensorState state = sensorState(now, &errorCode);
-  const bool communicationOk = state != SensorState::kFault;
   const bool breathRawValid =
       std::isfinite(breathRaw) && breathRaw > 0.0F &&
       fresh(breathUpdatedMs, kVitalMaxAgeMs, now);
   const bool heartRawValid =
       std::isfinite(heartRaw) && heartRaw > 0.0F &&
       fresh(heartUpdatedMs, kVitalMaxAgeMs, now);
+  const WindowStats breath = breathStats();
+  const bool distanceStatsReady = windowReady(
+      distanceWindow, distanceWindowStart, distanceWindowCount);
+  const float distanceStd = distanceStatsReady
+                                ? windowStddev(distanceWindow,
+                                               distanceWindowStart,
+                                               distanceWindowCount)
+                                : NAN;
+  const bool freezeDetected = distanceStatsReady && distanceStd == 0.0F &&
+                              !heartRawValid;
+  const bool filteredBreathValid = breath.ready &&
+      std::isfinite(breath.rate) && breath.stddev >= kBreathMinPhaseStd &&
+      !freezeDetected;
+  const char* errorCode = nullptr;
+  const SensorState state = sensorState(now, heartRawValid, breath, distanceStd,
+                                        distanceStatsReady, &errorCode);
+  const bool communicationOk = state != SensorState::kFault;
 
   Serial.printf(
       "{\"schema_version\":\"%s\",\"device_id\":\"%s\","
@@ -225,13 +356,23 @@ void emitTelemetry(uint32_t now) {
   printAge(std::isfinite(distanceRaw), distanceUpdatedMs, now);
   Serial.print(",\"breath_rate_raw\":");
   printNullableFloat(breathRaw);
-  Serial.print(",\"breath_rate_filtered\":null,\"breath_raw_valid\":");
+  Serial.print(",\"breath_rate_filtered\":");
+  printNullableFloat(filteredBreathValid ? breath.rate : NAN);
+  Serial.print(",\"breath_filtered_valid\":");
+  Serial.print(filteredBreathValid ? "true" : "false");
+  Serial.print(",\"breath_phase_std\":");
+  printNullableFloat(breath.stddev);
+  Serial.print(",\"breath_window_ready\":");
+  Serial.print(breath.ready ? "true" : "false");
+  Serial.print(",\"breath_rate_raw_trusted\":false,\"breath_raw_valid\":");
   Serial.print(breathRawValid ? "true" : "false");
   Serial.print(",\"breath_age_ms\":");
   printAge(std::isfinite(breathRaw), breathUpdatedMs, now);
   Serial.print(",\"heart_rate_raw\":");
   printNullableFloat(heartRaw);
   Serial.print(",\"heart_raw_valid\":");
+  Serial.print(heartRawValid ? "true" : "false");
+  Serial.print(",\"vital_presence_detected\":");
   Serial.print(heartRawValid ? "true" : "false");
   Serial.print(",\"heart_verified\":false,\"heart_age_ms\":");
   printAge(std::isfinite(heartRaw), heartUpdatedMs, now);
@@ -243,6 +384,10 @@ void emitTelemetry(uint32_t now) {
   printNullableFloat(heartPhase);
   Serial.print(",\"phase_age_ms\":");
   printAge(std::isfinite(totalPhase), phasesUpdatedMs, now);
+  Serial.print(",\"distance_std_cm\":");
+  printNullableFloat(distanceStd);
+  Serial.print(",\"freeze_detected\":");
+  Serial.print(freezeDetected ? "true" : "false");
   Serial.printf(",\"firmware_version\":\"%s\",\"sensor_firmware_version\":",
                 kEspFirmwareVersion);
   if (firmwareKnown) Serial.printf("\"0x%08lX\"", static_cast<unsigned long>(firmwareRaw));
@@ -267,6 +412,12 @@ bool handleValidFrame(uint16_t type, const uint8_t* data, size_t dataLength,
       breathPhase = breath;
       heartPhase = heart;
       phasesUpdatedMs = now;
+      if (breathWindowCount == 0 ||
+          now - lastBreathWindowSampleMs >= kTelemetryIntervalMs) {
+        appendSample(breathWindow, &breathWindowStart, &breathWindowCount, now,
+                     breathPhase);
+        lastBreathWindowSampleMs = now;
+      }
       return true;
     }
     case kTypeBreath: {
@@ -288,6 +439,13 @@ bool handleValidFrame(uint16_t type, const uint8_t* data, size_t dataLength,
       distanceRaw = readU32(data) ? readFloat(data + 4) : NAN;
       if (!std::isfinite(distanceRaw)) distanceRaw = NAN;
       distanceUpdatedMs = now;
+      if (std::isfinite(distanceRaw) &&
+          (distanceWindowCount == 0 ||
+           now - lastDistanceWindowSampleMs >= kTelemetryIntervalMs)) {
+        appendSample(distanceWindow, &distanceWindowStart, &distanceWindowCount,
+                     now, distanceRaw);
+        lastDistanceWindowSampleMs = now;
+      }
       return true;
     case kTypePresence:
       if (dataLength < 1) return false;

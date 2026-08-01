@@ -867,3 +867,42 @@
   - 150 레코드, `seq` 결손 0, `checksum_errors`/`parse_errors` 증가 0, UART 프레임 15초에 1,128개(75fps).
   - `sensor_state`는 150개 전부 `WARMUP`, `error_code=TARGET_WARMUP`. `kWarmupMs=60000` 설계대로이며 FAULT 아님.
 - [ ] C단계 전 확인 필요. 헬스체크 15초 내내 `human_detected_raw=true`였고 거리는 45.92cm(115샘플)와 51.66cm(35샘플) 두 값만 나왔다. 센서 정면 약 0.46~0.52m에 사람 또는 정지 반사체가 있었다는 뜻이므로, 빈 공간 30분을 시작하기 전에 감지 원뿔을 반드시 비워야 한다.
+
+### 2026-08-01 mmWave 스키마 1.2 및 CSV 배치 v2
+
+#### 작업 체크리스트
+
+- [x] ESP `breath_phase` 30초 원형 창과 영교차+15% 히스테리시스 호흡수 구현
+  - 위상 표준편차 0.2 미만은 `BREATH_PHASE_LOW_AMPLITUDE/DEGRADED`로 두고 `breath_rate_filtered=null`을 출력한다.
+  - 거리 30초 창 `std=0`과 심박신호 무효가 동시에 성립할 때만 `LOCK_LOSS_FREEZE/DEGRADED`로 둔다.
+  - vendor `breath_rate_raw`는 보존하되 `breath_rate_raw_trusted=false`, 심박은 `vital_presence_detected` 단방향 증거로 명시했다.
+- [x] 텔레메트리 스키마 1.2, ESP 펌웨어 1.2.0 및 설정 SHA-256 갱신
+  - 설정 SHA-256: `b817e8bfd5e52b18275626f7b6a9bd60098ea4b108428a5aaf63600dbc987834`.
+  - PlatformIO 빌드 성공: RAM 9.9%(32,356B), Flash 20.5%(268,765B).
+- [x] CSV 변환기에 반복 가능한 `--matrix-jsonl`, `--breath-jsonl` 입력 추가
+  - cue와 ESP 시계는 변환하지 않고 파일 기록 순서에서 `stage=measurement` 범위를 선택한다.
+  - 11개 열 순서, 원본 `breath_phase`, 실측 timestamp, 세션 분리 규칙을 유지한다.
+- [x] 한준우 전달 배치 v2 생성
+  - 위치: `firmware/esp_wroom32_mr60_monitor/csv/2026-07-26_han_junwoo_delivery_v2/`.
+  - NORMAL_D06/D09/D12/D15 4세션, 호흡 성공·실패 사례 5세션, 총 9개 CSV와 원본 JSONL 사본을 포함한다.
+  - `manifest.json`에 원본·사본·CSV SHA-256, 세션 진단, 용도 해석을 기록하고 `DELIVERY_NOTES.md`에 팀 전달 주의사항을 정리했다.
+- [x] 2026-07-28 호흡 로그 중복 판정
+  - 12rpm explicit attempt03은 30초 영교차 평균 12.36rpm, ±2rpm 99.3%로 기존 실제 6rpm 사고 로그를 대체하는 유효 기준이다.
+  - 15rpm explicit full v3은 평균 15.25rpm, ±2rpm 100%로 07-26 성공본과 동등하다. 배치 중복을 피하려고 기존 07-26 성공본 하나만 포함했다.
+  - 20rpm explicit full v2는 평균 17.99rpm, ±2rpm 51.7%라 유효 대체본이 아니다. 07-26 deep 성공본(20.17rpm, 100%)을 기준으로 유지한다.
+- [x] 스키마 1.2 실제 업로드 및 75초 통신·스키마 헬스체크
+  - ESP32-D0WD-V3 rev3.1에 업로드했고 각 플래시 구간의 해시 검증이 통과했다. MR60 센서 펌웨어는 변경하지 않았다.
+  - 원본: `logs/final/2026-08-01_healthcheck_v120_75s.jsonl`, SHA-256 `eb4c57a16ea00d6b4314364f298cac2420a0f9cf3023eed15d02dcdd95835382`.
+  - 749패킷/74.848초, schema 1.2·ESP 1.2.0·config hash 일치, checksum/parse 오류 증가 0.
+  - 상태는 WARMUP 288, VALID 266, DEGRADED 195였다. DEGRADED 전부가 `BREATH_PHASE_LOW_AMPLITUDE`였고 freeze 오탐은 0건이다.
+  - 필터 유효 517패킷의 중앙값은 14.94rpm이었다. 이 캡처는 통신·스키마 검증이며 피험자 기준 호흡이 없으므로 정확도 KPI 자료로 사용하지 않는다.
+- [x] Pi mmWave 어댑터 schema 1.2 회귀 테스트
+  - 전역 Python에는 패키지를 설치하지 않았다. `/opt/anaconda3`의 기존 numpy 1.26.4/pandas 2.2.2를 사용하는 `/private/tmp/safenest-pi-regression-venv` 임시 환경에서 실행했다.
+  - 명령: `python -m unittest SafeNest_V4_OnDevice_AI/tests/test_mr60_esp_adapter.py SafeNest_V4_OnDevice_AI/tests/test_mmwave_stream_adapter.py SafeNest_V4_OnDevice_AI/tests/test_mmwave_input_adapter.py -v`.
+  - 결과: 13개 테스트 전부 통과. `0/null`·부재·NaN/Inf·timestamp 중복/역행·gap·stale 안전 게이트와 실제 페이싱 로그 재생이 정상이며, schema 1.2 호환을 위한 추가 Pi 코드 수정은 필요 없었다.
+
+#### 파일명 날짜 주의
+
+`2026-07-26_heartrate_ref_applewatch*.jsonl`과 `2026-07-26_breath_paced_*.jsonl` 중
+인수인계에서 지정한 일부 파일은 실제 2026-08-01 캡처다. 기존 분석·매니페스트 참조를
+깨지 않도록 원본 파일명은 변경하지 않는다.

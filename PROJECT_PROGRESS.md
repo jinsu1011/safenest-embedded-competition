@@ -982,8 +982,10 @@
   - 결과: `/dev/cu.usbserial-10` 점유 없음 확인 후 실제 schema 1.2 스트림 수신. 첫 부분 줄은 `MMWAVE_JSON_INVALID`로 비은폐, 이후 firmware/config hash 일치와 표준 패킷 변환 확인. 60초 끝에도 자연호흡 창은 `MMWAVE_WINDOW_NOT_READY`(10 samples)로 mmWave DEGRADED/buffer 0 유지; 동일 물리조건 반복 금지. 합성 15rpm E2E에서 VALID와 통합 buffer 수신을 별도 PASS.
 - [x] 5. 최종 게이트(`git diff --check`, build, compile, unittest 4파일)
   - 결과: diff-check/py_compile PASS, PlatformIO RAM 32,356B(9.9%)·Flash 268,765B(20.5%), 지정 4파일 unittest 19 PASS. 임시 venv의 TFLite runtime 부재는 기존 fallback 경고이며 표적 계약 테스트는 PASS.
-- [ ] 6. 원본 해시·diff 범위 재검증 후 관련 변경 커밋·푸시
-- [ ] 7. 헤더 전달용 5절 통합 보고
+- [x] 6. 원본 해시·diff 범위 재검증 후 관련 변경 커밋·푸시
+  - 결과: 원본 logs/CSV 변경 0, 핵심 원본 4개 SHA-256 일치. 관련 10파일만 `829f0f9`로 커밋해 `origin/codex/mmwave-phase-integration` push 성공.
+- [x] 7. 헤더 전달용 5절 통합 보고
+  - 결과: 완료/제한/남은 작업/검증 증거/커밋·푸시와 핵심 명령 출력 요지를 최종 회신에 정리.
 
 ## 현재 상태와 결정
 

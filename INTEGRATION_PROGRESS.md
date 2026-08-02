@@ -1,0 +1,78 @@
+# SafeNest 구조 통합 진행 기록
+
+## 목표와 성공 기준
+
+원본 브랜치와 바이너리 자산의 기여 이력을 보존하면서 기능 중심 저장소 구조로 통합하고, 모든 경로 및 테스트를 검증한 뒤 전용 브랜치에 재현 가능한 커밋을 남긴다.
+
+## 복구 지점 (2026-08-02, Asia/Seoul)
+
+- 작업 시작 HEAD: `codex/mmwave-phase-integration` / `b0d3c95ef9c890779909a0ccef35daf0db9185ae`
+- fetch 전 로컬 `main`: `729c713b3c3d826a2e8444cb984994635c9a55f0`
+- fetch 전 `origin/main`: `34ae6c53f8be4e7f3f8cc3f5efd9ba8551ac5521`
+- fetch 후 통합 기준 `origin/main`: `01a4acb8c4b059fa15a38603f12a2b4682980362`
+- `origin/Ondevice_AI`: `d97df3e5a0110daa7eb64e868919cedc2256133e`
+- fetch 전 `origin/3D_Print`: `df2b12f93753da4b10541b15fe94176da171fe72`
+- fetch 후 `origin/3D_Print`: `35c1e1f511e62c65fb39460a49bd89b620d86daf`
+- 통합 브랜치: `refactor/integrated-v4-architecture` (기준 `origin/main`)
+
+## 생활 체크리스트
+
+- [x] Git 상태·브랜치·자산 1차 조사 — 작업 시작 시 추적 파일 변경 없음; 최신 ref와 분기 관계 확인.
+- [x] 기존 작업 보호 및 fetch — 기존 mmWave 작업은 `b0d3c95`에서 복구 가능하며 fetch 성공.
+- [x] 통합 브랜치 생성 — 최신 `origin/main`에서 전용 브랜치 생성.
+- [x] 브랜치별 트리·참조 비교 및 이동 매핑 확정 — 아래 원본 선택과 결손을 확인.
+- [x] 기능 중심 구조 통합 및 상위 디렉터리 README 작성 — 9개 최상위 디렉터리 모두 필수 11항목 확인; STL 4종, TFLite 3종, NPZ 2종 배치 확인.
+- [x] 코드·설정·모델·문서 경로 전수 수정 — `src.*` import, 저장소 루트 기준 모델·데이터·설정 경로와 문서 실행 경로 적용.
+- [x] 정적 검사와 Python 단위·통합 회귀 테스트 — 아래 검증 증거 모두 통과.
+- [x] 루트 README 기여·커밋·PR 절차 추가 및 최종 감사 — 브랜치 규칙, 개인 커밋 순서, PR 정의·생성·검토 절차 추가; Markdown link 0건 오류.
+- [ ] 검증된 변경을 통합 브랜치에 커밋.
+- [ ] 작업 브랜치 push 및 `main` 대상 draft PR 생성·검증.
+
+## 현재 상태와 결정
+
+- 최신 `origin/main`은 팀원별 디렉터리로 병합되어 있어 최종 목표 구조가 아니다.
+- 작업 시작 브랜치의 `firmware/`, `SafeNest_V4_OnDevice_AI/`, `pi/`는 브랜치 전환 뒤 미추적으로 보이지만 원본 커밋에 보존되어 있다.
+- `tmp/`는 작업 범위 밖의 사용자 자료로 취급하며 열거나 이동·삭제하지 않는다.
+- 1차 이동 명령은 `integrated_node/*`가 미추적 `__pycache__`까지 확장되어 중단됐다. 앞선 `sensors`, `adapters`, `inference`, `risk/*.py` 이동은 정상 반영됐고 파일 손실은 없다. 이후 이동은 추적 파일을 명시해 수행한다.
+- 팀원별 사본 제거 전 tree diff를 검증했다. `jinsu1011`에서 최신 mmWave 끝점으로 삭제는 없고 134개 추가·16개 개선, `sheepmeat` 고유 2개는 최신 README/보관 JSON으로 승계, `yuname121`의 차이는 최신 CAD 4종으로 승계된다.
+
+## 다음 단계
+
+팀원별 디렉터리, 원격 브랜치 끝점, mmWave 통합 브랜치의 파일을 내용 해시와 참조 관계로 비교해 이동 표를 확정한다.
+
+## 확정된 원본 선택 및 이동 표
+
+| 기능 영역 | 채택 원본 | 최종 위치 | 판단 근거 |
+|---|---|---|---|
+| MCU 펌웨어·측정·분석 | `codex/mmwave-phase-integration` (`b0d3c95`)의 `firmware/` | `firmware/` | `origin/main:jinsu1011/firmware`보다 134개 파일의 추가/수정이 있음 |
+| V4 AI 기본 구현 | `origin/Ondevice_AI` 계보 | `src/`, `models/`, `datasets/`, `config/`, `tests/` | V4 원저작 브랜치이며 74개 테스트를 포함 |
+| MR60 AI 연동 보강 | `b0d3c95`의 `SafeNest_V4_OnDevice_AI/` | 위 기능별 디렉터리 | V4 이후 9개 연동 파일, 290줄 추가 및 테스트 보강 |
+| Legacy 위험 엔진 | `b0d3c95:pi/` | `archive/legacy_prototypes/pi/` | 삭제하지 않고 비교 가능한 상태로 격리 |
+| CAD 4종 | `origin/3D_Print` (`35c1e1f`) | `hardware/3d_print/` | 최신 브랜치 파일이며 현재 팀원별 사본과 blob이 다름 |
+| 운용·연구 문서 | `b0d3c95`의 루트 문서 및 V4 문서 | `docs/` | 가장 최신 mmWave 운영 이력 포함 |
+
+### 확인된 결손
+
+- 전체 접근 가능한 Git 이력에서 기획 문서로 확인된 바이너리는 `safenest_mmwave_latest_development_direction_20260726.pdf` 1개이다.
+- 프롬프트에 언급된 `.docx` 및 `index.html`은 로컬/원격 전체 ref와 현재 작업 트리(`tmp/` 제외)에 존재하지 않는다.
+- 없는 자산은 생성하거나 대체하지 않으며, 추후 원본 제공 시 `docs/planning/`과 `docs/dashboard/`에 추가한다.
+
+## 게시 진행 상태
+
+- GitHub CLI 2.97.0 설치 완료.
+- GitHub 계정 `jinsu1011` 인증 및 `repo`, `workflow` 권한 확인 완료.
+- 작업 브랜치 `refactor/integrated-v4-architecture`, staged 605개, unstaged/untracked 0개 확인.
+- 다음 단계: staged 통합 변경을 커밋한 뒤 작업 브랜치만 push하고 `main` 대상 draft PR을 생성한다.
+
+## 검증 기록
+
+- 기본 `python3`(3.14)는 `numpy`/`pandas`가 없어 import 단계에서 실패했다. 시스템을 변경하지 않고 `/private/tmp/safenest-refactor-venv`를 만들고 프로젝트 범위 `tensorflow>=2.15,<2.20`(설치 2.19.1)을 사용했다.
+- `/private/tmp/safenest-refactor-venv/bin/python -m unittest discover -s tests -p "test_*.py"`: **84 tests OK, skipped=2**.
+- Python 소스 93개 `py_compile`: 통과 (`.pio`, `.venv`, cache 제외).
+- JSON 전체 파싱 및 `config/*.yaml` 3개 파싱: 통과.
+- `src.tools.build_v4_archive.archive_inputs()`: 46개 입력, missing 0.
+- `pio run`: 성공, RAM 9.9%(32,356/327,680), Flash 20.5%(268,765/1,310,720).
+- Markdown 19개 상대 링크 검사: broken link 0.
+- 원본 blob 보존: TFLite 3종·NPZ 2종이 `origin/Ondevice_AI`, STL 4종이 `origin/3D_Print`과 모두 일치.
+- 설정 단일화: 활성 `config/risk_rules.json` 0개, 공식 `config/risk_rules.yaml` 존재. root/V4 legacy JSON은 SHA-256 `86a0e24…b51bd3`으로 동일함을 확인해 archive에 `legacy_risk_rules.json` 한 사본으로 보존.
+- 충돌 파일 0개, 텍스트 대상 `git diff --check` 통과.

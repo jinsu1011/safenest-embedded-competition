@@ -47,7 +47,7 @@ Pi에서 ESP JSONL을 표준 `mmwave_mr60` 패킷으로 변환:
 ```bash
 cd safenest-embedded-competition
 python3 -m pip install -r requirements-pi.txt
-python3 src/sensors/adapters/run_mr60_serial_adapter.py --port /dev/ttyUSB0
+python3 src/sensors/mmwave/run_mr60_serial_adapter.py --port /dev/ttyUSB0
 ```
 
 실제 ESP 입력을 통합 위험 엔진까지 전달하고 buffer·안전 metadata를 함께 확인:
@@ -65,7 +65,7 @@ SHA-256을 엄격히 검사한다. 불일치·serial timeout·잘못된 JSON·ti
 기존 실측 로그를 장비 없이 재생:
 
 ```bash
-python3 src/sensors/adapters/run_mr60_serial_adapter.py \
+python3 src/sensors/mmwave/run_mr60_serial_adapter.py \
   --allow-legacy-provenance \
   --replay firmware/esp_wroom32_mr60_monitor/logs/breath/2026-07-28_breath_paced_15rpm_explicit_full_v3.jsonl
 ```

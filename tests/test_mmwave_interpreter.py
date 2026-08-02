@@ -19,7 +19,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.inference.mmwave_interpreter import MMWaveInterpreter
 from src.inference.model_registry import ModelRegistry
-from src.sensors.adapters.mmwave_stream_adapter import MMWaveStreamAdapter
+from src.sensors.mmwave.mmwave_stream_adapter import MMWaveStreamAdapter
 
 class TestMMWaveInterpreterAndAdapter(unittest.TestCase):
     @classmethod

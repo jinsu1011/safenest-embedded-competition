@@ -824,7 +824,7 @@
   - 결과: `firmware/esp_wroom32_mr60_monitor/analysis/breath/2026-07-28_breath_filter_comparison.json`.
   - raw pooled 표준편차/MAE는 4.396/3.804rpm이었다. median+EMA는 4.359/3.791rpm이지만 평균 0.433초 추가 지연과 추가 이상치를 만들었다.
   - 결론: vendor rate 평활은 채택하지 않는다. 원시는 진단용으로 보존하고 Pi의 30초 phase FFT를 최종 호흡수로 사용한다.
-- [x] `src/sensors/adapters/mr60_esp_adapter.py`에 60초 WARMUP, distance/presence/age/UART 안전 게이트와 phase 기반 호흡 추정을 구현했다.
+- [x] `src/sensors/mmwave/mr60_esp_adapter.py`에 60초 WARMUP, distance/presence/age/UART 안전 게이트와 phase 기반 호흡 추정을 구현했다.
 - [x] 0·NaN·결측·부재를 무호흡 또는 정상값으로 바꾸던 팀 코드 경로를 차단했다.
   - 미검증 심박은 위험도에 기여하지 않으며 `heart_verified=false`로 전달한다.
   - 미검증 무호흡 후보는 DEGRADED이며, `apnea_verified=true`인 별도 검증 입력만 응급으로 승격한다.
@@ -995,7 +995,7 @@
 
 ## 파일/결정 기억
 
-- 수정: `src/sensors/adapters/mr60_esp_adapter.py`, `src/sensors/adapters/run_mr60_serial_adapter.py`, `src/integrated_node/run_mr60_usb_node.py`, `src/integrated_node/safenest_risk_engine.py`, 관련 config/tests/docs와 본 진행 기록.
+- 수정: `src/sensors/mmwave/mr60_esp_adapter.py`, `src/sensors/mmwave/run_mr60_serial_adapter.py`, `src/integrated_node/run_mr60_usb_node.py`, `src/integrated_node/safenest_risk_engine.py`, 관련 config/tests/docs와 본 진행 기록.
 - 원본 JSONL은 수정·이동·이름 변경하지 않는다. 시작 해시는 최종 manifest와 핸드오프의 고정 SHA-256을 기준으로 재검증한다.
 
 # 2026-08-01 MR60 Phase 2B Apple Watch 심박 탐색 검증

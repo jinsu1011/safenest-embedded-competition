@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-adapters/mmwave_csv_adapter.py
+sensors/mmwave/mmwave_csv_adapter.py
 P0-6 mmWave CSV 입력 Adapter 정밀 연산 구현
 
 [검수 3차 정밀 연산]

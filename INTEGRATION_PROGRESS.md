@@ -81,3 +81,14 @@
 - 원본 blob 보존: TFLite 3종·NPZ 2종이 `origin/Ondevice_AI`, STL 4종이 `origin/3D_Print`과 모두 일치.
 - 설정 단일화: 활성 `config/risk_rules.json` 0개, 공식 `config/risk_rules.yaml` 존재. root/V4 legacy JSON은 SHA-256 `86a0e24…b51bd3`으로 동일함을 확인해 archive에 `legacy_risk_rules.json` 한 사본으로 보존.
 - 충돌 파일 0개, 텍스트 대상 `git diff --check` 통과.
+
+## 기기·주제별 2차 정리 (2026-08-02)
+
+- [x] 추적 파일과 작업 트리의 사용자명 디렉터리 조사 — `jinsu1011/`, `sheepmeat/`, `yuname121/` 경로 0개 확인.
+- [x] 남은 구형 로컬 폴더 내용 감사 — `SafeNest_V4_OnDevice_AI/`, `pi/`는 Python 캐시만, `thermal/`은 빈 폴더임을 확인하고 제거.
+- [x] 일반 `src/sensors/adapters/` 분류 검토 — 포함된 4개 모듈이 모두 mmWave/MR60 전용임을 확인해 `src/sensors/mmwave/`로 이동.
+- [x] 코드·테스트·도구·문서의 이전 adapter 경로 치환 — `src.sensors.adapters`와 `src/sensors/adapters` 잔존 참조 0개.
+- [x] 정적 검사와 Python 회귀 테스트 완료 — 84 tests OK(skipped=2), 현재 Python 파일 컴파일 통과, Markdown 33개 링크 0건 오류, archive 입력 46개 missing 0.
+- [ ] 변경 커밋·push 및 draft PR #2 head 검증.
+
+향후 센서 전용 코드는 `src/sensors/<device>/`, 공용 추론·위험도·통합 코드는 각 기능 주제 패키지에 배치하며 사용자명 디렉터리를 만들지 않는다.

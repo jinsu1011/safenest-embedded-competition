@@ -24,7 +24,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from src.inference.model_registry import ModelRegistry
-from src.sensors.adapters.mmwave_stream_adapter import MMWaveStreamAdapter
+from src.sensors.mmwave.mmwave_stream_adapter import MMWaveStreamAdapter
 from src.risk.risk_rules import RiskRulesEvaluator
 from src.risk.risk_engine import RiskEngineV4
 

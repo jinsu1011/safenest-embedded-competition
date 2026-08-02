@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.sensors.adapters.mmwave_stream_adapter import MMWaveStreamAdapter
+from src.sensors.mmwave.mmwave_stream_adapter import MMWaveStreamAdapter
 from src.risk.risk_rules import RiskRulesEvaluator
 
 

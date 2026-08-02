@@ -13,7 +13,7 @@ if __package__ in (None, ""):
     project_root = Path(__file__).resolve().parents[2]
     sys.path.insert(0, str(project_root))
 
-from src.sensors.adapters.mr60_esp_adapter import MR60ESPAdapter
+from src.sensors.mmwave.mr60_esp_adapter import MR60ESPAdapter
 from src.integrated_node.safenest_risk_engine import SafeNestRiskEngine
 
 

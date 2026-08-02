@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-adapters/mmwave_stream_adapter.py
+sensors/mmwave/mmwave_stream_adapter.py
 P0-6 mmWave 실시간 파이프라인 Ring Buffer Stream Adapter 정밀 구현
 
 [검수 3차 핵심 수정]

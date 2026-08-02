@@ -707,7 +707,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "07", "Sampling은 시간을 숫자열로 바꾼다", "sample 개수와 실제 측정 시간은 같지 않으므로 time grid를 명시해야 한다.",
-        "PART I · 시스템 기초", "UNIT 03 · 1/2", "src/sensors/adapters/mmwave_stream_adapter.py:31-94; models/model_manifest.json:73-96",
+        "PART I · 시스템 기초", "UNIT 03 · 1/2", "src/sensors/mmwave/mmwave_stream_adapter.py:31-94; models/model_manifest.json:73-96",
         ("body", "연속시간 신호 x(t)를 일정 간격으로 읽으면 이산 신호 x[k]가 된다. 이상적인 sampling에서는 모든 시각이 첫 시각과 sample rate로 결정된다. 실제 stream에는 jitter, gap, 중복 timestamp가 생길 수 있으므로 N개의 값이 있다는 사실만으로 이상적인 시간 grid를 보장할 수 없다."),
         ("equation", r"t_k=t_0+\frac{k}{f_s},\qquad T_{\mathrm{cov}}=\frac{N-1}{f_s}", "1.2", "f_s는 초당 sample 수이고 T_cov는 첫 sample과 마지막 sample 사이의 실제 coverage다."),
         ("diagram", "timeline", {"markers": [(0.0, "k=0", "t₀"), (0.33, "k=100", "10.0 s"), (0.67, "k=200", "20.0 s"), (1.0, "k=299", "29.9 s")]}, 34 * mm, "10 Hz에서 300개 sample은 첫 점을 0으로 두면 마지막 점이 29.9초에 놓인다."),
@@ -716,7 +716,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "08", "Freshness는 판단 시점의 유효성을 정한다", "측정 시각과 도착 시각을 분리해야 오래된 값을 새 값처럼 쓰지 않는다.",
-        "PART I · 시스템 기초", "UNIT 03 · 2/2", "src/sensors/adapters/mmwave_stream_adapter.py:84-110; src/integrated_node/safenest_risk_engine.py:120-169",
+        "PART I · 시스템 기초", "UNIT 03 · 2/2", "src/sensors/mmwave/mmwave_stream_adapter.py:84-110; src/integrated_node/safenest_risk_engine.py:120-169",
         ("body", "<b>Freshness</b>는 값이 존재하는지가 아니라 현재 판단에 사용할 만큼 최근인지 묻는다. 센서가 측정한 시각 measured_at과 process가 받은 시각 received_at이 다르면 transport 지연과 queue 지연을 분리할 수 있다. 현재 packet에 timestamp 하나만 있으면 이 두 시간을 구분하기 어렵다."),
         ("equation", r"a_i(t)=t-t^{\mathrm{meas}}_i,\qquad \mathrm{valid}_i(t)=[a_i(t)\leq B_i]", "1.3", "a_i는 i번째 sensor 값의 age, B_i는 그 sensor에 허용된 freshness budget이다."),
         ("diagram", "flow", {"labels": [("측정", "measured_at"), ("전송", "transport"), ("도착", "received_at"), ("대기", "queue"), ("판단", "evaluated_at")]}, 36 * mm, "전체 latency와 sensor age는 같은 숫자가 아니며 각각 기록해야 한다."),
@@ -841,7 +841,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "20", "호흡 입력은 긴 신호 체인의 결과다", "Resp_phase 300개는 radar raw에서 여러 선택과 보정을 거친 canonical signal이다.",
-        "PART II · 센서와 물리", "UNIT 08 · 4/4", "models/mmwave/sensor_stats_metadata_v0.1.0.json; src/sensors/adapters/mmwave_stream_adapter.py; models/model_manifest.json",
+        "PART II · 센서와 물리", "UNIT 08 · 4/4", "models/mmwave/sensor_stats_metadata_v0.1.0.json; src/sensors/mmwave/mmwave_stream_adapter.py; models/model_manifest.json",
         ("diagram", "flow", {"labels": [("range FFT", "complex bins"), ("clutter 제거", "background"), ("chest bin", "target"), ("phase", "angle"), ("unwrap", "continuous"), ("10 Hz", "resample"), ("window", "300×1")]}, 39 * mm, "Model input은 마지막 300개 숫자만이 아니라 이 전체 처리 의미를 포함한다."),
         ("body", "현재 metadata의 input semantic은 <b>resp_phase_unwrapped_clutter_removed</b>이고 sample rate는 10 Hz, window는 300 samples다. 따라서 producer가 phase를 제공할 때는 rad 단위, unwrap 방식, clutter 제거 방식, sample clock과 session 경계를 함께 보장해야 한다."),
         ("body", "호흡 rate는 phase 파형의 주기성을 요약한 값이고 resp_phase는 시간 신호다. 정상 RPM이 들어온다는 사실만으로 model window가 준비된 것은 아니다. 반대로 model class는 특정 30초 파형의 분류 결과이지 현재 한 순간의 물리적 호흡량이 아니다."),
@@ -851,7 +851,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "P3", "PART III · Sampling과 신호처리", "신호처리는 noise를 줄이는 대신 정보 손실·지연·상태 기억을 만든다.",
-        "PART III · DSP와 시간", "PART OPENER", "src/sensors/adapters/mmwave_stream_adapter.py; src/integrated_node/safenest_risk_engine.py:17-71,326-344",
+        "PART III · DSP와 시간", "PART OPENER", "src/sensors/mmwave/mmwave_stream_adapter.py; src/integrated_node/safenest_risk_engine.py:17-71,326-344",
         ("body", "Digital signal processing은 센서의 연속 물리 현상을 유한한 sample과 제한된 계산으로 해석하는 과정이다. Sampling rate, window 길이, FFT bin, filter coefficient는 단순한 구현 숫자가 아니라 관측 가능한 현상과 응답시간을 결정한다."),
         ("diagram", "layers", {"labels": [("Sampling", "연속→이산"), ("Window", "관측 구간"), ("주파수 변환", "DFT·band energy"), ("배경 제거", "clutter"), ("시간 필터", "mean·IIR"), ("상태 안정화", "hysteresis") ]}, 76 * mm, "각 단계는 noise를 줄이지만 동시에 latency와 memory를 추가한다."),
         ("h2", "이 장의 중심 원리"),
@@ -861,7 +861,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "21", "Sampling theorem이 관측 가능한 주파수를 정한다", "Sample rate보다 빠르게 변하는 성분은 원래 주파수로 구분되지 않는다.",
-        "PART III · DSP와 시간", "UNIT 09 · 1/2", "models/model_manifest.json:73-96; src/sensors/adapters/mmwave_stream_adapter.py:31-47",
+        "PART III · DSP와 시간", "UNIT 09 · 1/2", "models/model_manifest.json:73-96; src/sensors/mmwave/mmwave_stream_adapter.py:31-47",
         ("body", "연속시간 sinusoid를 f_s로 sampling하면 주파수축이 f_s 간격으로 반복된다. 원 신호의 spectrum이 반복된 spectrum과 겹치면 높은 주파수 성분이 낮은 주파수처럼 보이는 aliasing이 생긴다. 대역 제한 신호를 손실 없이 복원하려면 가장 높은 유효 주파수가 Nyquist frequency보다 작아야 한다."),
         ("equation", r"f_{\mathrm{signal,max}}<f_N=\frac{f_s}{2}", "3.1", "f_N은 Nyquist frequency다. 실제 시스템은 경계 밖 성분을 줄이는 anti-alias filter와 여유 대역이 필요하다."),
         ("equation", r"f_{\mathrm{alias}}=\left|f_0-kf_s\right|\quad\mathrm{for\ a\ suitable\ integer}\ k", "3.2", "f_s를 넘는 주파수는 sampling 후 더 낮은 apparent frequency로 접혀 보일 수 있다."),
@@ -871,7 +871,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "22", "Window는 무엇을 한 번의 판단으로 묶을지 정한다", "길이는 주파수 분해능과 startup latency, stride는 판단 갱신 간격을 결정한다.",
-        "PART III · DSP와 시간", "UNIT 09 · 2/2", "src/sensors/adapters/mmwave_csv_adapter.py:40-120; src/sensors/adapters/mmwave_stream_adapter.py:31-94",
+        "PART III · DSP와 시간", "UNIT 09 · 2/2", "src/sensors/mmwave/mmwave_csv_adapter.py:40-120; src/sensors/mmwave/mmwave_stream_adapter.py:31-94",
         ("body", "Window는 연속 stream에서 유한 구간을 잘라 하나의 feature 또는 model input으로 만드는 연산이다. N과 f_s가 정해지면 관측 구간과 DFT frequency spacing이 함께 정해진다. Window를 길게 하면 가까운 주파수를 구분하기 쉬워지지만 첫 판단까지 기다리는 시간이 늘어난다."),
         ("equation", r"T_{\mathrm{window}}\approx\frac{N}{f_s},\qquad \Delta f=\frac{f_s}{N}", "3.3", "N=300, f_s=10 Hz이면 약 30초 window이고 frequency spacing은 0.0333 Hz다."),
         ("diagram", "timeline", {"markers": [(0.0, "첫 sample", "buffer 1/300"), (0.34, "10 s", "101/300"), (0.67, "20 s", "201/300"), (1.0, "29.9 s", "300/300") ]}, 36 * mm, "첫 AI invoke는 이상적인 10 Hz grid에서 약 29.9초 뒤 가능하다."),

@@ -17,7 +17,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.sensors.adapters.mmwave_stream_adapter import MMWaveStreamAdapter
+from src.sensors.mmwave.mmwave_stream_adapter import MMWaveStreamAdapter
 
 
 class TestMMWaveStreamAdapter(unittest.TestCase):

@@ -891,7 +891,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         ["계층", "대표 경로", "판별 질문"],
         [
             ["계약", "models/model_manifest.json, metadata", "모델 입력 의미·버전·hash의 기준인가?"],
-            ["Adapter", "src/sensors/adapters/", "생산자 형식을 canonical window로 바꾸는가?"],
+            ["Adapter", "src/sensors/mmwave/", "생산자 형식을 canonical window로 바꾸는가?"],
             ["Inference", "src/inference/", "tensor 검사·양자화·invoke·decode를 담당하는가?"],
             ["Policy", "config/risk_engine.json, risk_rules.py", "센서값을 score와 reason으로 바꾸는가?"],
             ["Orchestration", "src/integrated_node/safenest_risk_engine.py", "상태를 소유하고 경로를 결합하는가?"],
@@ -996,7 +996,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "시간축 계약: sampling과 freshness",
         "sample 개수, 측정 시간, 도착 시간은 같은 개념이 아니다.",
         "PART I · 구조와 계약",
-        "src/sensors/adapters/mmwave_stream_adapter.py:31-110; src/integrated_node/safenest_risk_engine.py:203-214",
+        "src/sensors/mmwave/mmwave_stream_adapter.py:31-110; src/integrated_node/safenest_risk_engine.py:203-214",
     )
     w.table(
         ["용어", "정의", "현재 구현"],
@@ -1658,7 +1658,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "Stream Adapter state machine",
         "ring buffer는 단순 저장소가 아니라 입실·시간·신선도 조건을 가진 gate다.",
         "PART II · 센서와 신호",
-        "src/sensors/adapters/mmwave_stream_adapter.py:24-110; src/integrated_node/safenest_risk_engine.py:242-281",
+        "src/sensors/mmwave/mmwave_stream_adapter.py:24-110; src/integrated_node/safenest_risk_engine.py:242-281",
     )
     w.table(
         ["event", "동작", "reason / 상태"],
@@ -1696,7 +1696,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "CSV Adapter와 dataset windowing",
         "offline Adapter는 실시간 경로보다 강한 시간 grid와 session 격리를 구현한다.",
         "PART II · 센서와 신호",
-        "src/sensors/adapters/mmwave_csv_adapter.py:23-126",
+        "src/sensors/mmwave/mmwave_csv_adapter.py:23-126",
     )
     w.numbered(
         [
@@ -2455,7 +2455,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "데이터 split, leakage, 평가 지표",
         "안전 모델의 성능은 sample 수보다 독립성 단위와 error cost로 정의한다.",
         "PART V · 검증과 확장",
-        "src/sensors/adapters/mmwave_csv_adapter.py:70-124; src/training/thermal_train.py:18-23; docs/roadmap_and_setup/safenest_mmwave_latest_development_direction_20260726.md",
+        "src/sensors/mmwave/mmwave_csv_adapter.py:70-124; src/training/thermal_train.py:18-23; docs/roadmap_and_setup/safenest_mmwave_latest_development_direction_20260726.md",
     )
     w.table(
         ["누수 단위", "잘못된 split", "권장 split"],
@@ -2532,7 +2532,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "새 센서·모델 추가 체크리스트",
         "인터페이스를 먼저 고정하면 시스템 확장 시 원인 추적 비용이 줄어든다.",
         "PART V · 검증과 확장",
-        "models/model_manifest.json; src/sensors/adapters/; src/inference/; tests/",
+        "models/model_manifest.json; src/sensors/mmwave/; src/inference/; tests/",
     )
     w.table(
         ["단계", "승인 질문"],
@@ -2570,7 +2570,7 @@ def build_guide(output: Path = OUTPUT) -> None:
             "<b>README.md</b>: 현재 기준선·디렉터리 역할·테스트 범위를 파악한다.",
             "<b>models/model_manifest.json</b>: 세 artifact의 shape·dtype·class·status를 표로 옮긴다.",
             "<b>src/inference/*_interpreter.py</b>: validation -> preprocessing -> invoke -> decode 차이를 비교한다.",
-            "<b>src/sensors/adapters/</b>: window의 시간·session·rejection 조건을 state diagram으로 그린다.",
+            "<b>src/sensors/mmwave/</b>: window의 시간·session·rejection 조건을 state diagram으로 그린다.",
             "<b>config/risk_engine.json + risk_rules.py</b>: 부분 score·override·reason을 수식으로 만든다.",
             "<b>safenest_risk_engine.py</b>: state ownership, 호출 순서, smoothing, output을 추적한다.",
             "<b>virtual streamer + plotter</b>: simulation input과 현재 UI 소비 계약을 확인한다.",

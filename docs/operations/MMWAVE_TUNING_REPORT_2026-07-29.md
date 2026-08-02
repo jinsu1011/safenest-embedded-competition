@@ -68,7 +68,7 @@ ESP firmware 1.2.0 업로드, schema 1.2 회귀, 빈 공간·정지 인체 장�
 
 - ESP firmware/config: `firmware/esp_wroom32_mr60_monitor/src/main.cpp`, `include/mmwave_config.h`, `config/mmwave_sensor_config.json`.
 - filter 분석: `compare_breath_filters.py`, `analysis/breath/2026-07-28_breath_filter_comparison.json`.
-- Pi adapter/config: `src/sensors/adapters/mr60_esp_adapter.py`, `run_mr60_serial_adapter.py`, `config/mmwave_processing.json`.
+- Pi adapter/config: `src/sensors/mmwave/mr60_esp_adapter.py`, `run_mr60_serial_adapter.py`, `config/mmwave_processing.json`.
 - 위험도 안전 계약: `src/risk/`, `src/integrated_node/safenest_risk_engine.py`, `sensors/mmwave/mmwave_adapter.py`.
 - 원본 manifest: `datasets/mmwave/mr60_20260728_manifest.json`.
 - 통합 절차: `docs/ai/MR60_INTEGRATION.md`.

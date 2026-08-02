@@ -19,7 +19,7 @@ PlatformIO 설정, C/C++ 소스·헤더, 센서 설정, 재현 가능한 캡처�
 입력은 MR60 UART 프레임이며 출력은 USB/UART JSONL 텔레메트리와 재현 가능한 분석 요약이다.
 
 ## 7. 다른 기능 영역과의 관계
-`src/sensors/adapters/`가 텔레메트리를 소비하고 `docs/operations/`가 설치·운용 절차를 설명한다.
+`src/sensors/mmwave/`가 텔레메트리를 소비하고 `docs/operations/`가 설치·운용 절차를 설명한다.
 
 ## 8. 실행·학습·추론 또는 활용 방법
 `cd firmware/esp_wroom32_mr60_monitor && pio run`으로 빌드하며 장치 업로드 전 해당 런북을 확인한다.

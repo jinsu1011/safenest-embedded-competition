@@ -13,7 +13,7 @@
 모델 바이너리, 원본 측정 로그, 비밀값, 가상환경, 캐시와 생성 결과는 포함하지 않는다.
 
 ## 5. 주요 하위 구성
-`sensors/`, `inference/`, `risk/`, `integrated_node/`, `training/`, `tools/`로 구성한다.
+`sensors/`, `inference/`, `risk/`, `integrated_node/`, `training/`, `tools/`로 구성한다. 센서 코드는 사용자명이나 포괄적인 `adapters/` 폴더 대신 `sensors/co2/`, `sensors/mmwave/`, `sensors/pir/`, `sensors/thermal44/`처럼 기기별로 배치한다.
 
 ## 6. 입력과 출력 인터페이스
 입력은 센서 프레임·JSON 패킷·모델 매니페스트이며, 출력은 `InferenceResult`와 위험도 평가 객체 또는 JSON 텔레메트리다.
@@ -28,7 +28,7 @@
 SafeNest V4 통합 구조이며 MR60 ESP 어댑터 보강분(`b0d3c95`)을 포함한다.
 
 ## 10. 향후 파일 추가 및 관리 규칙
-절대경로를 코드에 넣지 말고 저장소 루트 기준 경로를 사용하며 새 모듈에는 대응 테스트를 추가한다.
+절대경로를 코드에 넣지 말고 저장소 루트 기준 경로를 사용하며 새 모듈에는 대응 테스트를 추가한다. 사용자명 디렉터리를 만들지 말고 공용 코드는 기능 주제별, 센서 전용 코드는 기기별 패키지에 추가한다.
 
 ## 11. 주요 기여자와 원본 브랜치 추적 정보
 Junwoo Han(`sheepmeat`, `origin/Ondevice_AI`, `d97df3e`)의 V4 구현과 Jinsu Kim(`jinsu1011`, `codex/mmwave-phase-integration`, `b0d3c95`)의 MR60 통합을 계승한다.

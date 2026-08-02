@@ -14,7 +14,7 @@ REPO_ROOT = PROJECT_ROOT
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.sensors.adapters.mr60_esp_adapter import MR60ESPAdapter
+from src.sensors.mmwave.mr60_esp_adapter import MR60ESPAdapter
 from src.integrated_node.run_mr60_usb_node import MR60IntegratedPipeline
 
 

@@ -103,7 +103,7 @@ git log -3 --oneline --decorate
 lsof /dev/cu.usbserial-10
 ```
 
-`src/sensors/adapters/run_mr60_serial_adapter.py`의 실제 포트 입력과 `src/integrated_node/safenest_risk_engine.py`의 소비 경로를 확인한다. replay가 아니라 실제 ESP JSONL을 사용해 다음을 증명한다.
+`src/sensors/mmwave/run_mr60_serial_adapter.py`의 실제 포트 입력과 `src/integrated_node/safenest_risk_engine.py`의 소비 경로를 확인한다. replay가 아니라 실제 ESP JSONL을 사용해 다음을 증명한다.
 
 - schema 1.2 레코드를 파싱한다.
 - firmware/config hash 불일치를 숨기지 않는다.

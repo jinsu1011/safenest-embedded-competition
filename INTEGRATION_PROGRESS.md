@@ -26,7 +26,7 @@
 - [x] 정적 검사와 Python 단위·통합 회귀 테스트 — 아래 검증 증거 모두 통과.
 - [x] 루트 README 기여·커밋·PR 절차 추가 및 최종 감사 — 브랜치 규칙, 개인 커밋 순서, PR 정의·생성·검토 절차 추가; Markdown link 0건 오류.
 - [x] 검증된 변경을 통합 브랜치에 커밋 — `372aa2af2ffe7f1e547a5cf99bc8bd2cc3a44855` 생성 및 tree/부모/메시지 확인.
-- [ ] 작업 브랜치 push 및 `main` 대상 draft PR 생성·검증.
+- [x] 작업 브랜치 push 및 `main` 대상 draft PR 생성 — [PR #2](https://github.com/jinsu1011/safenest-embedded-competition/pull/2).
 
 ## 현재 상태와 결정
 
@@ -63,7 +63,9 @@
 - GitHub 계정 `jinsu1011` 인증 및 `repo`, `workflow` 권한 확인 완료.
 - 작업 브랜치 `refactor/integrated-v4-architecture`, staged 605개, unstaged/untracked 0개 확인.
 - 통합 커밋 `372aa2a` 생성 완료. 커밋 명령은 종료 시 SIGBUS(138)를 반환했으나, 새 HEAD·부모·커밋 tree와 clean working tree를 독립 확인해 커밋 성공으로 판정했다.
-- 다음 단계: 이 진행 기록을 커밋한 뒤 작업 브랜치만 push하고 `main` 대상 draft PR을 생성한다.
+- 작업 브랜치 최초 push 및 upstream 설정 완료; force push나 `main` 직접 push는 수행하지 않았다.
+- `main` 대상 draft PR #2 생성 완료: https://github.com/jinsu1011/safenest-embedded-competition/pull/2
+- 다음 단계: 이 기록을 커밋·push하고 PR의 base/head/draft 상태와 원격 커밋 일치를 최종 검증한 뒤 팀 검토·승인을 기다린다.
 
 ## 검증 기록
 

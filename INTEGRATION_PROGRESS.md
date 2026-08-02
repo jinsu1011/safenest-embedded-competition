@@ -65,7 +65,9 @@
 - 통합 커밋 `372aa2a` 생성 완료. 커밋 명령은 종료 시 SIGBUS(138)를 반환했으나, 새 HEAD·부모·커밋 tree와 clean working tree를 독립 확인해 커밋 성공으로 판정했다.
 - 작업 브랜치 최초 push 및 upstream 설정 완료; force push나 `main` 직접 push는 수행하지 않았다.
 - `main` 대상 draft PR #2 생성 완료: https://github.com/jinsu1011/safenest-embedded-competition/pull/2
-- 다음 단계: 이 기록을 커밋·push하고 PR의 base/head/draft 상태와 원격 커밋 일치를 최종 검증한 뒤 팀 검토·승인을 기다린다.
+- PR 원격 검증: `OPEN`/`DRAFT`, base=`main`, head=`refactor/integrated-v4-architecture` 확인.
+- 게시 시점 로컬·원격·PR head가 `46d3aaa88ac725454fb6ae84ec9a2148edb50c91`로 일치하고 working tree가 clean임을 확인.
+- 다음 단계: 팀 검토와 승인 후 PR을 Ready for review로 전환하고 필수 검사를 거쳐 `main`에 병합한다.
 
 ## 검증 기록
 

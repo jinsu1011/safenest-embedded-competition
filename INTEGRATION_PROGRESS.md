@@ -89,6 +89,6 @@
 - [x] 일반 `src/sensors/adapters/` 분류 검토 — 포함된 4개 모듈이 모두 mmWave/MR60 전용임을 확인해 `src/sensors/mmwave/`로 이동.
 - [x] 코드·테스트·도구·문서의 이전 adapter 경로 치환 — `src.sensors.adapters`와 `src/sensors/adapters` 잔존 참조 0개.
 - [x] 정적 검사와 Python 회귀 테스트 완료 — 84 tests OK(skipped=2), 현재 Python 파일 컴파일 통과, Markdown 33개 링크 0건 오류, archive 입력 46개 missing 0.
-- [ ] 변경 커밋·push 및 draft PR #2 head 검증.
+- [x] 변경 커밋·push 및 draft PR #2 head 검증 — `ac8f95e85a2a1995c62be4b2fa4b51cf48808bc2`, 로컬·원격·PR head 일치.
 
 향후 센서 전용 코드는 `src/sensors/<device>/`, 공용 추론·위험도·통합 코드는 각 기능 주제 패키지에 배치하며 사용자명 디렉터리를 만들지 않는다.

@@ -1,5 +1,6 @@
 import json
-B="/Users/kimjinsu/Documents/임베디드 소프트웨어 경진대회/firmware/esp_wroom32_mr60_monitor/logs"
+from pathlib import Path
+B=Path(__file__).resolve().parents[1]/"logs"
 files=[("빈공간 6분(무인)", f"{B}/baseline/2026-07-25_empty_gate_v1_360s.jsonl"),
        ("인체 90cm 6분(07-25)", f"{B}/baseline/2026-07-25_occupied_d09_v1_360s.jsonl"),
        ("인체 90cm 5분(07-26 2차)", f"{B}/kpi/2026-07-26_heartrate_ref_applewatch_run2_300s.jsonl")]

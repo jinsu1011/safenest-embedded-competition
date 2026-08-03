@@ -1,5 +1,7 @@
 import json, statistics as st
-F="/Users/kimjinsu/Documents/임베디드 소프트웨어 경진대회/firmware/esp_wroom32_mr60_monitor/logs/kpi/2026-07-26_heartrate_ref_applewatch_300s.jsonl"
+from pathlib import Path
+LOGS=Path(__file__).resolve().parents[1]/"logs"
+F=LOGS/"kpi/2026-07-26_heartrate_ref_applewatch_300s.jsonl"
 recs=[json.loads(l) for l in open(F) if l.strip()]
 t0=recs[0]["ts_monotonic_ms"]
 for r in recs: r["t"]=(r["ts_monotonic_ms"]-t0)/1000.0

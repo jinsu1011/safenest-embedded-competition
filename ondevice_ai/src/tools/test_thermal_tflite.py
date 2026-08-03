@@ -5,7 +5,7 @@
 test_thermal_tflite.py
 SafeNest Thermal-44 INT8 TFLite 모델 추론 단위 검증 스크립트
 
-models/model_manifest.json 및 src/inference/thermal_interpreter.py 공용 Wrapper를 사용하여
+ondevice_ai/models/model_manifest.json 및 ondevice_ai/src/inference/thermal_interpreter.py 공용 Wrapper를 사용하여
 단일화된 공식 모델(thermal_fall_int8_v0.1.0.tflite)을 검증합니다.
 """
 

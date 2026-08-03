@@ -1,8 +1,10 @@
 #!/bin/bash
-BASE="/Users/kimjinsu/Documents/임베디드 소프트웨어 경진대회"
-PY="$BASE/firmware/esp_wroom32_mr60_monitor/.venv/bin/python"
-OUT="$BASE/firmware/esp_wroom32_mr60_monitor/logs/kpi/2026-07-26_heartrate_ref_applewatch_run2_300s.jsonl"
-SCR="/private/tmp/claude-501/-Users-kimjinsu-Desktop------/deca0af1-4fbf-4552-892c-762b185e2122/scratchpad"
+FW="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PY="$FW/.venv/bin/python"
+OUT="$FW/logs/kpi/2026-07-26_heartrate_ref_applewatch_run2_300s.jsonl"
+# 실행마다 달라지는 임시 작업 디렉터리. 저장소 밖에 두고 SCR로 덮어쓸 수 있다.
+SCR="${SCR:-${TMPDIR:-/tmp}/safenest-hr-ref-capture}"
+mkdir -p "$SCR"
 
 START=$(date +%s)
 echo "start_epoch=$START" > "$SCR/hr_ref2_start.txt"
@@ -11,7 +13,7 @@ date -r "$START" "+start_local=%Y-%m-%d %H:%M:%S" >> "$SCR/hr_ref2_start.txt"
 afplay /System/Library/Sounds/Glass.aiff &
 say -v Yuna "두 번째 심박 비교 시작합니다. 상체 고정해 주세요." &
 
-"$PY" "$BASE/firmware/esp_wroom32_mr60_monitor/capture_serial.py" \
+"$PY" "$FW/capture_serial.py" \
   --port /dev/cu.usbserial-10 --baud 115200 \
   --duration 300 --output "$OUT" > "$SCR/hr_ref2_capture.log" 2>&1 &
 CAP=$!

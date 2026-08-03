@@ -602,7 +602,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "사실의 등급을 먼저 고정한다",
         "코드가 존재한다는 사실과 실제 환경에서 성능이 입증됐다는 사실은 서로 다르다.",
         "학습 안내",
-        "models/model_manifest.json:6-108; reports/TEST_RESULTS_20260726.md:13-45",
+        "ondevice_ai/models/model_manifest.json:6-108; reports/TEST_RESULTS_20260726.md:13-45",
     )
     w.table(
         ["표기", "정의", "이 문서에서의 예"],
@@ -639,7 +639,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "공통 선수개념과 표기 프라이머",
         "같은 기호가 다른 계층을 뜻하지 않도록 물리량·텐서·품질·상태 표기를 먼저 고정한다.",
         "학습 안내",
-        "src/inference/*_interpreter.py; src/integrated_node/safenest_risk_engine.py:98-118,326-344",
+        "ondevice_ai/src/inference/*_interpreter.py; ondevice_ai/src/integrated_node/safenest_risk_engine.py:98-118,326-344",
     )
     w.pipeline(
         [
@@ -795,7 +795,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "임무와 안전 경계",
         "여러 센서의 불완전한 관측으로 위험 가능성과 시스템 건강을 함께 추정하는 프로토타입이다.",
         "PART I · 구조와 계약",
-        "README.md:1-7; src/risk/risk_rules.py:258-335",
+        "README.md:1-7; ondevice_ai/src/risk/risk_rules.py:258-335",
     )
     w.h2("문제의 구조")
     w.pipeline(
@@ -837,7 +837,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "AS-IS 전체 구조",
         "현재 주 실행 경로는 하나의 Python process 안에서 순차 호출되는 동기 구조다.",
         "PART I · 구조와 계약",
-        "src/integrated_node/virtual_sensor_streamer.py:71-200; src/integrated_node/safenest_integrated_plotter.py:119-274",
+        "ondevice_ai/src/integrated_node/virtual_sensor_streamer.py:71-200; ondevice_ai/src/integrated_node/safenest_integrated_plotter.py:119-274",
     )
     w.pipeline(
         [
@@ -890,14 +890,14 @@ def build_guide(output: Path = OUTPUT) -> None:
     w.table(
         ["계층", "대표 경로", "판별 질문"],
         [
-            ["계약", "models/model_manifest.json, metadata", "모델 입력 의미·버전·hash의 기준인가?"],
-            ["Adapter", "src/sensors/mmwave/", "생산자 형식을 canonical window로 바꾸는가?"],
-            ["Inference", "src/inference/", "tensor 검사·양자화·invoke·decode를 담당하는가?"],
-            ["Policy", "config/risk_engine.json, risk_rules.py", "센서값을 score와 reason으로 바꾸는가?"],
-            ["Orchestration", "src/integrated_node/safenest_risk_engine.py", "상태를 소유하고 경로를 결합하는가?"],
+            ["계약", "ondevice_ai/models/model_manifest.json, metadata", "모델 입력 의미·버전·hash의 기준인가?"],
+            ["Adapter", "devices/mmwave/src/", "생산자 형식을 canonical window로 바꾸는가?"],
+            ["Inference", "ondevice_ai/src/inference/", "tensor 검사·양자화·invoke·decode를 담당하는가?"],
+            ["Policy", "ondevice_ai/config/risk_engine.json, risk_rules.py", "센서값을 score와 reason으로 바꾸는가?"],
+            ["Orchestration", "ondevice_ai/src/integrated_node/safenest_risk_engine.py", "상태를 소유하고 경로를 결합하는가?"],
             ["Simulation/UI", "virtual_sensor_streamer.py, plotter.py", "실센서가 아닌 시연·관측인가?"],
-            ["Standalone", "mr60/, co2_data/, src/tools/", "공용 packet을 실제로 생산·소비하는가?"],
-            ["Evidence", "tests/, reports/, tests/benchmarks/", "주장의 범위를 재현 가능한가?"],
+            ["Standalone", "mr60/, co2_data/, ondevice_ai/src/tools/", "공용 packet을 실제로 생산·소비하는가?"],
+            ["Evidence", "tests/, reports/, ondevice_ai/benchmarks/", "주장의 범위를 재현 가능한가?"],
         ],
         [0.18, 0.42, 0.40],
     )
@@ -924,7 +924,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "한 packet을 끝까지 추적한다",
         "시스템 이해의 기본 단위는 class 하나가 아니라 생산자·변환·상태·소비자의 연결이다.",
         "PART I · 구조와 계약",
-        "src/integrated_node/safenest_risk_engine.py:120-415",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:120-415",
     )
     w.numbered(
         [
@@ -964,7 +964,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "공통 sensor packet 계약",
         "현재 계약은 schema 파일이 아니라 생산자와 evaluate_risk 내부 접근 코드에 암묵적으로 존재한다.",
         "PART I · 구조와 계약",
-        "src/integrated_node/virtual_sensor_streamer.py:177-199; src/integrated_node/safenest_risk_engine.py:98-118,195-315",
+        "ondevice_ai/src/integrated_node/virtual_sensor_streamer.py:177-199; ondevice_ai/src/integrated_node/safenest_risk_engine.py:98-118,195-315",
     )
     w.table(
         ["경로", "의미·단위", "현재 사용·제약"],
@@ -996,7 +996,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "시간축 계약: sampling과 freshness",
         "sample 개수, 측정 시간, 도착 시간은 같은 개념이 아니다.",
         "PART I · 구조와 계약",
-        "src/sensors/mmwave/mmwave_stream_adapter.py:31-110; src/integrated_node/safenest_risk_engine.py:203-214",
+        "devices/mmwave/src/mmwave_stream_adapter.py:31-110; ondevice_ai/src/integrated_node/safenest_risk_engine.py:203-214",
     )
     w.table(
         ["용어", "정의", "현재 구현"],
@@ -1032,7 +1032,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "상태 소유권과 생명주기",
         "현재 엔진은 순수 함수가 아니라 과거 입력을 기억하는 stateful component다.",
         "PART I · 구조와 계약",
-        "src/integrated_node/safenest_risk_engine.py:73-96; src/risk/risk_rules.py:64-85",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:73-96; ondevice_ai/src/risk/risk_rules.py:64-85",
     )
     w.table(
         ["상태", "크기·역할", "reset 조건 / 현재 공백"],
@@ -1070,7 +1070,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "Thermal 측정 체인",
         "실제 온도 센서 체인과 현재 저장소의 grayscale intensity 체인을 구분한다.",
         "PART II · 센서와 신호",
-        "src/training/thermal_prep.py:19-130; src/inference/thermal_interpreter.py:106-148",
+        "ondevice_ai/src/training/thermal_prep.py:19-130; ondevice_ai/src/inference/thermal_interpreter.py:106-148",
     )
     w.pipeline(
         [
@@ -1119,7 +1119,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "Thermal 데이터와 학습 설계",
         "높은 내부 재현값보다 label provenance와 독립 split이 먼저다.",
         "PART II · 센서와 신호",
-        "src/training/thermal_prep.py:19-50,61-130; src/training/thermal_train.py:18-57",
+        "ondevice_ai/src/training/thermal_prep.py:19-50,61-130; ondevice_ai/src/training/thermal_train.py:18-57",
     )
     w.table(
         ["class", "현재 frame 수", "비율", "해석"],
@@ -1147,7 +1147,7 @@ def build_guide(output: Path = OUTPUT) -> None:
             "train/test는 frame 단위 무작위 80/20 분할이며 subject·session·scene grouping이 없다.",
             "연속 frame 또는 같은 사람의 유사 장면이 양쪽에 들어가면 독립 일반화가 과대평가된다.",
             "NOT_HUMAN 4장은 class imbalance뿐 아니라 open-set 열원 오인 문제를 평가할 수 없다.",
-            "공식 artifact를 만드는 완전한 full-INT8 재현 pipeline과 현재 src/training/thermal_train.py가 일치하지 않는다.",
+            "공식 artifact를 만드는 완전한 full-INT8 재현 pipeline과 현재 ondevice_ai/src/training/thermal_train.py가 일치하지 않는다.",
         ]
     )
     w.callout(
@@ -1163,7 +1163,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "Thermal runtime과 위험 연결",
         "frame 정규화부터 emergency override까지 실제 계산을 따라간다.",
         "PART II · 센서와 신호",
-        "src/inference/thermal_interpreter.py:80-199; src/risk/risk_rules.py:193-210",
+        "ondevice_ai/src/inference/thermal_interpreter.py:80-199; ondevice_ai/src/risk/risk_rules.py:193-210",
     )
     w.numbered(
         [
@@ -1196,7 +1196,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "Thermal 검증 경계와 보강점",
         "artifact 무결성, tensor 실행, 인식 성능, 안전 성능은 서로 다른 시험이다.",
         "PART II · 센서와 신호",
-        "tests/test_thermal_interpreter.py:30-115; tests/benchmarks/thermal_latest.json:1-15",
+        "ondevice_ai/tests/test_thermal_interpreter.py:30-115; ondevice_ai/benchmarks/thermal_latest.json:1-15",
     )
     w.table(
         ["층", "현재 증거", "추가로 필요한 증거"],
@@ -1231,7 +1231,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "CO2 동역학과 slope",
         "느린 환경 신호는 값 자체뿐 아니라 환기·공간 부피·시간척도의 영향을 받는다.",
         "PART II · 센서와 신호",
-        "src/integrated_node/safenest_risk_engine.py:92-94,195-230; src/risk/risk_rules.py:148-174",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:92-94,195-230; ondevice_ai/src/risk/risk_rules.py:148-174",
     )
     w.body(
         "완전 혼합 공간의 개념 모델에서는 체적분율 C의 변화가 발생량 G, 공간 부피 V, 환기 유량 Q_v, 외기 농도 "
@@ -1271,7 +1271,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "CO2 AI의 입력과 출력",
         "현재 모델은 위험 도달시간이 아니라 UCI 기반 VACANT/OCCUPIED 2분류다.",
         "PART II · 센서와 신호",
-        "models/model_manifest.json:37-65; src/inference/co2_interpreter.py:38-131",
+        "ondevice_ai/models/model_manifest.json:37-65; ondevice_ai/src/inference/co2_interpreter.py:38-131",
     )
     w.table(
         ["축", "계약", "runtime 처리"],
@@ -1307,7 +1307,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "CO2 AI와 위험 규칙의 실제 연결",
         "AI 호출 성공과 최종 위험도 사용을 분리해서 읽는다.",
         "PART II · 센서와 신호",
-        "src/integrated_node/safenest_risk_engine.py:195-232,391-402; src/risk/risk_rules.py:148-174,312-319",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:195-232,391-402; ondevice_ai/src/risk/risk_rules.py:148-174,312-319",
     )
     w.code(
         [
@@ -1352,7 +1352,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "PIR과 presence gating",
         "PIR motion=0은 사람이 없다는 뜻도, 쓰러졌다는 뜻도 아니다.",
         "PART II · 센서와 신호",
-        "src/risk/risk_rules.py:212-256; src/integrated_node/safenest_risk_engine.py:240-249,306-315",
+        "ondevice_ai/src/risk/risk_rules.py:212-256; ondevice_ai/src/integrated_node/safenest_risk_engine.py:240-249,306-315",
     )
     w.table(
         ["입력 조합", "timer 동작", "RuleResult"],
@@ -1389,7 +1389,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "FMCW radar 신호 체인",
         "거리와 미세 움직임을 얻는 이론적 체인과 현재 코드의 시작점을 구분한다.",
         "PART II · 센서와 신호",
-        "src/integrated_node/safenest_risk_engine.py:30-71; models/mmwave/sensor_stats_metadata_v0.1.0.json:2-19",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:30-71; ondevice_ai/models/mmwave/sensor_stats_metadata_v0.1.0.json:2-19",
     )
     w.pipeline(
         [
@@ -1434,7 +1434,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "Range bin과 거리축의 물리성",
         "FFT index를 meter로 바꾸려면 sensor configuration이 필요하다.",
         "PART II · 센서와 신호",
-        "src/integrated_node/safenest_risk_engine.py:47-71,86-90",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:47-71,86-90",
     )
     w.h2("Range bin")
     w.body(
@@ -1474,7 +1474,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "I/Q, complex phase, 미세 변위",
         "크기만 남기면 호흡으로 인한 sub-wavelength 움직임 정보를 잃을 수 있다.",
         "PART II · 센서와 신호",
-        "src/integrated_node/safenest_risk_engine.py:37-65; models/mmwave/sensor_stats_metadata_v0.1.0.json:19",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:37-65; ondevice_ai/models/mmwave/sensor_stats_metadata_v0.1.0.json:19",
     )
     w.body(
         "한 range bin의 complex 값 X=I+jQ는 반사 amplitude와 phase를 함께 보존한다. I와 Q는 직교 성분이며 "
@@ -1509,7 +1509,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "Clutter map과 calibration 조건",
         "평균 복소 배경을 빼려면 '배경만 관측했다'는 조건이 먼저 입증돼야 한다.",
         "PART II · 센서와 신호",
-        "src/integrated_node/safenest_risk_engine.py:30-45,283-292",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:30-45,283-292",
     )
     w.equation(
         [
@@ -1551,7 +1551,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "Adaptive chest-bin FFT band-energy의 해상도",
         "수식이 맞아도 관측 길이가 짧으면 선택 가능한 주파수 bin이 부족하다.",
         "PART II · 센서와 신호",
-        "src/integrated_node/safenest_risk_engine.py:47-71,86-90,283-292",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:47-71,86-90,283-292",
     )
     w.equation(
         [
@@ -1624,7 +1624,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "mmWave 10 Hz·300 sample window",
         "tensor의 세 축과 시간·주파수 해상도를 계산한다.",
         "PART II · 센서와 신호",
-        "models/model_manifest.json:67-95; models/mmwave/sensor_stats_metadata_v0.1.0.json:2-19",
+        "ondevice_ai/models/model_manifest.json:67-95; ondevice_ai/models/mmwave/sensor_stats_metadata_v0.1.0.json:2-19",
     )
     w.table(
         ["계약", "값", "의미"],
@@ -1658,7 +1658,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "Stream Adapter state machine",
         "ring buffer는 단순 저장소가 아니라 입실·시간·신선도 조건을 가진 gate다.",
         "PART II · 센서와 신호",
-        "src/sensors/mmwave/mmwave_stream_adapter.py:24-110; src/integrated_node/safenest_risk_engine.py:242-281",
+        "devices/mmwave/src/mmwave_stream_adapter.py:24-110; ondevice_ai/src/integrated_node/safenest_risk_engine.py:242-281",
     )
     w.table(
         ["event", "동작", "reason / 상태"],
@@ -1679,7 +1679,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         [
             "dt가 0.1초 근처인지 검사하지 않는다. 0&lt;dt&lt;=0.5이면 허용한다.",
             "300개 window의 실제 coverage가 29.9초인지 확인하거나 재샘플링하지 않는다.",
-            "ready 이후 매 새 sample마다 299/300이 겹치는 window를 추론한다. nominal 10 src/inference/s다.",
+            "ready 이후 매 새 sample마다 299/300이 겹치는 window를 추론한다. nominal 10 ondevice_ai/src/inference/s다.",
             "get_status는 wall clock을 쓰므로 replay timestamp와 혼용할 때 해석을 주의해야 한다.",
         ]
     )
@@ -1696,7 +1696,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "CSV Adapter와 dataset windowing",
         "offline Adapter는 실시간 경로보다 강한 시간 grid와 session 격리를 구현한다.",
         "PART II · 센서와 신호",
-        "src/sensors/mmwave/mmwave_csv_adapter.py:23-126",
+        "devices/mmwave/src/mmwave_csv_adapter.py:23-126",
     )
     w.numbered(
         [
@@ -1735,7 +1735,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "Model·Manifest·Metadata·Provenance",
         "네 계약은 서로 대체할 수 없으며 모두 있어야 model output의 의미를 복원할 수 있다.",
         "PART III · Edge AI 계약",
-        "models/model_manifest.json:1-110; src/inference/model_registry.py:23-93",
+        "ondevice_ai/models/model_manifest.json:1-110; ondevice_ai/src/inference/model_registry.py:23-93",
     )
     w.table(
         ["계약", "답하는 질문", "SafeNest 예"],
@@ -1772,7 +1772,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "Z-score와 INT8 양자화",
         "정규화는 분포를 맞추고, 양자화는 제한된 정수 격자에 표현한다.",
         "PART III · Edge AI 계약",
-        "src/inference/mmwave_interpreter.py:159-199; models/model_manifest.json:78-94",
+        "ondevice_ai/src/inference/mmwave_interpreter.py:159-199; ondevice_ai/models/model_manifest.json:78-94",
     )
     w.equation(
         [
@@ -1813,7 +1813,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "CO2 INT8 포화 범위 계산",
         "manifest quantization과 metadata를 합치면 배포 입력의 유효 표현 범위를 계산할 수 있다.",
         "PART III · Edge AI 계약",
-        "models/model_manifest.json:48-60; models/co2/co2_scaling_metadata_v0.1.0.json:2-16",
+        "ondevice_ai/models/model_manifest.json:48-60; ondevice_ai/models/co2/co2_scaling_metadata_v0.1.0.json:2-16",
     )
     w.equation(
         [
@@ -1850,7 +1850,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "TFLite 실행과 confidence 해석",
         "invoke 성공, softmax-like 출력, 실제 정확도는 세 개의 다른 주장이다.",
         "PART III · Edge AI 계약",
-        "src/inference/thermal_interpreter.py:150-199; src/inference/mmwave_interpreter.py:189-245",
+        "ondevice_ai/src/inference/thermal_interpreter.py:150-199; ondevice_ai/src/inference/mmwave_interpreter.py:189-245",
     )
     w.pipeline(
         [
@@ -1890,7 +1890,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "세 Wrapper의 검증 강도 감사",
         "공통 interface처럼 보여도 initialization과 fault 처리의 깊이가 다르다.",
         "PART III · Edge AI 계약",
-        "src/inference/thermal_interpreter.py:57-104; src/inference/co2_interpreter.py:49-109; src/inference/mmwave_interpreter.py:58-157",
+        "ondevice_ai/src/inference/thermal_interpreter.py:57-104; ondevice_ai/src/inference/co2_interpreter.py:49-109; ondevice_ai/src/inference/mmwave_interpreter.py:58-157",
     )
     w.table(
         ["검사", "Thermal", "CO2", "mmWave"],
@@ -1925,7 +1925,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "현재 세 모델 카드",
         "모델의 역할보다 증거 등급과 연결 상태를 먼저 읽는다.",
         "PART III · Edge AI 계약",
-        "models/model_manifest.json:6-108; reports/TEST_RESULTS_20260726.md:13-45",
+        "ondevice_ai/models/model_manifest.json:6-108; reports/TEST_RESULTS_20260726.md:13-45",
     )
     w.table(
         ["항목", "Thermal", "CO2", "mmWave"],
@@ -1963,7 +1963,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "센서별 부분 점수 함수",
         "각 modality는 먼저 0-1 score와 reason으로 변환된 뒤 가중합에 들어간다.",
         "PART IV · 위험 융합과 상태",
-        "src/risk/risk_rules.py:87-256; config/risk_engine.json:4-27",
+        "ondevice_ai/src/risk/risk_rules.py:87-256; ondevice_ai/config/risk_engine.json:4-27",
     )
     w.table(
         ["modality", "조건", "부분 score / 효과"],
@@ -1998,7 +1998,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "가중 융합 계산 예제",
         "점수 기여도를 직접 계산하면 reason과 최종 level의 차이가 보인다.",
         "PART IV · 위험 융합과 상태",
-        "src/risk/risk_rules.py:312-334; config/risk_engine.json:18-27",
+        "ondevice_ai/src/risk/risk_rules.py:312-334; ondevice_ai/config/risk_engine.json:18-27",
     )
     w.equation(
         [
@@ -2036,7 +2036,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "Quality Gate의 현재 의미",
         "Q_quality,i는 계산되지만 현재 위험 가중치를 동적으로 재정규화하지 않는다.",
         "PART IV · 위험 융합과 상태",
-        "src/integrated_node/safenest_risk_engine.py:98-125,360-377; src/risk/risk_rules.py:312-319",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:98-125,360-377; ondevice_ai/src/risk/risk_rules.py:312-319",
     )
     w.table(
         ["sensor", "현재 Q_quality=1 조건", "비정상 Q_quality", "미검사"],
@@ -2079,7 +2079,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "Emergency Override와 timer",
         "즉시 경로와 지속시간 확인 경로를 분리해 latency budget을 읽는다.",
         "PART IV · 위험 융합과 상태",
-        "src/risk/risk_rules.py:87-146,193-210; src/integrated_node/safenest_risk_engine.py:326-331",
+        "ondevice_ai/src/risk/risk_rules.py:87-146,193-210; ondevice_ai/src/integrated_node/safenest_risk_engine.py:326-331",
     )
     w.table(
         ["trigger", "확인 시간", "동작"],
@@ -2126,7 +2126,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "Moving mean, IIR, Hysteresis",
         "노이즈 억제는 응답 지연과 상태 기억을 만든다.",
         "PART IV · 위험 융합과 상태",
-        "src/integrated_node/safenest_risk_engine.py:326-344; config/risk_engine.json:18-28",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:326-344; ondevice_ai/config/risk_engine.json:18-28",
     )
     w.equation(
         [
@@ -2163,7 +2163,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "상태의 세 축을 함께 읽는다",
         "위험 수준, 장비 건강, 원인 코드는 서로 다른 질문에 답한다.",
         "PART IV · 위험 융합과 상태",
-        "src/risk/risk_rules.py:258-335; src/integrated_node/safenest_risk_engine.py:360-415",
+        "ondevice_ai/src/risk/risk_rules.py:258-335; ondevice_ai/src/integrated_node/safenest_risk_engine.py:360-415",
     )
     w.table(
         ["축", "질문", "대표 값"],
@@ -2204,7 +2204,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "현재 출력 계약과 관측성",
         "확장 가능한 시스템은 결과뿐 아니라 시간·출처·품질·상태 전이를 설명해야 한다.",
         "PART IV · 위험 융합과 상태",
-        "src/integrated_node/safenest_risk_engine.py:360-415; src/integrated_node/safenest_integrated_plotter.py:119-258",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:360-415; ondevice_ai/src/integrated_node/safenest_integrated_plotter.py:119-258",
     )
     w.table(
         ["현재 field", "내용", "관측 가치"],
@@ -2242,7 +2242,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "정상 startup 시나리오 추적",
         "AI window가 준비되지 않은 초기 상태를 센서 고장이나 안전 상태와 혼동하지 않는다.",
         "PART IV · 위험 융합과 상태",
-        "src/integrated_node/safenest_risk_engine.py:242-281,303-377; tests/test_three_model_integration.py:43-52",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:242-281,303-377; ondevice_ai/tests/test_three_model_integration.py:43-52",
     )
     w.table(
         ["시각", "mmWave buffer", "AI 상태", "위험·건강 해석"],
@@ -2278,7 +2278,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "낙상과 무호흡 시나리오 추적",
         "두 경로 모두 R=100이지만 trigger와 신뢰 경계가 다르다.",
         "PART IV · 위험 융합과 상태",
-        "src/risk/risk_rules.py:87-146,193-210; tests/test_fault_injection.py:58-78",
+        "ondevice_ai/src/risk/risk_rules.py:87-146,193-210; ondevice_ai/tests/test_fault_injection.py:58-78",
     )
     w.table(
         ["경로", "필요 입력", "지연", "주의"],
@@ -2321,7 +2321,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "CO2·결측·FAULT 시나리오",
         "reason, 숫자 risk, 상태를 따로 계산해야 직관과 다른 결과를 설명할 수 있다.",
         "PART IV · 위험 융합과 상태",
-        "src/integrated_node/safenest_risk_engine.py:124-169; tests/test_fault_injection.py:28-57",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:124-169; ondevice_ai/tests/test_fault_injection.py:28-57",
     )
     w.table(
         ["입력", "risk/status 가능 결과", "reason·health"],
@@ -2353,7 +2353,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "현재 확인된 계약·상태 불일치",
         "확장 전에 고쳐야 할 항목을 '현재 사실'과 '권장 결정'으로 분리한다.",
         "PART V · 검증과 확장",
-        "src/risk/risk_rules.py:39-61,285-300; src/integrated_node/run_demo.py:31-37; src/integrated_node/safenest_risk_engine.py:338-415",
+        "ondevice_ai/src/risk/risk_rules.py:39-61,285-300; ondevice_ai/src/integrated_node/run_demo.py:31-37; ondevice_ai/src/integrated_node/safenest_risk_engine.py:338-415",
     )
     w.table(
         ["우선", "현재 사실", "영향 / 권장"],
@@ -2384,7 +2384,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "48개 자동 테스트가 증명하는 범위",
         "2026-07-27 재실행에서도 48/48 통과했지만, 시험 oracle의 범위를 넘겨 해석하지 않는다.",
         "PART V · 검증과 확장",
-        "reports/TEST_RESULTS_20260726.md:13-45; tests/test_*.py",
+        "reports/TEST_RESULTS_20260726.md:13-45; ondevice_ai/tests/test_*.py",
     )
     w.table(
         ["묶음", "수", "검증", "주요 공백"],
@@ -2417,7 +2417,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "Benchmark와 Raspberry Pi HIL 계획",
         "평균 invoke 시간 하나로 실시간·안전 성능을 판단하지 않는다.",
         "PART V · 검증과 확장",
-        "tests/benchmarks/thermal_latest.json:1-15; tests/benchmarks/benchmark_thermal.py:23-59; models/model_manifest.json:96-103",
+        "ondevice_ai/benchmarks/thermal_latest.json:1-15; ondevice_ai/benchmarks/benchmark_thermal.py:23-59; ondevice_ai/models/model_manifest.json:96-103",
     )
     w.table(
         ["현재 측정", "값", "제한"],
@@ -2455,7 +2455,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "데이터 split, leakage, 평가 지표",
         "안전 모델의 성능은 sample 수보다 독립성 단위와 error cost로 정의한다.",
         "PART V · 검증과 확장",
-        "src/sensors/mmwave/mmwave_csv_adapter.py:70-124; src/training/thermal_train.py:18-23; docs/roadmap_and_setup/safenest_mmwave_latest_development_direction_20260726.md",
+        "devices/mmwave/src/mmwave_csv_adapter.py:70-124; ondevice_ai/src/training/thermal_train.py:18-23; docs/roadmap_and_setup/safenest_mmwave_latest_development_direction_20260726.md",
     )
     w.table(
         ["누수 단위", "잘못된 split", "권장 split"],
@@ -2532,7 +2532,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "새 센서·모델 추가 체크리스트",
         "인터페이스를 먼저 고정하면 시스템 확장 시 원인 추적 비용이 줄어든다.",
         "PART V · 검증과 확장",
-        "models/model_manifest.json; src/sensors/mmwave/; src/inference/; tests/",
+        "ondevice_ai/models/model_manifest.json; devices/mmwave/src/; ondevice_ai/src/inference/; tests/",
     )
     w.table(
         ["단계", "승인 질문"],
@@ -2568,14 +2568,14 @@ def build_guide(output: Path = OUTPUT) -> None:
     w.numbered(
         [
             "<b>README.md</b>: 현재 기준선·디렉터리 역할·테스트 범위를 파악한다.",
-            "<b>models/model_manifest.json</b>: 세 artifact의 shape·dtype·class·status를 표로 옮긴다.",
-            "<b>src/inference/*_interpreter.py</b>: validation -> preprocessing -> invoke -> decode 차이를 비교한다.",
-            "<b>src/sensors/mmwave/</b>: window의 시간·session·rejection 조건을 state diagram으로 그린다.",
-            "<b>config/risk_engine.json + risk_rules.py</b>: 부분 score·override·reason을 수식으로 만든다.",
+            "<b>ondevice_ai/models/model_manifest.json</b>: 세 artifact의 shape·dtype·class·status를 표로 옮긴다.",
+            "<b>ondevice_ai/src/inference/*_interpreter.py</b>: validation -> preprocessing -> invoke -> decode 차이를 비교한다.",
+            "<b>devices/mmwave/src/</b>: window의 시간·session·rejection 조건을 state diagram으로 그린다.",
+            "<b>ondevice_ai/config/risk_engine.json + risk_rules.py</b>: 부분 score·override·reason을 수식으로 만든다.",
             "<b>safenest_risk_engine.py</b>: state ownership, 호출 순서, smoothing, output을 추적한다.",
             "<b>virtual streamer + plotter</b>: simulation input과 현재 UI 소비 계약을 확인한다.",
             "<b>mr60/</b>: 독립 receiver와 통합 경로 사이의 결손을 기록한다.",
-            "<b>tests/ + reports/ + tests/benchmarks/</b>: 주장마다 실제 oracle과 환경을 연결한다.",
+            "<b>tests/ + reports/ + ondevice_ai/benchmarks/</b>: 주장마다 실제 oracle과 환경을 연결한다.",
             "<b>NEXT_STEPS·roadmap</b>: 구현 사실과 계획을 다시 분리한다.",
         ]
     )
@@ -2597,7 +2597,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "필수 실습 4개",
         "설명을 읽는 데서 끝내지 않고 현재 artifact와 상태를 직접 재현한다.",
         "PART V · 검증과 확장",
-        "tests/; models/model_manifest.json; src/risk/risk_rules.py; src/integrated_node/safenest_risk_engine.py",
+        "tests/; ondevice_ai/models/model_manifest.json; ondevice_ai/src/risk/risk_rules.py; ondevice_ai/src/integrated_node/safenest_risk_engine.py",
     )
     w.table(
         ["실습", "수행", "완료 기준"],
@@ -2759,7 +2759,7 @@ def build_guide(output: Path = OUTPUT) -> None:
     )
     w.finish()
 
-    w.start("C", "복제 상수와 동기화 위험", "현재 숫자가 여러 파일에 복제돼 있으므로 변경 지점과 검증을 함께 추적한다.", "부록", "models/model_manifest.json; config/risk_engine.json; src/integrated_node/safenest_risk_engine.py")
+    w.start("C", "복제 상수와 동기화 위험", "현재 숫자가 여러 파일에 복제돼 있으므로 변경 지점과 검증을 함께 추적한다.", "부록", "ondevice_ai/models/model_manifest.json; ondevice_ai/config/risk_engine.json; ondevice_ai/src/integrated_node/safenest_risk_engine.py")
     w.table(
         ["항목", "현재 값", "복제 위치 / 주의"],
         [
@@ -2792,15 +2792,15 @@ def build_guide(output: Path = OUTPUT) -> None:
     w.table(
         ["주제", "우선 근거", "보조 증거"],
         [
-            ["전체 packet·orchestration", "src/integrated_node/safenest_risk_engine.py", "virtual_sensor_streamer.py, plotter.py"],
-            ["위험 score·timer·health", "src/risk/risk_rules.py, risk_config.json", "tests/test_risk_rules.py"],
-            ["모델 artifact 계약", "models/model_manifest.json", "각 metadata·IMPORT_PROVENANCE"],
-            ["Thermal runtime·data", "thermal_interpreter.py, src/training/thermal_prep.py", "src/training/thermal_train.py, thermal tests"],
+            ["전체 packet·orchestration", "ondevice_ai/src/integrated_node/safenest_risk_engine.py", "virtual_sensor_streamer.py, plotter.py"],
+            ["위험 score·timer·health", "ondevice_ai/src/risk/risk_rules.py, risk_config.json", "ondevice_ai/tests/test_risk_rules.py"],
+            ["모델 artifact 계약", "ondevice_ai/models/model_manifest.json", "각 metadata·IMPORT_PROVENANCE"],
+            ["Thermal runtime·data", "thermal_interpreter.py, ondevice_ai/src/training/thermal_prep.py", "ondevice_ai/src/training/thermal_train.py, thermal tests"],
             ["CO2 runtime", "co2_interpreter.py", "co2 metadata, co2_data/ guides"],
             ["mmWave runtime", "mmwave_interpreter.py", "stream/csv adapters, mmWave tests"],
             ["real MR60 gap", "mr60/sensor_receiver.py", "sensor_simulator.py"],
-            ["자동 검증", "reports/TEST_RESULTS_20260726.md", "tests/test_*.py"],
-            ["성능", "tests/benchmarks/thermal_latest.json", "benchmark_thermal.py"],
+            ["자동 검증", "reports/TEST_RESULTS_20260726.md", "ondevice_ai/tests/test_*.py"],
+            ["성능", "ondevice_ai/benchmarks/thermal_latest.json", "benchmark_thermal.py"],
             ["확장 방향", "docs/roadmap_and_setup/\nsafenest_mmwave_latest_\ndevelopment_direction_20260726.md", "NEXT_STEPS.md"],
         ],
         [0.26, 0.42, 0.32],
@@ -2809,13 +2809,13 @@ def build_guide(output: Path = OUTPUT) -> None:
     w.code(
         [
             "python3 -m unittest discover -s tests -p 'test_*.py' -v",
-            "python3 src/integrated_node/run_demo.py        # GUI",
-            "python3 src/integrated_node/run_demo.py --cli  # 현재 legacy-key failure 확인 대상",
+            "python3 ondevice_ai/src/integrated_node/run_demo.py        # GUI",
+            "python3 ondevice_ai/src/integrated_node/run_demo.py --cli  # 현재 legacy-key failure 확인 대상",
         ]
     )
     w.callout(
         "Benchmark 명령 주의",
-        "python3 tests/benchmarks/benchmark_thermal.py는 thermal_latest.json과 날짜가 고정된 thermal_mac_20260725.json을 "
+        "python3 ondevice_ai/benchmarks/benchmark_thermal.py는 thermal_latest.json과 날짜가 고정된 thermal_mac_20260725.json을 "
         "덮어쓴다. 배포 근거를 보존하려면 임시 worktree/복사본에서 실행하거나 스크립트에 --output 옵션을 먼저 추가한다.",
         "amber",
     )
@@ -2872,7 +2872,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "구현 상태기계와 update order",
         "상태는 값 목록이 아니라 owner·key·guard·reset·invariant로 설명해야 재사용과 동시성이 안전해진다.",
         "부록",
-        "src/integrated_node/safenest_risk_engine.py:73-96,195-344; src/risk/risk_rules.py:82-146,213-256",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:73-96,195-344; ondevice_ai/src/risk/risk_rules.py:82-146,213-256",
     )
     w.table(
         ["owner / state key", "생명주기·reset", "현재 invariant와 fault 경계"],
@@ -2916,7 +2916,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "제안 canonical schema와 호환성 규칙",
         "현재 dict를 그대로 굳히지 말고 optional·null·version·error 의미를 기계 검증 가능한 계약으로 만든다.",
         "부록 · DESIGN TARGET / NOT IMPLEMENTED",
-        "src/integrated_node/virtual_sensor_streamer.py:177-199; src/integrated_node/safenest_risk_engine.py:120-169,360-415",
+        "ondevice_ai/src/integrated_node/virtual_sensor_streamer.py:177-199; ondevice_ai/src/integrated_node/safenest_risk_engine.py:120-169,360-415",
     )
     w.code(
         [
@@ -2977,13 +2977,13 @@ def build_guide(output: Path = OUTPUT) -> None:
         "실행 가능한 수치 실습 카드",
         "명령·fixture·기대값·채점 기준을 고정해 읽기 과제를 재현 가능한 학습 증거로 바꾼다.",
         "부록",
-        "src/tools/verify_safenest_learning_examples.py; tests/; models/model_manifest.json",
+        "ondevice_ai/src/tools/verify_safenest_learning_examples.py; tests/; ondevice_ai/models/model_manifest.json",
     )
     w.h2("환경과 명령")
     w.code(
         [
             "cd <repository-root>",
-            "python3 src/tools/verify_safenest_learning_examples.py",
+            "python3 ondevice_ai/src/tools/verify_safenest_learning_examples.py",
             "python3 -m unittest discover -s tests -p 'test_*.py' -v",
             "# PASS asserts A-C arithmetic, D type, E gap reset, F time-boundary behavior",
         ],
@@ -3027,7 +3027,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "raw→moving mean→IIR→상태 누적 계산",
         "한 시퀀스를 끝까지 계산하면 필터 지연, 히스테리시스, emergency history 효과가 동시에 보인다.",
         "부록",
-        "src/integrated_node/safenest_risk_engine.py:326-344; src/tools/verify_safenest_learning_examples.py",
+        "ondevice_ai/src/integrated_node/safenest_risk_engine.py:326-344; ondevice_ai/src/tools/verify_safenest_learning_examples.py",
     )
     w.equation(
         [
@@ -3071,7 +3071,7 @@ def build_guide(output: Path = OUTPUT) -> None:
         "요구사항·hazard·oracle·coverage 추적성",
         "테스트 수가 아니라 어떤 실패를 어떤 판정 규칙으로 덮었는지와 남은 gap을 연결한다.",
         "부록",
-        "tests/; config/risk_engine.json; models/model_manifest.json; docs/roadmap_and_setup/",
+        "tests/; ondevice_ai/config/risk_engine.json; ondevice_ai/models/model_manifest.json; docs/roadmap_and_setup/",
     )
     w.table(
         ["ID / 요구", "실패 hazard", "test oracle", "현재 coverage / gap"],

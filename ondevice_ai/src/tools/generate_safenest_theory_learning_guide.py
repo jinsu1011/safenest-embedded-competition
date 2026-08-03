@@ -619,7 +619,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "00", "이 학습서의 읽는 법", "표를 외우는 대신 현상·변환·판단의 인과관계를 하나의 mental model로 만든다.",
-        "학습 안내", "READING GUIDE", "README.md; models/model_manifest.json; src/integrated_node/safenest_risk_engine.py",
+        "학습 안내", "READING GUIDE", "README.md; ondevice_ai/models/model_manifest.json; ondevice_ai/src/integrated_node/safenest_risk_engine.py",
         ("body", "이 문서의 목표는 코드 파일의 위치를 암기하는 것이 아니다. 센서가 어떤 물리량을 관측하고, 그 값이 어떤 시간축과 단위를 거쳐 신호와 tensor가 되며, 마지막에 어떤 규칙과 상태기계로 연결되는지를 설명할 수 있어야 한다. 따라서 각 단원은 <b>현상 → 정의 → 도식 → 수식 → SafeNest 연결 → 한계</b>의 순서로 전개한다."),
         ("diagram", "flow", {"labels": [("현상", "무엇이 변하는가"), ("측정", "센서가 보는 것"), ("변환", "신호·tensor"), ("판단", "AI·규칙"), ("상태", "위험·건강")]}, 35 * mm, "한 단계의 출력은 다음 단계의 입력 의미를 제한한다. 중간 의미를 생략하면 shape가 맞아도 시스템은 틀릴 수 있다."),
         ("body", "핵심 개념은 두 쪽을 한 학습 단위로 묶었다. 첫 쪽에서는 정의와 원리를 세우고, 둘째 쪽에서는 수식의 의미와 현재 시스템의 대응 관계를 설명한다. 수식 아래에는 기호·단위·가정을 문장으로 풀어 쓴다."),
@@ -629,7 +629,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "01", "전체 시스템을 먼저 본다", "세부 모델을 보기 전에 신호가 어디에서 생기고 어디에서 의미가 바뀌는지 고정한다.",
-        "학습 안내", "SYSTEM MAP", "src/integrated_node/virtual_sensor_streamer.py:171-199; src/integrated_node/safenest_risk_engine.py:120-415",
+        "학습 안내", "SYSTEM MAP", "ondevice_ai/src/integrated_node/virtual_sensor_streamer.py:171-199; ondevice_ai/src/integrated_node/safenest_risk_engine.py:120-415",
         ("body", "SafeNest의 입력은 Thermal frame, CO₂ 농도와 습도, mmWave 호흡 정보, PIR motion이다. 이 값들은 곧바로 위험도가 아니다. 먼저 입력 계약을 통과하고, 필요한 경우 window·정규화·양자화를 거친 뒤 AI 또는 규칙 기반 부분 판단이 된다. 부분 판단은 위험 융합과 상태기계를 거쳐 사용자에게 전달된다."),
         ("diagram", "layers", {"labels": [("물리계", "사람·공간·환기·움직임"), ("센서 관측", "thermal·CO₂·mmWave·PIR"), ("신호 표현", "frame·ppm·phase·motion"), ("추론과 규칙", "TFLite class·부분 위험도"), ("융합과 상태", "risk·health·reason"), ("출력", "경보·UI·telemetry")]}, 76 * mm, "위쪽은 현실 세계이고 아래쪽으로 갈수록 소프트웨어가 부여한 해석이 강해진다."),
         ("body", "시스템을 설명할 때는 항상 위에서 아래로 내려가야 한다. 예를 들어 ‘mmWave AI가 무호흡을 감지한다’고 바로 말하면 phase의 물리 의미, 10 Hz sampling, 300-sample window, 모델 class와 2초 확인 규칙이 모두 생략된다. 정확한 설명은 이 연결을 복원하는 일이다."),
@@ -638,7 +638,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "02", "기호와 계층을 먼저 고정한다", "같은 문자와 같은 class 번호가 다른 계층을 뜻하지 않도록 표기를 분리한다.",
-        "학습 안내", "NOTATION", "models/model_manifest.json; src/risk/risk_rules.py; src/integrated_node/safenest_risk_engine.py",
+        "학습 안내", "NOTATION", "ondevice_ai/models/model_manifest.json; ondevice_ai/src/risk/risk_rules.py; ondevice_ai/src/integrated_node/safenest_risk_engine.py",
         ("table", ["기호", "이 문서의 의미", "단위·범위"], [
             ["x(t), x[k]", "연속시간 물리 신호 / sampling된 이산 신호", "물리량에 따라 다름"],
             ["f_s, N", "sample rate / window sample 수", "Hz / samples"],
@@ -656,7 +656,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "P1", "PART I · 시스템을 보는 기본 틀", "복잡한 시스템은 구성요소 목록보다 계층·계약·시간·상태의 관계로 이해한다.",
-        "PART I · 시스템 기초", "PART OPENER", "README.md; models/model_manifest.json; src/integrated_node/safenest_risk_engine.py",
+        "PART I · 시스템 기초", "PART OPENER", "README.md; ondevice_ai/models/model_manifest.json; ondevice_ai/src/integrated_node/safenest_risk_engine.py",
         ("body", "센서와 AI를 많이 연결한다고 자동으로 하나의 시스템이 되는 것은 아니다. 각 구성요소가 생산하는 값의 의미, 그 값이 유효한 시간, 내부에 남는 상태, 고장 시 downstream에 전달되는 정보가 합쳐져야 시스템이 된다. PART I은 이후 모든 장을 읽는 공통 문법을 만든다."),
         ("diagram", "layers", {"labels": [("계층", "현실→신호→판단"), ("계약", "shape보다 의미"), ("시간", "sampling·age·latency"), ("상태", "history·timer·transition"), ("두 출력축", "risk와 health")]}, 70 * mm, "시스템 확장으로 복잡도가 증가할수록 이 다섯 축을 먼저 고정해야 한다."),
         ("h2", "이 장의 중심 질문"),
@@ -666,7 +666,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "03", "계층은 의미가 바뀌는 경계다", "물리량에서 경보까지 내려갈수록 관측값에 해석과 정책이 추가된다.",
-        "PART I · 시스템 기초", "UNIT 01 · 1/2", "src/integrated_node/safenest_risk_engine.py:120-415; src/inference/*_interpreter.py",
+        "PART I · 시스템 기초", "UNIT 01 · 1/2", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:120-415; ondevice_ai/src/inference/*_interpreter.py",
         ("body", "<b>추상화 계층</b>은 세부를 숨기는 장치이면서 동시에 의미가 바뀌는 경계다. 물리계의 흉부 변위는 radar complex signal이 되고, 특정 range bin의 phase가 되며, 300-sample tensor와 model class를 거쳐 호흡 위험 증거가 된다. 각 계층은 이전 계층 전체가 아니라 필요한 표현만 전달한다."),
         ("diagram", "flow", {"labels": [("물리량", "흉부 변위"), ("센서신호", "I/Q·rFFT"), ("표현", "resp_phase"), ("Tensor", "[1,300,1]"), ("판단", "class·rule")]}, 39 * mm, "화살표마다 정보는 압축되고 새로운 가정이 추가된다."),
         ("h2", "추상화가 필요한 이유"),
@@ -676,7 +676,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "04", "인과관계와 상태를 함께 본다", "현재 출력은 현재 입력뿐 아니라 과거 상태와 update order에도 의존한다.",
-        "PART I · 시스템 기초", "UNIT 01 · 2/2", "src/integrated_node/safenest_risk_engine.py:73-96,326-344; src/risk/risk_rules.py:82-146",
+        "PART I · 시스템 기초", "UNIT 01 · 2/2", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:73-96,326-344; ondevice_ai/src/risk/risk_rules.py:82-146",
         ("body", "입력만으로 출력이 결정되는 순수 함수라면 같은 입력은 언제나 같은 결과를 낸다. 하지만 SafeNest에는 window, moving mean, IIR state, 이전 status, apnea timer가 남는다. 따라서 동일한 packet도 직전 history와 timer가 다르면 다른 결과를 낼 수 있다."),
         ("equation", r"s_{k+1}=f(s_k,x_k),\qquad y_k=g(s_k,x_k)", "1.1", "x_k는 현재 입력, s_k는 buffer·filter·timer를 포함한 내부 상태, y_k는 현재 출력이다."),
         ("diagram", "flow", {"labels": [("현재 입력", "x_k"), ("상태 갱신", "f(s_k,x_k)"), ("새 상태", "s_{k+1}"), ("출력", "y_k")]}, 34 * mm, "입력과 상태가 함께 다음 출력의 원인이 된다."),
@@ -686,7 +686,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "05", "기계 계약은 구조를 고정한다", "shape·dtype·key는 값이 해석되기 전에 확인할 수 있는 최소 조건이다.",
-        "PART I · 시스템 기초", "UNIT 02 · 1/2", "models/model_manifest.json; src/inference/mmwave_interpreter.py:113-158",
+        "PART I · 시스템 기초", "UNIT 02 · 1/2", "ondevice_ai/models/model_manifest.json; ondevice_ai/src/inference/mmwave_interpreter.py:113-158",
         ("body", "<b>기계 계약</b>은 프로그램이 자동으로 검사할 수 있는 구조적 조건이다. message의 key, tensor shape, dtype, quantization parameter, schema version이 여기에 속한다. 기계 계약이 없으면 잘못된 입력이 downstream 계산으로 들어가 더 늦고 모호한 오류를 만든다."),
         ("diagram", "schema", {}, 49 * mm, "식별·시간·의미·건강 정보가 하나의 envelope에서 기계적으로 검증되어야 한다."),
         ("h2", "계약 검사의 순서"),
@@ -696,7 +696,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "06", "의미 계약은 숫자의 뜻을 고정한다", "같은 배열이라도 단위·전처리·시간축이 다르면 다른 신호다.",
-        "PART I · 시스템 기초", "UNIT 02 · 2/2", "models/mmwave/sensor_stats_metadata_v0.1.0.json; models/model_manifest.json",
+        "PART I · 시스템 기초", "UNIT 02 · 2/2", "ondevice_ai/models/mmwave/sensor_stats_metadata_v0.1.0.json; ondevice_ai/models/model_manifest.json",
         ("body", "<b>Semantic contract</b>는 숫자가 무엇을 뜻하는지 정한다. mmWave model의 입력은 단순한 300개 실수가 아니라 10 Hz로 sampling된 30초 resp_phase이며 metadata에는 unwrapped·clutter-removed 의미가 기록돼 있다. 값의 발생 과정이 달라지면 shape가 같아도 학습 분포와 입력 의미가 달라진다."),
         ("diagram", "flow", {"labels": [("같은 shape", "300 values"), ("단위", "rad 또는 rpm"), ("시간축", "10 Hz·30 s"), ("전처리", "unwrap·clutter"), ("의미", "model input")]}, 39 * mm, "기계 계약은 첫 상자만 확인하고 의미 계약은 나머지 상자를 확인한다."),
         ("h2", "의미 계약이 깨지는 전형적인 경우"),
@@ -707,7 +707,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "07", "Sampling은 시간을 숫자열로 바꾼다", "sample 개수와 실제 측정 시간은 같지 않으므로 time grid를 명시해야 한다.",
-        "PART I · 시스템 기초", "UNIT 03 · 1/2", "src/sensors/mmwave/mmwave_stream_adapter.py:31-94; models/model_manifest.json:73-96",
+        "PART I · 시스템 기초", "UNIT 03 · 1/2", "devices/mmwave/src/mmwave_stream_adapter.py:31-94; ondevice_ai/models/model_manifest.json:73-96",
         ("body", "연속시간 신호 x(t)를 일정 간격으로 읽으면 이산 신호 x[k]가 된다. 이상적인 sampling에서는 모든 시각이 첫 시각과 sample rate로 결정된다. 실제 stream에는 jitter, gap, 중복 timestamp가 생길 수 있으므로 N개의 값이 있다는 사실만으로 이상적인 시간 grid를 보장할 수 없다."),
         ("equation", r"t_k=t_0+\frac{k}{f_s},\qquad T_{\mathrm{cov}}=\frac{N-1}{f_s}", "1.2", "f_s는 초당 sample 수이고 T_cov는 첫 sample과 마지막 sample 사이의 실제 coverage다."),
         ("diagram", "timeline", {"markers": [(0.0, "k=0", "t₀"), (0.33, "k=100", "10.0 s"), (0.67, "k=200", "20.0 s"), (1.0, "k=299", "29.9 s")]}, 34 * mm, "10 Hz에서 300개 sample은 첫 점을 0으로 두면 마지막 점이 29.9초에 놓인다."),
@@ -716,7 +716,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "08", "Freshness는 판단 시점의 유효성을 정한다", "측정 시각과 도착 시각을 분리해야 오래된 값을 새 값처럼 쓰지 않는다.",
-        "PART I · 시스템 기초", "UNIT 03 · 2/2", "src/sensors/mmwave/mmwave_stream_adapter.py:84-110; src/integrated_node/safenest_risk_engine.py:120-169",
+        "PART I · 시스템 기초", "UNIT 03 · 2/2", "devices/mmwave/src/mmwave_stream_adapter.py:84-110; ondevice_ai/src/integrated_node/safenest_risk_engine.py:120-169",
         ("body", "<b>Freshness</b>는 값이 존재하는지가 아니라 현재 판단에 사용할 만큼 최근인지 묻는다. 센서가 측정한 시각 measured_at과 process가 받은 시각 received_at이 다르면 transport 지연과 queue 지연을 분리할 수 있다. 현재 packet에 timestamp 하나만 있으면 이 두 시간을 구분하기 어렵다."),
         ("equation", r"a_i(t)=t-t^{\mathrm{meas}}_i,\qquad \mathrm{valid}_i(t)=[a_i(t)\leq B_i]", "1.3", "a_i는 i번째 sensor 값의 age, B_i는 그 sensor에 허용된 freshness budget이다."),
         ("diagram", "flow", {"labels": [("측정", "measured_at"), ("전송", "transport"), ("도착", "received_at"), ("대기", "queue"), ("판단", "evaluated_at")]}, 36 * mm, "전체 latency와 sensor age는 같은 숫자가 아니며 각각 기록해야 한다."),
@@ -726,7 +726,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "09", "상태의 소유권과 생명주기", "buffer·filter·timer가 누구에게 속하고 언제 reset되는지가 시스템 의미를 결정한다.",
-        "PART I · 시스템 기초", "UNIT 04 · 1/2", "src/integrated_node/safenest_risk_engine.py:73-96; src/risk/risk_rules.py:82-85",
+        "PART I · 시스템 기초", "UNIT 04 · 1/2", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:73-96; ondevice_ai/src/risk/risk_rules.py:82-85",
         ("body", "<b>State owner</b>는 과거 정보를 보관하고 갱신하며 초기화할 책임이 있는 객체다. SafeNestRiskEngine instance 하나에는 mmWave buffer, rFFT history, CO₂ history, raw risk history, IIR state, 이전 status가 함께 있다. RiskRulesEvaluator는 apnea와 no-motion timer를 보관한다."),
         ("diagram", "state", {}, 43 * mm, "위험 상태 전이뿐 아니라 FAULT 진입과 복귀도 명시적인 lifecycle로 다뤄야 한다."),
         ("h2", "Reset은 단순한 메모리 삭제가 아니다"),
@@ -736,7 +736,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "10", "위험과 건강은 서로 다른 축이다", "관측 위험이 낮은 것과 그 판단을 신뢰할 수 있는 것은 같은 문장이 아니다.",
-        "PART I · 시스템 기초", "UNIT 04 · 2/2", "src/risk/risk_rules.py:258-335; src/integrated_node/safenest_risk_engine.py:360-415",
+        "PART I · 시스템 기초", "UNIT 04 · 2/2", "ondevice_ai/src/risk/risk_rules.py:258-335; ondevice_ai/src/integrated_node/safenest_risk_engine.py:360-415",
         ("body", "위험도는 현재 관측된 증거가 얼마나 위험한지를 나타낸다. 시스템 건강은 그 증거를 생산한 센서·model·시간 경로가 얼마나 가용한지를 나타낸다. sensor가 모두 빠진 경우 risk_score가 0일 수 있지만 이는 안전 증거가 아니라 판단 가능한 관측이 없다는 뜻이다."),
         ("diagram", "fan_in", {"sources": ["호흡 증거", "CO₂ 증거", "심박 증거", "자세 증거", "움직임 증거"], "center": "위험 융합", "output": "RISK"}, 57 * mm, "부분 위험도는 하나의 RISK 축으로 합쳐지지만 health와 reason은 별도로 보존해야 한다."),
         ("body", "따라서 출력은 최소한 status_str, system_status, reasons의 세 축을 가져야 한다. NORMAL+DEGRADED는 낮은 위험 증거와 제한된 판단 범위가 동시에 존재한다는 뜻이다. DANGER+DEGRADED도 가능하며 응급 증거가 다른 경로의 고장을 지우지 않는다."),
@@ -746,7 +746,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "P2", "PART II · 센서와 물리적 측정", "센서는 사람의 상태를 직접 읽지 않고 특정 물리 현상을 제한된 방식으로 관측한다.",
-        "PART II · 센서와 물리", "PART OPENER", "src/training/thermal_prep.py; src/integrated_node/virtual_sensor_streamer.py; mr60/sensor_receiver.py",
+        "PART II · 센서와 물리", "PART OPENER", "ondevice_ai/src/training/thermal_prep.py; ondevice_ai/src/integrated_node/virtual_sensor_streamer.py; mr60/sensor_receiver.py",
         ("body", "센서 데이터의 의미를 이해하려면 먼저 ‘무엇을 직접 측정하는가’를 물어야 한다. Thermal은 적외선 복사 분포, CO₂ sensor는 공간의 기체 농도, PIR은 적외선 flux의 시간 변화, mmWave radar는 송수신파의 주파수·위상 관계를 관측한다. 사람의 자세·재실·호흡은 이 관측을 해석한 결과다."),
         ("diagram", "flow", {"labels": [("물리 현상", "radiation·gas·motion"), ("센서 변환", "전기 신호"), ("보정", "offset·gain"), ("표현", "frame·ppm·phase"), ("추론", "상태 의미")]}, 40 * mm, "센서는 해석의 출발점이지 정답 자체가 아니다."),
         ("h2", "센서 이론에서 반드시 구분할 것"),
@@ -756,7 +756,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "11", "Thermal sensor는 복사 분포를 본다", "온도와 적외선 intensity는 관련 있지만 동일한 데이터 표현은 아니다.",
-        "PART II · 센서와 물리", "UNIT 05 · 1/2", "src/training/thermal_prep.py:19-130; src/inference/thermal_interpreter.py:106-148",
+        "PART II · 센서와 물리", "UNIT 05 · 1/2", "ondevice_ai/src/training/thermal_prep.py:19-130; ondevice_ai/src/inference/thermal_interpreter.py:106-148",
         ("body", "절대온도가 0 K보다 높은 물체는 전자기 복사를 방출한다. Thermal array는 특정 적외선 파장대에서 들어오는 복사 에너지를 pixel별 전기 신호로 바꾼다. 이 신호는 대상 온도뿐 아니라 방사율 emissivity, 반사된 주변 복사, 광학계, sensor response와 보정 상태의 영향을 함께 받는다."),
         ("equation", r"P_{\mathrm{rad}}\approx \varepsilon\sigma A\left(T^4-T_{\mathrm{env}}^4\right)", "2.1", "이 식은 복사 에너지와 절대온도의 관계를 보여주는 개념 모델이다. 실제 thermal camera는 제한된 파장대와 calibration model을 사용한다."),
         ("diagram", "flow", {"labels": [("대상", "T·emissivity"), ("적외선 복사", "incident power"), ("pixel array", "response"), ("NUC·보정", "offset·gain"), ("frame", "온도/강도 grid")]}, 38 * mm, "온도 grid를 얻으려면 pixel response를 물리 온도로 바꾸는 calibration chain이 필요하다."),
@@ -765,7 +765,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "12", "현재 Thermal 입력은 normalized intensity다", "저장소의 grayscale 학습 체인과 실제 온도 측정 체인을 구분한다.",
-        "PART II · 센서와 물리", "UNIT 05 · 2/2", "src/training/thermal_prep.py:19-130; models/model_manifest.json:6-35; src/inference/thermal_interpreter.py:106-159",
+        "PART II · 센서와 물리", "UNIT 05 · 2/2", "ondevice_ai/src/training/thermal_prep.py:19-130; ondevice_ai/models/model_manifest.json:6-35; ondevice_ai/src/inference/thermal_interpreter.py:106-159",
         ("body", "현재 학습 원천은 PNG/JPEG를 grayscale로 읽고 80×62로 resize한 뒤 255로 나눈 영상이다. runtime manifest의 의미도 normalized_thermal_frame이다. 따라서 thermal_80x62 배열을 ‘섭씨 온도 4,960개’라고 설명하면 현재 artifact의 학습 의미와 맞지 않는다."),
         ("diagram", "flow", {"labels": [("이미지", "PNG/JPEG"), ("grayscale", "8-bit"), ("resize", "80×62"), ("정규화", "0…1"), ("2D CNN", "3 classes")]}, 37 * mm, "현재 경로는 radiometric temperature보다 영상 형상과 intensity contrast를 사용한다."),
         ("equation", r"x_{\mathrm{norm}}=\frac{x-x_{\min}}{x_{\max}-x_{\min}}", "2.2", "runtime에서 값이 0…1 범위를 벗어나면 한 frame의 최소·최대로 다시 정규화할 수 있다."),
@@ -775,7 +775,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "13", "CO₂ 농도는 발생과 환기의 균형이다", "같은 사람이 있어도 공간 부피와 환기량이 다르면 농도 변화가 달라진다.",
-        "PART II · 센서와 물리", "UNIT 06 · 1/2", "src/integrated_node/safenest_risk_engine.py:92-94,195-230; src/risk/risk_rules.py:148-174",
+        "PART II · 센서와 물리", "UNIT 06 · 1/2", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:92-94,195-230; ondevice_ai/src/risk/risk_rules.py:148-174",
         ("body", "공간을 하나의 완전 혼합 control volume으로 보면 CO₂ 농도 변화는 내부 발생량과 환기에 의한 유출입의 차이로 설명할 수 있다. 이 모델은 실제 방의 위치별 농도 차이를 생략하지만 농도와 slope를 해석하는 기본 인과관계를 제공한다."),
         ("diagram", "fan_in", {"sources": ["사람의 발생량 G", "외기 농도 C_out", "공간 부피 V", "환기 유량 Q_v"], "center": "공간 물질수지", "output": "C(t)"}, 54 * mm, "농도 C(t)는 사람의 존재만이 아니라 공간과 환기 조건의 함수다."),
         ("equation", r"V\frac{dC}{dt}=G-Q_v\left(C-C_{\mathrm{out}}\right)", "2.3", "C는 체적분율, G는 CO₂ 발생 부피유량, Q_v는 환기 유량, V는 공간 부피다."),
@@ -784,7 +784,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "14", "CO₂의 시간응답은 1차 시스템과 닮아 있다", "환기가 강할수록 정상상태 농도와 도달 시간이 함께 낮아진다.",
-        "PART II · 센서와 물리", "UNIT 06 · 2/2", "src/integrated_node/safenest_risk_engine.py:203-230; config/risk_engine.json:12-16",
+        "PART II · 센서와 물리", "UNIT 06 · 2/2", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:203-230; ondevice_ai/config/risk_engine.json:12-16",
         ("body", "G, Q_v, V, C_out이 일정하다고 두면 농도는 정상상태를 향해 지수적으로 접근한다. 시간상수는 공간 공기가 환기로 교체되는 시간척도이며, 같은 농도 변화율도 window 길이와 sensor update rate가 다르면 다른 feature가 된다."),
         ("equation", r"C(t)=C_{\mathrm{ss}}+\left(C_0-C_{\mathrm{ss}}\right)e^{-t/\tau},\quad C_{\mathrm{ss}}=C_{\mathrm{out}}+\frac{G}{Q_v},\quad \tau=\frac{V}{Q_v}", "2.4", "C_ss는 정상상태 농도이고 τ는 공간 부피를 환기 유량으로 나눈 시간상수다."),
         ("diagram", "plot", {"plot": "co2"}, 45 * mm, "환기가 강하면 더 낮은 정상상태에 더 빨리 접근하고, 환기가 약하면 농도가 더 높게 축적된다."),
@@ -794,7 +794,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "15", "PIR은 절대 위치보다 변화를 감지한다", "Pyroelectric element는 적외선 flux의 시간 변화에 반응한다.",
-        "PART II · 센서와 물리", "UNIT 07 · 1/2", "src/integrated_node/virtual_sensor_streamer.py:117-159; src/risk/risk_rules.py:213-256",
+        "PART II · 센서와 물리", "UNIT 07 · 1/2", "ondevice_ai/src/integrated_node/virtual_sensor_streamer.py:117-159; ondevice_ai/src/risk/risk_rules.py:213-256",
         ("body", "PIR(passive infrared) sensor는 스스로 빛을 내지 않고 주변에서 들어오는 적외선 복사의 변화를 감지한다. 사람과 배경의 복사 차이가 Fresnel lens의 여러 zone을 지나며 pyroelectric element에 시간 변화로 나타난다. 따라서 움직이지 않는 사람은 신호가 작아질 수 있다."),
         ("equation", r"v_{\mathrm{PIR}}(t)\propto \frac{d\Phi_{\mathrm{IR}}(t)}{dt}", "2.5", "Φ_IR은 sensor에 들어오는 적외선 flux다. PIR 출력은 절대 복사량보다 변화율에 민감하다는 개념을 나타낸다."),
         ("diagram", "flow", {"labels": [("사람 이동", "IR contrast"), ("Fresnel zone", "공간 변조"), ("dual element", "차동 응답"), ("증폭·필터", "pulse"), ("motion", "0/1 event")]}, 38 * mm, "PIR의 motion=0은 ‘사람 없음’이 아니라 최근 검출 가능한 변화가 없다는 뜻에 가깝다."),
@@ -803,7 +803,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "16", "No-motion은 presence와 함께 해석한다", "움직임이 없다는 증거가 위험 의미를 가지려면 사람이 있다는 조건이 먼저 필요하다.",
-        "PART II · 센서와 물리", "UNIT 07 · 2/2", "src/risk/risk_rules.py:213-256; src/integrated_node/safenest_risk_engine.py:306-315",
+        "PART II · 센서와 물리", "UNIT 07 · 2/2", "ondevice_ai/src/risk/risk_rules.py:213-256; ondevice_ai/src/integrated_node/safenest_risk_engine.py:306-315",
         ("body", "SafeNest의 no-motion timer는 PIR motion=0만으로 시작하지 않는다. mmWave에서 presence가 확인된 상태에서 motion=0이 지속될 때만 의미 있는 정지 상태로 누적한다. Presence가 false이거나 motion이 다시 1이 되면 timer를 reset한다."),
         ("diagram", "timeline", {"markers": [(0.0, "presence=1", "motion=0"), (0.33, "5 s", "누적"), (0.67, "10 s", "누적"), (1.0, "15 s", "LONG_NO_MOTION")]}, 36 * mm, "15초는 물리 상수가 아니라 현재 provisional policy의 지속시간 문턱이다."),
         ("body", "여기서 presence는 여러 센서의 fusion 결과가 아니라 현재 코드의 mmWave presence 하나다. 따라서 radar blind spot이나 stale presence가 있으면 no-motion 의미도 함께 약해진다. ‘정지=위험’이 아니라 ‘presence가 있는 상태에서 관측 가능한 움직임이 일정 시간 없다’가 정확한 설명이다."),
@@ -822,7 +822,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "18", "Range FFT는 여러 거리를 bin으로 분리한다", "한 chirp 안의 ADC sample을 주파수축으로 바꾸면 target 거리가 분리된다.",
-        "PART II · 센서와 물리", "UNIT 08 · 2/4", "src/integrated_node/safenest_risk_engine.py:17-71; mr60/sensor_receiver.py",
+        "PART II · 센서와 물리", "UNIT 08 · 2/4", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:17-71; mr60/sensor_receiver.py",
         ("body", "Mixer 출력에는 여러 target의 beat tone이 함께 들어 있다. Chirp 내부의 fast-time ADC sample에 FFT를 적용하면 서로 다른 beat frequency가 서로 다른 bin에 나타난다. Calibration이 맞으면 각 frequency bin을 거리 bin으로 mapping할 수 있다."),
         ("equation", r"X[m]=\sum_{n=0}^{N_r-1}x[n]e^{-j2\pi mn/N_r}", "2.8", "x[n]은 chirp 안의 ADC 또는 complex baseband sample이고 X[m]은 m번째 beat-frequency bin이다."),
         ("diagram", "flow", {"labels": [("ADC samples", "fast time"), ("window", "leakage 억제"), ("range FFT", "frequency bins"), ("calibration", "f_b→R"), ("range profile", "complex X[m]")]}, 38 * mm, "Range profile의 각 bin은 크기와 위상을 가진 complex 값이다."),
@@ -832,7 +832,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "19", "위상은 파장보다 작은 변위에 민감하다", "같은 range bin 안의 미세한 흉부 운동은 complex phase 변화로 나타난다.",
-        "PART II · 센서와 물리", "UNIT 08 · 3/4", "models/mmwave/sensor_stats_metadata_v0.1.0.json; src/inference/mmwave_interpreter.py:159-198",
+        "PART II · 센서와 물리", "UNIT 08 · 3/4", "ondevice_ai/models/mmwave/sensor_stats_metadata_v0.1.0.json; ondevice_ai/src/inference/mmwave_interpreter.py:159-198",
         ("body", "호흡에 의한 흉부 변위는 range resolution보다 작을 수 있어 bin index가 바뀌지 않는다. 그러나 왕복 경로 길이는 미세하게 변하고 complex signal의 phase가 이동한다. Radar는 이 phase modulation을 이용해 sub-bin displacement를 관측할 수 있다."),
         ("equation", r"\Delta\phi=\frac{4\pi}{\lambda}\Delta R,\qquad \Delta R=\frac{\lambda}{4\pi}\Delta\phi", "2.9", "전자파가 target까지 갔다가 돌아오므로 경로 변화가 2ΔR이고 phase 식에 4π가 나타난다."),
         ("diagram", "plot", {"plot": "phase"}, 44 * mm, "주기적인 흉부 변위가 시간에 따른 phase 파형으로 표현된다."),
@@ -841,7 +841,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "20", "호흡 입력은 긴 신호 체인의 결과다", "Resp_phase 300개는 radar raw에서 여러 선택과 보정을 거친 canonical signal이다.",
-        "PART II · 센서와 물리", "UNIT 08 · 4/4", "models/mmwave/sensor_stats_metadata_v0.1.0.json; src/sensors/mmwave/mmwave_stream_adapter.py; models/model_manifest.json",
+        "PART II · 센서와 물리", "UNIT 08 · 4/4", "ondevice_ai/models/mmwave/sensor_stats_metadata_v0.1.0.json; devices/mmwave/src/mmwave_stream_adapter.py; ondevice_ai/models/model_manifest.json",
         ("diagram", "flow", {"labels": [("range FFT", "complex bins"), ("clutter 제거", "background"), ("chest bin", "target"), ("phase", "angle"), ("unwrap", "continuous"), ("10 Hz", "resample"), ("window", "300×1")]}, 39 * mm, "Model input은 마지막 300개 숫자만이 아니라 이 전체 처리 의미를 포함한다."),
         ("body", "현재 metadata의 input semantic은 <b>resp_phase_unwrapped_clutter_removed</b>이고 sample rate는 10 Hz, window는 300 samples다. 따라서 producer가 phase를 제공할 때는 rad 단위, unwrap 방식, clutter 제거 방식, sample clock과 session 경계를 함께 보장해야 한다."),
         ("body", "호흡 rate는 phase 파형의 주기성을 요약한 값이고 resp_phase는 시간 신호다. 정상 RPM이 들어온다는 사실만으로 model window가 준비된 것은 아니다. 반대로 model class는 특정 30초 파형의 분류 결과이지 현재 한 순간의 물리적 호흡량이 아니다."),
@@ -851,7 +851,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "P3", "PART III · Sampling과 신호처리", "신호처리는 noise를 줄이는 대신 정보 손실·지연·상태 기억을 만든다.",
-        "PART III · DSP와 시간", "PART OPENER", "src/sensors/mmwave/mmwave_stream_adapter.py; src/integrated_node/safenest_risk_engine.py:17-71,326-344",
+        "PART III · DSP와 시간", "PART OPENER", "devices/mmwave/src/mmwave_stream_adapter.py; ondevice_ai/src/integrated_node/safenest_risk_engine.py:17-71,326-344",
         ("body", "Digital signal processing은 센서의 연속 물리 현상을 유한한 sample과 제한된 계산으로 해석하는 과정이다. Sampling rate, window 길이, FFT bin, filter coefficient는 단순한 구현 숫자가 아니라 관측 가능한 현상과 응답시간을 결정한다."),
         ("diagram", "layers", {"labels": [("Sampling", "연속→이산"), ("Window", "관측 구간"), ("주파수 변환", "DFT·band energy"), ("배경 제거", "clutter"), ("시간 필터", "mean·IIR"), ("상태 안정화", "hysteresis") ]}, 76 * mm, "각 단계는 noise를 줄이지만 동시에 latency와 memory를 추가한다."),
         ("h2", "이 장의 중심 원리"),
@@ -861,7 +861,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "21", "Sampling theorem이 관측 가능한 주파수를 정한다", "Sample rate보다 빠르게 변하는 성분은 원래 주파수로 구분되지 않는다.",
-        "PART III · DSP와 시간", "UNIT 09 · 1/2", "models/model_manifest.json:73-96; src/sensors/mmwave/mmwave_stream_adapter.py:31-47",
+        "PART III · DSP와 시간", "UNIT 09 · 1/2", "ondevice_ai/models/model_manifest.json:73-96; devices/mmwave/src/mmwave_stream_adapter.py:31-47",
         ("body", "연속시간 sinusoid를 f_s로 sampling하면 주파수축이 f_s 간격으로 반복된다. 원 신호의 spectrum이 반복된 spectrum과 겹치면 높은 주파수 성분이 낮은 주파수처럼 보이는 aliasing이 생긴다. 대역 제한 신호를 손실 없이 복원하려면 가장 높은 유효 주파수가 Nyquist frequency보다 작아야 한다."),
         ("equation", r"f_{\mathrm{signal,max}}<f_N=\frac{f_s}{2}", "3.1", "f_N은 Nyquist frequency다. 실제 시스템은 경계 밖 성분을 줄이는 anti-alias filter와 여유 대역이 필요하다."),
         ("equation", r"f_{\mathrm{alias}}=\left|f_0-kf_s\right|\quad\mathrm{for\ a\ suitable\ integer}\ k", "3.2", "f_s를 넘는 주파수는 sampling 후 더 낮은 apparent frequency로 접혀 보일 수 있다."),
@@ -871,7 +871,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "22", "Window는 무엇을 한 번의 판단으로 묶을지 정한다", "길이는 주파수 분해능과 startup latency, stride는 판단 갱신 간격을 결정한다.",
-        "PART III · DSP와 시간", "UNIT 09 · 2/2", "src/sensors/mmwave/mmwave_csv_adapter.py:40-120; src/sensors/mmwave/mmwave_stream_adapter.py:31-94",
+        "PART III · DSP와 시간", "UNIT 09 · 2/2", "devices/mmwave/src/mmwave_csv_adapter.py:40-120; devices/mmwave/src/mmwave_stream_adapter.py:31-94",
         ("body", "Window는 연속 stream에서 유한 구간을 잘라 하나의 feature 또는 model input으로 만드는 연산이다. N과 f_s가 정해지면 관측 구간과 DFT frequency spacing이 함께 정해진다. Window를 길게 하면 가까운 주파수를 구분하기 쉬워지지만 첫 판단까지 기다리는 시간이 늘어난다."),
         ("equation", r"T_{\mathrm{window}}\approx\frac{N}{f_s},\qquad \Delta f=\frac{f_s}{N}", "3.3", "N=300, f_s=10 Hz이면 약 30초 window이고 frequency spacing은 0.0333 Hz다."),
         ("diagram", "timeline", {"markers": [(0.0, "첫 sample", "buffer 1/300"), (0.34, "10 s", "101/300"), (0.67, "20 s", "201/300"), (1.0, "29.9 s", "300/300") ]}, 36 * mm, "첫 AI invoke는 이상적인 10 Hz grid에서 약 29.9초 뒤 가능하다."),
@@ -881,7 +881,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "23", "DFT는 시간 파형을 주파수 성분으로 분해한다", "각 bin은 window 안에서 특정 주파수의 complex sinusoid와 얼마나 닮았는지 나타낸다.",
-        "PART III · DSP와 시간", "UNIT 10 · 1/2", "src/integrated_node/safenest_risk_engine.py:54-71; numpy.fft 사용 경로",
+        "PART III · DSP와 시간", "UNIT 10 · 1/2", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:54-71; numpy.fft 사용 경로",
         ("body", "이산 Fourier 변환 DFT는 N개의 시간 sample을 N개의 complex frequency coefficient로 바꾼다. 각 coefficient의 magnitude는 해당 sinusoid 성분의 크기와 관련되고 phase는 시간 정렬 정보를 담는다. 실수 신호에는 양·음 주파수 대칭이 있어 rFFT는 비음수 주파수 절반만 계산한다."),
         ("equation", r"X[m]=\sum_{n=0}^{N-1}x[n]e^{-j2\pi mn/N},\qquad f_m=\frac{m}{N}f_s", "3.4", "m번째 bin의 중심 주파수는 m f_s/N이다."),
         ("diagram", "plot", {"plot": "spectrum"}, 45 * mm, "유한 window에서는 연속 spectrum을 Δf 간격의 bin으로 관측한다."),
@@ -890,7 +890,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "24", "Band energy는 주파수 대역의 활동량을 요약한다", "PSD와 단순 FFT 제곱합은 normalization과 단위가 다르다.",
-        "PART III · DSP와 시간", "UNIT 10 · 2/2", "src/integrated_node/safenest_risk_engine.py:54-71",
+        "PART III · DSP와 시간", "UNIT 10 · 2/2", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:54-71",
         ("body", "호흡처럼 관심 주파수 범위가 알려진 경우 특정 bin들의 magnitude squared를 합해 대역 activity를 비교할 수 있다. 이 값은 target bin을 선택하는 proxy로 유용하지만 sampling rate, window 길이, window function, FFT normalization이 없으면 물리 단위를 가진 power spectral density라고 부르기 어렵다."),
         ("equation", r"E_B=\sum_{m:\,f_m\in B}\left|X[m]\right|^2", "3.5", "B는 관심 주파수 대역이고 E_B는 해당 bin들의 비정규화 energy proxy다."),
         ("body", "현재 adaptive chest-bin 경로는 10 Hz에서 rFFT history 30개를 사용하므로 시간 window가 약 3초이고 Δf는 약 0.333 Hz다. 0.1–0.5 Hz 대역 안에 매우 적은 bin만 들어와 호흡 대역의 세밀한 구조를 표현하기 어렵다. 30초 model window의 0.0333 Hz spacing과 구분해야 한다."),
@@ -900,7 +900,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "25", "Clutter 제거는 정적 반사를 배경으로 분리한다", "벽·가구처럼 지속되는 반사를 추정해 움직이는 target의 변화를 강조한다.",
-        "PART III · DSP와 시간", "UNIT 11 · 1/2", "src/integrated_node/safenest_risk_engine.py:25-46",
+        "PART III · DSP와 시간", "UNIT 11 · 1/2", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:25-46",
         ("body", "Radar range profile에는 사람뿐 아니라 벽, 바닥, 좌석, sensor enclosure의 반사가 함께 들어 있다. 이 중 시간에 따라 거의 변하지 않는 성분을 clutter 또는 background로 보고 여러 frame의 평균으로 추정할 수 있다. 현재 frame에서 background를 빼면 변화 성분이 강조된다."),
         ("equation", r"C[b]=\frac{1}{K}\sum_{k=0}^{K-1}X_k[b],\qquad \widetilde{X}_k[b]=X_k[b]-C[b]", "3.6", "C[b]는 b번째 range bin의 complex clutter estimate이고 X̃는 background-subtracted signal이다."),
         ("diagram", "flow", {"labels": [("range profile", "X_k[b]"), ("K-frame 평균", "C[b]"), ("complex subtraction", "X-C"), ("변화 성분", "X tilde"), ("target 분석", "energy·phase")]}, 37 * mm, "Magnitude가 아니라 complex 값을 빼야 amplitude와 phase background를 함께 제거할 수 있다."),
@@ -909,7 +909,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "26", "Chest bin 선택은 target 위치를 추정하는 문제다", "여러 거리 중 호흡 대역 활동이 가장 뚜렷한 bin을 선택한다.",
-        "PART III · DSP와 시간", "UNIT 11 · 2/2", "src/integrated_node/safenest_risk_engine.py:48-71,283-292",
+        "PART III · DSP와 시간", "UNIT 11 · 2/2", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:48-71,283-292",
         ("body", "사람의 흉부 반사가 들어 있는 거리 bin을 알면 그 bin의 phase를 시간에 따라 추적할 수 있다. Adaptive 방식은 각 거리 bin의 시간 history를 FFT하고 호흡 대역 energy를 계산해 가장 큰 bin을 선택한다. 이는 거리 amplitude가 가장 큰 bin과 다를 수 있다."),
         ("equation", r"b^*=\underset{b}{\arg\max}\;\sum_{m:\,f_m\in B}\left|\mathcal{F}_t\left\{\widetilde{X}_t[b]\right\}[m]\right|^2", "3.7", "각 range bin의 시간 변화에서 호흡 대역 energy가 최대인 b*를 chest bin으로 선택한다."),
         ("diagram", "flow", {"labels": [("range bins", "b=0…B-1"), ("시간 history", "X_t[b]"), ("time FFT", "per bin"), ("band energy", "0.1…0.5 Hz"), ("argmax", "chest bin") ]}, 38 * mm, "거리축 FFT와 시간축 FFT는 서로 다른 차원에 적용되는 연산이다."),
@@ -919,7 +919,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "27", "Moving mean은 짧은 변동을 평균낸다", "최근 값을 같은 가중치로 묶어 noise를 줄이지만 변화의 시작을 퍼뜨린다.",
-        "PART III · DSP와 시간", "UNIT 12 · 1/4", "src/integrated_node/safenest_risk_engine.py:93-95,326-336",
+        "PART III · DSP와 시간", "UNIT 12 · 1/4", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:93-95,326-336",
         ("body", "N-point moving mean은 최근 N개의 입력을 같은 가중치로 평균한다. 독립적인 zero-mean noise에는 variance 감소 효과가 있지만 step 변화는 N samples에 걸쳐 점진적으로 나타난다. Window가 완전히 차기 전에는 사용 가능한 sample 수만 평균해 startup 응답이 정상상태와 다르다."),
         ("equation", r"M[k]=\frac{1}{N_m}\sum_{i=0}^{N_m-1}r[k-i],\qquad N_m=6", "3.8", "현재 엔진은 최대 6개의 raw risk를 평균한다. 시작 직후에는 deque에 들어 있는 값만 사용한다."),
         ("diagram", "flow", {"labels": [("raw risk", "r[k]"), ("6-sample buffer", "history"), ("동일 가중 평균", "1/6"), ("M[k]", "smoothed input") ]}, 36 * mm, "한 개의 spike는 여섯 출력에 걸쳐 영향을 남길 수 있다."),
@@ -928,7 +928,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "28", "IIR은 과거 출력을 재귀적으로 기억한다", "현재 값과 이전 filter state를 섞어 지수형 memory를 만든다.",
-        "PART III · DSP와 시간", "UNIT 12 · 2/4", "src/integrated_node/safenest_risk_engine.py:333-336",
+        "PART III · DSP와 시간", "UNIT 12 · 2/4", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:333-336",
         ("body", "1차 IIR low-pass는 현재 입력 M[k]와 이전 출력 R[k-1]을 가중합한다. α가 클수록 새 입력을 빠르게 반영하고, α가 작을수록 과거 출력이 오래 남는다. Moving mean 뒤에 IIR이 이어지면 두 단계의 smoothing delay가 누적된다."),
         ("equation", r"R[k]=(1-\alpha)R[k-1]+\alpha M[k],\qquad \alpha=0.25", "3.9", "현재 엔진은 새 moving mean을 25%, 이전 filtered risk를 75% 반영한다."),
         ("equation", r"\tau_{\mathrm{packet}}\approx-\frac{1}{\ln(1-\alpha)}=3.48", "3.10", "IIR 단독 step response가 약 63%에 도달하는 시간척도를 packet 수로 근사한 값이다."),
@@ -938,7 +938,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "29", "Hysteresis는 상태 경계의 왕복을 막는다", "진입과 해제 문턱을 다르게 두어 threshold 근처의 flicker를 줄인다.",
-        "PART III · DSP와 시간", "UNIT 12 · 3/4", "src/integrated_node/safenest_risk_engine.py:338-344; config/risk_engine.json:18-28",
+        "PART III · DSP와 시간", "UNIT 12 · 3/4", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:338-344; ondevice_ai/config/risk_engine.json:18-28",
         ("body", "하나의 threshold만 사용하면 noise가 경계 위아래를 오갈 때 상태가 빠르게 전환된다. Hysteresis는 위험 상태로 들어가는 문턱과 빠져나오는 문턱을 다르게 둬 상태에 memory를 부여한다. 그래서 현재 위험도뿐 아니라 이전 상태가 다음 상태를 결정한다."),
         ("diagram", "plot", {"plot": "hysteresis"}, 47 * mm, "높은 진입 문턱과 낮은 해제 문턱 사이가 상태 유지 영역이다."),
         ("equation", r"R_{\mathrm{off}}<R_{\mathrm{on}}", "3.11", "상태가 위험으로 진입하는 R_on보다 해제되는 R_off를 낮게 두어 안정적인 전이를 만든다."),
@@ -948,7 +948,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "30", "경보 latency는 여러 시간의 합이다", "Model 실행시간 하나만으로 sensor-to-alarm 요구를 설명할 수 없다.",
-        "PART III · DSP와 시간", "UNIT 12 · 4/4", "src/integrated_node/safenest_risk_engine.py:242-344; src/risk/risk_rules.py:87-146",
+        "PART III · DSP와 시간", "UNIT 12 · 4/4", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:242-344; ondevice_ai/src/risk/risk_rules.py:87-146",
         ("body", "End-to-end latency는 물리 현상이 생긴 시점부터 실제 actuator나 UI가 반응할 때까지의 시간이다. Sensor update, packet transport, window startup, model compute, 지속시간 확인, filter·hysteresis, output 전달이 모두 포함된다."),
         ("equation", r"T_{\mathrm{alarm}}=T_{\mathrm{sample}}+T_{\mathrm{transport}}+T_{\mathrm{window}}+T_{\mathrm{compute}}+T_{\mathrm{confirm}}+T_{\mathrm{actuate}}", "3.12", "각 항은 별도의 timestamp로 관측하거나 upper bound를 정해야 한다."),
         ("diagram", "timeline", {"markers": [(0.0, "현상 발생", "physical"), (0.18, "sensor", "sample"), (0.38, "window", "ready"), (0.58, "inference", "class"), (0.80, "confirm", "timer"), (1.0, "alarm", "actuate") ]}, 38 * mm, "병렬 경로마다 window와 confirmation이 달라 earliest alarm time도 달라진다."),
@@ -959,7 +959,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "P4", "PART IV · Edge AI의 입력과 출력", "Model은 물리계를 직접 보지 않고 계약된 tensor 표현을 계산한다.",
-        "PART IV · Edge AI", "PART OPENER", "models/model_manifest.json; src/inference/*_interpreter.py",
+        "PART IV · Edge AI", "PART OPENER", "ondevice_ai/models/model_manifest.json; ondevice_ai/src/inference/*_interpreter.py",
         ("body", "On-device AI를 이해할 때 architecture 이름보다 중요한 것은 입력 semantic, preprocessing, tensor contract와 출력 해석이다. Model은 sensor 자체가 아니라 정해진 feature 또는 frame 배열을 입력받는다. 따라서 upstream 변환이 학습 때와 같아야 model class가 같은 뜻을 가진다."),
         ("diagram", "flow", {"labels": [("센서값", "physical unit"), ("feature", "selected meaning"), ("정규화", "training scale"), ("양자화", "int8 grid"), ("TFLite", "graph invoke"), ("출력", "class score") ]}, 40 * mm, "각 화살표는 model 성능의 일부이며 wrapper와 metadata가 함께 계약해야 한다."),
         ("h2", "이 장에서 분리할 개념"),
@@ -969,7 +969,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "31", "Feature는 물리 신호에서 선택한 표현이다", "Model이 학습한 것은 sensor 전체가 아니라 특정 변환을 거친 입력 공간이다.",
-        "PART IV · Edge AI", "UNIT 13 · 1/2", "models/model_manifest.json; src/inference/co2_interpreter.py:80-95; src/inference/mmwave_interpreter.py:159-198",
+        "PART IV · Edge AI", "UNIT 13 · 1/2", "ondevice_ai/models/model_manifest.json; ondevice_ai/src/inference/co2_interpreter.py:80-95; ondevice_ai/src/inference/mmwave_interpreter.py:159-198",
         ("body", "<b>Feature</b>는 raw data에서 판단에 도움이 된다고 선택하거나 계산한 표현이다. CO₂ model은 slope·humidity·ppm 세 값을 사용하고, mmWave model은 300-sample resp_phase window를 사용한다. Thermal model은 spatial frame 자체에서 feature를 내부적으로 학습한다."),
         ("equation", r"\mathbf{u}=h\!\left(x_{\mathrm{raw}},\,t,\,c\right)", "4.1", "h는 calibration·filter·window·geometry를 포함한 feature 변환이고 c는 그 변환에 필요한 context다."),
         ("diagram", "flow", {"labels": [("raw", "sensor data"), ("calibration", "unit·offset"), ("window", "time context"), ("feature h", "selected info"), ("tensor", "fixed shape") ]}, 38 * mm, "Feature engineering은 정보 선택이므로 무엇을 버렸는지도 설명해야 한다."),
@@ -978,7 +978,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "32", "Tensor는 feature를 runtime 형식으로 고정한다", "Shape는 배열 구조를, semantic은 각 축과 원소의 뜻을 설명한다.",
-        "PART IV · Edge AI", "UNIT 13 · 2/2", "models/model_manifest.json; src/inference/thermal_interpreter.py; src/inference/mmwave_interpreter.py",
+        "PART IV · Edge AI", "UNIT 13 · 2/2", "ondevice_ai/models/model_manifest.json; ondevice_ai/src/inference/thermal_interpreter.py; ondevice_ai/src/inference/mmwave_interpreter.py",
         ("body", "Tensor는 dtype과 shape를 가진 다차원 배열이다. 그러나 [1,300,1]은 batch·time·channel이라는 축 구조만 말할 뿐 각 time sample이 rad 단위 resp_phase라는 사실은 말하지 않는다. Model input contract는 tensor 구조와 signal semantic을 함께 가져야 한다."),
         ("diagram", "layers", {"labels": [("Axis contract", "batch·time·height·width·channel"), ("Shape", "[1,300,1] / [1,62,80,1]"), ("Dtype", "float32 또는 int8"), ("Numeric contract", "scale·zero point·finite"), ("Semantic", "unit·sampling·preprocess") ]}, 65 * mm, "아래로 갈수록 같은 배열이 무엇을 의미하는지 더 구체적으로 고정한다."),
         ("body", "Wrapper는 shape를 reshape할 수 있지만 의미를 추론해서 복구할 수는 없다. (300,)과 (1,300,1)은 같은 원소 순서를 가진다면 기계적으로 바꿀 수 있지만 breath_rpm 300개를 resp_phase로 바꾸는 것은 불가능하다."),
@@ -988,7 +988,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "33", "표준화는 feature 축의 척도를 맞춘다", "학습 통계로 중심과 scale을 바꾸어 optimization과 입력 분포를 안정화한다.",
-        "PART IV · Edge AI", "UNIT 14 · 1/2", "models/co2/co2_scaling_metadata_v0.1.0.json; models/mmwave/sensor_stats_metadata_v0.1.0.json",
+        "PART IV · Edge AI", "UNIT 14 · 1/2", "ondevice_ai/models/co2/co2_scaling_metadata_v0.1.0.json; ondevice_ai/models/mmwave/sensor_stats_metadata_v0.1.0.json",
         ("body", "서로 다른 feature는 단위와 범위가 다르다. CO₂ ppm은 수백에서 수천이고 humidity는 수십, slope는 더 작은 범위를 가질 수 있다. Z-score는 각 feature에서 학습 평균을 빼고 학습 표준편차로 나누어 무차원 좌표로 바꾼다."),
         ("equation", r"z_i=\frac{x_i-\mu_i}{\sigma_i}", "4.2", "μ_i와 σ_i는 runtime batch가 아니라 training data에서 고정한 feature별 통계다."),
         ("diagram", "flow", {"labels": [("물리값 x", "ppm·%·rad"), ("학습 평균", "μ_i"), ("학습 scale", "σ_i"), ("표준값 z", "dimensionless"), ("model input", "distribution") ]}, 38 * mm, "Runtime이 같은 μ와 σ를 사용해야 학습 때와 같은 좌표계가 유지된다."),
@@ -997,7 +997,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "34", "INT8 양자화는 실수축을 정수 격자로 바꾼다", "Scale과 zero point가 실수와 정수 사이의 affine mapping을 정한다.",
-        "PART IV · Edge AI", "UNIT 14 · 2/2", "src/inference/*_interpreter.py; models/model_manifest.json",
+        "PART IV · Edge AI", "UNIT 14 · 2/2", "ondevice_ai/src/inference/*_interpreter.py; ondevice_ai/models/model_manifest.json",
         ("body", "Full-INT8 model은 activation과 weight를 8-bit 정수로 표현해 메모리와 integer 연산을 줄인다. 실수 0이 정수 zero point에 대응하고, scale은 정수 한 칸이 나타내는 실수 간격이다. Quantization은 압축이므로 rounding error와 표현 범위 제한을 만든다."),
         ("equation", r"q=\mathrm{clip}\!\left(\mathrm{round}\!\left(\frac{x}{s_q}\right)+z_q,\,-128,\,127\right)", "4.3", "현재 wrapper는 np.rint의 ties-to-even rounding을 사용하고 int8 범위로 clip한다."),
         ("equation", r"\widehat{x}=s_q\left(q-z_q\right)", "4.4", "Dequantization은 정수 q를 대표 실수 값 x-hat으로 되돌리지만 원래 x를 완전히 복원하지는 못한다."),
@@ -1007,7 +1007,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "35", "양자화 오차와 saturation을 구분한다", "범위 안의 rounding error와 범위 밖의 clipping error는 크기와 의미가 다르다.",
-        "PART IV · Edge AI", "UNIT 15 · 1/2", "models/model_manifest.json; src/inference/co2_interpreter.py:80-103; src/inference/thermal_interpreter.py:139-159",
+        "PART IV · Edge AI", "UNIT 15 · 1/2", "ondevice_ai/models/model_manifest.json; ondevice_ai/src/inference/co2_interpreter.py:80-103; ondevice_ai/src/inference/thermal_interpreter.py:139-159",
         ("body", "입력이 int8 표현 범위 안에 있으면 가장 가까운 grid point로 반올림되어 오차가 대략 scale 절반 이내에 놓인다. 반면 범위를 넘으면 q가 -128 또는 127에 고정되어 입력이 더 커져도 tensor 값이 변하지 않는다. 이를 saturation 또는 clipping이라 한다."),
         ("equation", r"x_{\min}=s_q(-128-z_q),\qquad x_{\max}=s_q(127-z_q)", "4.5", "이 범위는 양자화 직전의 실수 domain에서 int8 tensor가 표현할 수 있는 구간이다."),
         ("equation", r"\left|x-\widehat{x}\right|\leq\frac{s_q}{2}\quad\mathrm{only\ when\ not\ saturated}", "4.6", "Scale/2 오차 bound는 clipping되지 않은 값에만 적용된다."),
@@ -1017,7 +1017,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "36", "TFLite invoke는 고정된 계산 graph를 실행한다", "Interpreter는 tensor 계약을 준비하고 graph를 호출한 뒤 출력을 해석한다.",
-        "PART IV · Edge AI", "UNIT 15 · 2/2", "src/inference/common.py; src/inference/*_interpreter.py; models/model_manifest.json",
+        "PART IV · Edge AI", "UNIT 15 · 2/2", "ondevice_ai/src/inference/common.py; ondevice_ai/src/inference/*_interpreter.py; ondevice_ai/models/model_manifest.json",
         ("body", "TFLite runtime은 model artifact에서 operator graph와 tensor metadata를 읽고 input tensor를 할당한다. Wrapper는 application의 sensor 표현을 tensor로 바꾸고 set_tensor→invoke→get_tensor 순서로 graph를 실행한다. 이 경로의 성공은 graph가 계산됐다는 뜻이지 semantic correctness를 증명하지 않는다."),
         ("diagram", "flow", {"labels": [("Artifact", "tflite+hash"), ("Interpreter", "allocate"), ("Input", "validate·quantize"), ("invoke", "operator graph"), ("Output", "dequantize"), ("Prediction", "class·score") ]}, 40 * mm, "Wrapper는 application contract와 model tensor contract 사이의 번역기다."),
         ("h2", "초기화 시 고정해야 하는 것"),
@@ -1028,7 +1028,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "37", "출력 score는 정확도와 같은 값이 아니다", "Model의 정규화 출력은 선택 class의 상대적 강도이며 현장 확률은 calibration이 필요하다.",
-        "PART IV · Edge AI", "UNIT 16 · 1/3", "src/inference/*_interpreter.py; models/model_manifest.json",
+        "PART IV · Edge AI", "UNIT 16 · 1/3", "ondevice_ai/src/inference/*_interpreter.py; ondevice_ai/models/model_manifest.json",
         ("body", "Classification model은 각 class에 score를 내고 가장 큰 항을 prediction으로 선택한다. Softmax output은 합이 1이지만 그 숫자가 실제 사건 확률과 일치하려면 독립 data에서 calibration이 확인되어야 한다. 높은 score는 입력이 학습 분포 밖인지도 알려주지 않는다."),
         ("equation", r"p_i=\frac{e^{a_i}}{\sum_j e^{a_j}},\qquad \widehat{c}=\underset{i}{\arg\max}\;p_i", "4.7", "a_i는 logit이고 p_i는 class 간 정규화 score다. p_i가 calibrated probability라는 보장은 별도다."),
         ("body", "현재 wrapper는 dequantized output의 음수를 clip하고 합으로 다시 나누는 경로가 있다. 따라서 문서에서는 confidence보다 <b>normalized class score</b>라고 부르는 것이 안전하다. Accuracy는 많은 labeled samples에서 맞은 비율이고 한 sample의 score와 다른 개념이다."),
@@ -1037,7 +1037,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "38", "세 model은 서로 다른 질문에 답한다", "Tensor 형식이 모두 int8이어도 입력 의미와 class namespace는 공유되지 않는다.",
-        "PART IV · Edge AI", "UNIT 16 · 2/3", "models/model_manifest.json",
+        "PART IV · Edge AI", "UNIT 16 · 2/3", "ondevice_ai/models/model_manifest.json",
         ("table", ["Model", "입력 semantic", "출력 class", "현재 시스템 역할"], [
             ["Thermal", "normalized frame [1,62,80,1]", "NOT_HUMAN / NORMAL / FALL", "FALL score≥0.8이면 emergency"],
             ["CO₂", "slope·humidity·ppm [1,3]", "VACANT / OCCUPIED", "class는 meta에 기록; risk는 농도 rule"],
@@ -1050,7 +1050,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "39", "AI와 규칙은 서로 다른 지식을 표현한다", "Model은 data에서 pattern을 학습하고 rule은 명시적 정책과 물리 한계를 표현한다.",
-        "PART IV · Edge AI", "UNIT 16 · 3/3", "src/risk/risk_rules.py; src/integrated_node/safenest_risk_engine.py",
+        "PART IV · Edge AI", "UNIT 16 · 3/3", "ondevice_ai/src/risk/risk_rules.py; ondevice_ai/src/integrated_node/safenest_risk_engine.py",
         ("body", "AI model은 복잡한 pattern을 압축할 수 있지만 왜 특정 threshold가 안전한지 스스로 정의하지 않는다. Rule은 정상 호흡 범위, CO₂ 문턱, 지속시간, emergency override처럼 사람이 검토해야 하는 정책을 명시적으로 표현한다. Hybrid system은 두 종류의 지식을 결합한다."),
         ("diagram", "flow", {"labels": [("센서 evidence", "value·signal"), ("AI pattern", "learned"), ("Rule constraint", "explicit"), ("Policy", "combine"), ("State", "risk·health") ]}, 39 * mm, "AI가 모든 센서를 자동으로 융합하는 구조가 아니라 model별 class와 rule score를 policy가 결합한다."),
         ("h2", "AI가 대신할 수 없는 질문"),
@@ -1061,7 +1061,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "P5", "PART V · 위험 융합과 상태기계", "센서 evidence를 하나의 숫자로 합치되 emergency·health·reason을 잃지 않는다.",
-        "PART V · 위험과 상태", "PART OPENER", "src/risk/risk_rules.py; config/risk_engine.json; src/integrated_node/safenest_risk_engine.py",
+        "PART V · 위험과 상태", "PART OPENER", "ondevice_ai/src/risk/risk_rules.py; ondevice_ai/config/risk_engine.json; ondevice_ai/src/integrated_node/safenest_risk_engine.py",
         ("body", "위험 융합은 여러 sensor와 model의 서로 다른 evidence를 공통 부분 점수로 바꾸고 정책 가중치로 결합하는 과정이다. 그러나 모든 중요한 사건을 평균으로 표현할 수는 없다. 낙상과 무호흡처럼 즉시 또는 지속시간 확인 후 강제로 DANGER가 되어야 하는 사건은 emergency override로 분리한다."),
         ("diagram", "layers", {"labels": [("부분 evidence", "호흡·환경·심박·자세·움직임"), ("부분 점수", "S_i∈[0,1]"), ("가중 융합", "R_raw"), ("Emergency", "override"), ("시간 필터", "mean·IIR"), ("상태기계", "risk·health·reason") ]}, 76 * mm, "융합은 하나의 pipeline이지만 emergency와 health는 별도 경로로 유지된다."),
         ("h2", "이 장의 중심 질문"),
@@ -1071,7 +1071,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "40", "부분 점수는 sensor evidence를 정책 척도로 바꾼다", "물리값을 곧바로 더하지 않고 modality별 의미를 0…1로 해석한다.",
-        "PART V · 위험과 상태", "UNIT 17 · 1/2", "src/risk/risk_rules.py:87-256; config/risk_engine.json",
+        "PART V · 위험과 상태", "UNIT 17 · 1/2", "ondevice_ai/src/risk/risk_rules.py:87-256; ondevice_ai/config/risk_engine.json",
         ("body", "ppm, RPM, BPM, class score처럼 단위가 다른 값을 직접 합할 수는 없다. 각 rule은 sensor evidence를 정상·주의·위험·fault 의미에 따라 dimensionless partial score S_i로 mapping한다. 이 mapping은 물리 법칙이 아니라 안전 정책이므로 threshold와 slope의 근거가 별도로 필요하다."),
         ("equation", r"S_i=\psi_i\!\left(x_i,\,m_i,\,q_i,\,s_i\right),\qquad 0\leq S_i\leq1", "5.1", "ψ_i는 sensor value x_i, model output m_i, 품질 q_i, 내부 상태 s_i를 부분 위험도로 바꾸는 modality별 rule이다."),
         ("diagram", "flow", {"labels": [("물리값", "rpm·ppm·bpm"), ("유효성", "type·range·time"), ("의미 rule", "threshold·timer"), ("부분 점수", "S_i"), ("reason", "원인 code") ]}, 39 * mm, "부분 점수와 reason은 같은 판단에서 나오지만 숫자와 설명이라는 다른 역할을 한다."),
@@ -1080,7 +1080,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "41", "가중합은 부분 위험도를 하나의 척도로 결합한다", "Weight는 센서의 정확도만이 아니라 정책상 상대적 영향력을 나타낸다.",
-        "PART V · 위험과 상태", "UNIT 17 · 2/2", "src/risk/risk_rules.py:303-323; config/risk_engine.json:18-28",
+        "PART V · 위험과 상태", "UNIT 17 · 2/2", "ondevice_ai/src/risk/risk_rules.py:303-323; ondevice_ai/config/risk_engine.json:18-28",
         ("body", "각 partial score가 0…1 범위에 있으면 weight로 결합해 0…100 위험도로 바꿀 수 있다. Weight 합을 1로 두면 모든 S_i=1일 때 R_raw=100이 된다. 하지만 이 정규화만으로 통계적 확률이나 최적 융합이 되는 것은 아니다."),
         ("equation", r"R_{\mathrm{raw}}=100\sum_{i=1}^{M}w_iS_i,\qquad \sum_i w_i=1", "5.2", "현재 weight는 respiration 0.30, environment 0.25, HR 0.20, posture 0.15, motion 0.10이다."),
         ("diagram", "fan_in", {"sources": ["0.30·S_resp", "0.25·S_env", "0.20·S_HR", "0.15·S_posture", "0.10·S_motion"], "center": "Σ weighted evidence", "output": "R_raw"}, 58 * mm, "Weight는 각 modality의 최대 기여도를 제한한다."),
@@ -1090,7 +1090,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "42", "품질은 위험도와 별도의 정보다", "Q_i가 계산된다는 사실과 위험 가중치에 반영된다는 사실을 구분한다.",
-        "PART V · 위험과 상태", "UNIT 18 · 1/2", "src/integrated_node/safenest_risk_engine.py:98-125,360-377; src/risk/risk_rules.py:312-319",
+        "PART V · 위험과 상태", "UNIT 18 · 1/2", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:98-125,360-377; ondevice_ai/src/risk/risk_rules.py:312-319",
         ("body", "Sensor quality Q_i는 해당 경로의 입력이 기본 조건을 만족하는지를 나타낸다. 현재 Quality Gate는 thermal shape, CO₂ 범위, mmWave key 존재, PIR motion 존재를 coarse하게 본다. 그러나 Q_i는 telemetry와 실행 gate에 주로 쓰이며 current risk weight를 동적으로 재정규화하지 않는다."),
         ("equation", r"R_{\mathrm{current}}=100\sum_i w_iS_i", "5.3", "현재 구현의 위험식에는 Q_i가 곱해지지 않는다."),
         ("equation", r"R_{Q}=100\frac{\sum_i Q_iw_iS_i}{\sum_i Q_iw_i}", "5.4", "이 식은 가능한 설계 대안일 뿐 현재 구현이 아니다. 분모가 작을 때 과신할 수 있어 hazard review가 필요하다."),
@@ -1100,7 +1100,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "43", "Emergency timer는 지속시간을 정책으로 바꾼다", "순간적인 candidate와 일정 시간 지속된 사건을 구분한다.",
-        "PART V · 위험과 상태", "UNIT 18 · 2/2", "src/risk/risk_rules.py:87-146; src/integrated_node/safenest_risk_engine.py:242-331",
+        "PART V · 위험과 상태", "UNIT 18 · 2/2", "ondevice_ai/src/risk/risk_rules.py:87-146; ondevice_ai/src/integrated_node/safenest_risk_engine.py:242-331",
         ("body", "무호흡 candidate는 breath_rpm≤0.5 또는 mmWave class2에서 시작된다. 유효한 numeric timestamp 경로에서는 첫 candidate 시각 t₀를 저장하고 이후 elapsed를 계산한다. Candidate가 사라지면 timer를 reset하며 2초 이상 지속되면 emergency override가 된다."),
         ("equation", r"t_{\mathrm{elapsed}}=t_k-t_0,\qquad \mathrm{emergency}=[t_{\mathrm{elapsed}}\geq2.0\ \mathrm{s}]", "5.5", "2초는 현재 provisional policy의 confirmation interval이다."),
         ("diagram", "timeline", {"markers": [(0.0, "candidate 시작", "t₀"), (0.48, "1.0 s", "계속 확인"), (0.94, "1.9 s", "비응급"), (1.0, "2.0 s", "EMERGENCY") ]}, 36 * mm, "지속시간 판단은 sample count가 아니라 검증된 timestamp 차이로 정의하는 것이 원칙이다."),
@@ -1110,7 +1110,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "44", "Emergency override는 평균 경로를 우회한다", "즉시 보호가 필요한 사건을 smoothing delay에 맡기지 않는다.",
-        "PART V · 위험과 상태", "UNIT 19 · 1/2", "src/integrated_node/safenest_risk_engine.py:326-344; src/risk/risk_rules.py:87-210",
+        "PART V · 위험과 상태", "UNIT 19 · 1/2", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:326-344; ondevice_ai/src/risk/risk_rules.py:87-210",
         ("body", "Moving mean과 IIR은 noise를 줄이지만 빠른 위험에서도 출력이 천천히 상승한다. 낙상 또는 확인된 무호흡처럼 policy가 즉시 경보를 요구하는 사건은 일반 filter 경로를 우회해 위험도와 IIR state를 100으로 설정한다."),
         ("equation", r"R[k]=e_k\,100+(1-e_k)\left[(1-\alpha)R[k-1]+\alpha M[k]\right]", "5.6", "e_k∈{0,1}은 emergency override 여부다. Emergency일 때 moving mean과 IIR update를 우회한다."),
         ("diagram", "flow", {"labels": [("부분 판단", "rules"), ("Emergency?", "e_k"), ("override", "R=100"), ("DANGER", "alarm"), ("다음 tick", "recovery") ]}, 38 * mm, "Emergency는 빠른 진입을 보장하지만 해제와 recovery는 별도 상태 정책이 필요하다."),
@@ -1120,7 +1120,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "45", "위험 상태기계는 이전 상태를 기억한다", "같은 R이라도 어디에서 왔는지에 따라 다음 상태가 달라질 수 있다.",
-        "PART V · 위험과 상태", "UNIT 19 · 2/2", "src/integrated_node/safenest_risk_engine.py:338-344; config/risk_engine.json",
+        "PART V · 위험과 상태", "UNIT 19 · 2/2", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:338-344; ondevice_ai/config/risk_engine.json",
         ("body", "최종 status는 filtered risk의 단순 구간 분류가 아니라 이전 상태를 포함한 state transition이다. NORMAL/CAUTION에서 DANGER로 들어갈 때는 75를 사용하고, 이미 DANGER이면 65보다 클 때 유지한다. 이 차이가 hysteresis다."),
         ("diagram", "state", {}, 47 * mm, "상태 전이의 guard에는 risk threshold뿐 아니라 fault와 emergency event도 포함된다."),
         ("equation", r"z_{k+1}=F\!\left(z_k,R[k],e_k,h_k\right)", "5.7", "z_k는 risk state, e_k는 emergency, h_k는 system health다. 현재 구현은 일부 축을 별도 field로 출력한다."),
@@ -1130,7 +1130,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "46", "Fault는 원인과 영향 경로를 따라 전파되어야 한다", "하위 component의 실패가 최종 출력에서 사라지면 낮은 위험을 신뢰할 수 없다.",
-        "PART V · 위험과 상태", "UNIT 20", "src/risk/risk_rules.py:39-61,258-335; src/integrated_node/safenest_risk_engine.py:120-415",
+        "PART V · 위험과 상태", "UNIT 20", "ondevice_ai/src/risk/risk_rules.py:39-61,258-335; ondevice_ai/src/integrated_node/safenest_risk_engine.py:120-415",
         ("body", "Fault propagation은 한 component의 오류를 downstream이 해석할 수 있는 status와 reason으로 바꾸는 과정이다. 예외를 catch하는 것만으로 충분하지 않다. 어떤 입력이 거부됐는지, 해당 modality가 판단에서 제외됐는지, fallback이 사용됐는지, 전역 health가 어떻게 바뀌었는지를 보존해야 한다."),
         ("diagram", "layers", {"labels": [("입력 fault", "type·range·time"), ("Component status", "OK·DEGRADED·FAULT"), ("Reason taxonomy", "구조화된 원인"), ("Fusion policy", "부분 점수·제외"), ("System health", "최종 가용성"), ("Output", "risk+health+reason") ]}, 74 * mm, "Reason은 log용 문자열이 아니라 상태 전이와 소비자 정책을 연결하는 기계 계약이다."),
         ("h2", "Fault containment의 경계"),
@@ -1141,7 +1141,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "P6", "PART VI · 확장 가능한 시스템 구조", "센서가 늘어나도 identity·time·meaning·state의 경계가 흐려지지 않게 한다.",
-        "PART VI · 확장 구조", "PART OPENER", "src/integrated_node/virtual_sensor_streamer.py; src/integrated_node/safenest_risk_engine.py; models/model_manifest.json",
+        "PART VI · 확장 구조", "PART OPENER", "ondevice_ai/src/integrated_node/virtual_sensor_streamer.py; ondevice_ai/src/integrated_node/safenest_risk_engine.py; ondevice_ai/models/model_manifest.json",
         ("body", "시스템 확장의 어려움은 component 개수가 아니라 <b>관계의 가지 수</b>가 빠르게 늘어난다는 데 있다. Sensor마다 다른 payload·clock·fault 규칙을 fusion code가 직접 알면 새 sensor 하나가 기존 모든 경로와 결합된다. 확장 가능성은 이 결합을 명시적 계약과 state owner로 바꾸는 성질이다."),
         ("diagram", "layers", {"labels": [("Identity", "device·sensor·session"), ("Schema", "value·unit·semantic"), ("Clock", "measured·received·age"), ("State store", "keyed history·timer"), ("Fault model", "status·reason"), ("Observability", "trace·version·metric")]}, 76 * mm, "확장 지점은 코드 파일이 아니라 의미와 상태의 소유권을 보존하는 계약 경계여야 한다."),
         ("h2", "이 장의 중심 질문"),
@@ -1151,7 +1151,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "47", "Canonical schema는 정보의 공통 평면을 만든다", "생산자별 payload 차이를 흡수하되 의미 차이를 지우지 않는다.",
-        "PART VI · 확장 구조", "UNIT 21 · 1/2", "src/integrated_node/virtual_sensor_streamer.py:171-199; src/integrated_node/safenest_risk_engine.py:120-229",
+        "PART VI · 확장 구조", "UNIT 21 · 1/2", "ondevice_ai/src/integrated_node/virtual_sensor_streamer.py:171-199; ondevice_ai/src/integrated_node/safenest_risk_engine.py:120-229",
         ("body", "<b>Canonical schema</b>는 여러 생산자가 공통으로 전달해야 하는 정보의 최소 구조다. 모든 sensor를 같은 숫자 형식으로 압축하는 것이 아니라, 값에 붙어 있는 identity·time·unit·semantic·health를 동일한 위치에 두는 방식이다."),
         ("diagram", "schema", {}, 56 * mm, "Envelope은 payload 자체와 그 payload를 해석하는 metadata를 하나의 versioned contract로 묶는다."),
         ("body", "Identity는 이 값이 누구의 어떤 session에서 나왔는지를, Time은 언제 측정되고 언제 도착했는지를, Meaning은 단위와 보정·preprocessing semantic을, Health는 그 값을 어느 정도 신뢰할 수 있는지를 설명한다. Optional field는 없음의 의미와 fallback 규칙까지 정의해야 한다."),
@@ -1161,7 +1161,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "48", "시간 계약은 서로 다른 clock을 비교 가능하게 한다", "측정 시각·수신 시각·순서·age budget을 별도 field로 다룬다.",
-        "PART VI · 확장 구조", "UNIT 21 · 2/2", "src/integrated_node/safenest_risk_engine.py:136-163; src/risk/risk_rules.py:87-146",
+        "PART VI · 확장 구조", "UNIT 21 · 2/2", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:136-163; ondevice_ai/src/risk/risk_rules.py:87-146",
         ("body", "분산된 sensor는 각자의 clock으로 값을 측정하고 network·queue·inference 지연을 거쳐 fusion에 도착한다. <b>Event time</b>은 현상이 관측된 시각이고 <b>processing time</b>은 시스템이 처리한 시각이다. 두 시각을 하나로 두면 느게 도착한 과거 data를 현재 사건처럼 섞을 수 있다."),
         ("equation", r"a_i(t)=t_{\mathrm{fuse}}-t_{\mathrm{measured},i},\qquad \mathrm{valid}_i=[0\leq a_i(t)\leq B_i]", "6.1", "a_i는 fusion 시점의 data age, B_i는 modality별 freshness budget이다. Clock domain이 비교 가능해야 식이 성립한다."),
         ("diagram", "flow", {"labels": [("Sensor clock", "measured_at"), ("Transport", "delay·reorder"), ("Receiver", "received_at"), ("Adapter", "clock normalize"), ("Fusion", "age·alignment")]}, 39 * mm, "Sequence는 중복·순서 역전을, timestamp는 age와 sensor 간 정렬을 판별한다."),
@@ -1171,7 +1171,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "49", "State는 key와 lifecycle을 가져야 한다", "History·filter·timer의 소유자를 명시해 장치와 session 사이의 오염을 막는다.",
-        "PART VI · 확장 구조", "UNIT 22 · 1/2", "src/integrated_node/safenest_risk_engine.py:73-96; src/risk/risk_rules.py:82-146",
+        "PART VI · 확장 구조", "UNIT 22 · 1/2", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:73-96; ondevice_ai/src/risk/risk_rules.py:82-146",
         ("body", "Stateful component를 여러 장치가 공유하면 한 장치의 window, IIR, apnea start time, previous status가 다른 장치의 판단에 들어갈 수 있다. 따라서 상태는 전역 변수가 아니라 <b>identity로 key된 시간적 문맥</b>으로 보아야 한다."),
         ("equation", r"s_{k+1}^{(d,\ell)}=f\!\left(s_k^{(d,\ell)},x_k^{(d,\ell)}\right)", "6.2", "d는 device, ℓ은 session·location·occupant 등 정책이 정한 context key다. 각 key는 독립된 state trajectory를 갖는다."),
         ("diagram", "layers", {"labels": [("State key", "device_id+session_id"), ("Signal history", "window·raw risk"), ("Filter state", "IIR·previous state"), ("Timer state", "candidate start"), ("Lifecycle", "create·reset·expire") ]}, 66 * mm, "State key는 오염을 막고 lifecycle은 종료된 context의 history가 새 context에 재사용되는 것을 막는다."),
@@ -1181,7 +1181,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "50", "동시성은 update order와 결정성의 문제다", "병렬 입력이 공유 state를 바꾸면 순서 규칙이 시스템 의미가 된다.",
-        "PART VI · 확장 구조", "UNIT 22 · 2/2", "src/integrated_node/safenest_risk_engine.py:237-415; src/integrated_node/virtual_sensor_streamer.py",
+        "PART VI · 확장 구조", "UNIT 22 · 2/2", "ondevice_ai/src/integrated_node/safenest_risk_engine.py:237-415; ondevice_ai/src/integrated_node/virtual_sensor_streamer.py",
         ("body", "여러 sensor packet이 동시에 도착하면 scheduler에 따라 update 순서가 바뀐다. 공유 buffer와 timer가 있는 코드에서 순서가 명시되지 않으면 동일한 input set으로도 서로 다른 output이 나올 수 있다. 이를 <b>race condition</b>이라 하며, 결과가 timing에 의존해 재현이 어렵다."),
         ("diagram", "fan_in", {"sources": ["Device A packet", "Device B packet", "Model callback", "Timer event"], "center": "Keyed event loop", "output": "Ordered state"}, 51 * mm, "Key별 serial update는 같은 state의 순서를 고정하고 다른 key는 병렬로 유지할 수 있다."),
         ("equation", r"F\!\left(F(s,m),m\right)=F(s,m)", "6.3", "중복 message m이 재전송되어도 상태가 한 번만 반영되는 idempotency의 이상적 조건이다."),
@@ -1191,7 +1191,7 @@ def build_pages() -> list[TheoryPage]:
 
     pages.append(page(
         "51", "전체 시스템을 하나의 인과 서사로 연결한다", "물리 현상에서 위험·health·reason까지 중간 의미를 빠뜨리지 않는다.",
-        "PART VI · 확장 구조", "SYNTHESIS", "README.md; models/model_manifest.json; src/risk/risk_rules.py; src/integrated_node/safenest_risk_engine.py",
+        "PART VI · 확장 구조", "SYNTHESIS", "README.md; ondevice_ai/models/model_manifest.json; ondevice_ai/src/risk/risk_rules.py; ondevice_ai/src/integrated_node/safenest_risk_engine.py",
         ("diagram", "layers", {"labels": [("물리 현상", "열·가스·전자기파·움직임"), ("센서 관측", "frame·ppm·I/Q·binary"), ("시간 정렬", "sample rate·window·freshness"), ("표현 변환", "filter·feature·tensor"), ("추론", "model score·class"), ("정책", "rule·timer·weight·override"), ("상태기계", "risk·health·reason"), ("소비자", "UI·alarm·telemetry") ]}, 92 * mm, "각 화살표는 단순한 data 전달이 아니라 새 가정과 semantic이 추가되는 계약 경계다."),
         ("h2", "설명의 출발점"),
         ("body", "Thermal은 표면 복사 온도의 공간 pattern, CO₂는 점유·호흡과 환기가 합쳐진 느린 동역학, mmWave는 거리 bin에 들어 있는 흉부 변위의 phase 변조, PIR은 열 패턴 변화 사건을 관측한다. 서로 다른 물리량은 각자의 sampling·filter·window를 거쳐 시간적 증거가 된다."),

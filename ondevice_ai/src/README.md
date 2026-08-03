@@ -1,4 +1,4 @@
-# `src/`
+# `ondevice_ai/src/`
 
 ## 1. 디렉터리 목적
 라즈베리 파이에서 실행되는 센서 수집, 추론, 위험도 융합 및 통합 노드 코드를 기능별 Python 패키지로 제공한다.
@@ -13,22 +13,23 @@
 모델 바이너리, 원본 측정 로그, 비밀값, 가상환경, 캐시와 생성 결과는 포함하지 않는다.
 
 ## 5. 주요 하위 구성
-`sensors/`, `inference/`, `risk/`, `integrated_node/`, `training/`, `tools/`로 구성한다. 센서 코드는 사용자명이나 포괄적인 `adapters/` 폴더 대신 `sensors/co2/`, `sensors/mmwave/`, `sensors/pir/`, `sensors/thermal44/`처럼 기기별로 배치한다.
+`sensors/`, `inference/`, `risk/`, `integrated_node/`, `training/`, `tools/`로 구성한다. 기기별 드라이버·어댑터 실구현은 이곳이 아니라 `devices/<device>/src/`에 있고, `sensors/`에는 V4 관점의 registry·orchestration만 둔다. 드라이버 사본을 이곳에 만들지 않는다.
 
 ## 6. 입력과 출력 인터페이스
 입력은 센서 프레임·JSON 패킷·모델 매니페스트이며, 출력은 `InferenceResult`와 위험도 평가 객체 또는 JSON 텔레메트리다.
 
 ## 7. 다른 기능 영역과의 관계
-`config/`, `models/`, `datasets/`를 읽고 `firmware/`의 직렬 텔레메트리를 수신하며 `tests/`에서 검증된다.
+`ondevice_ai/config|models|datasets/`를 읽고, `shared/contracts/base_sensor.py` 계약에 기대며, 기기 실구현이 필요하면 `devices.<device>.src...`를 명시적으로 import한다. `devices/mmwave/firmware/`의 직렬 텔레메트리를 수신하고 `ondevice_ai/tests/`에서 검증된다.
 
 ## 8. 실행·학습·추론 또는 활용 방법
-저장소 루트에서 `python3 -m src.integrated_node.run_demo`를 실행하고, 학습 유틸리티는 `python3 -m src.training.<module>`로 호출한다.
+저장소 루트에서 `python3 -m ondevice_ai.src.integrated_node.run_demo`를 실행하고, 학습 유틸리티는 `python3 -m ondevice_ai.src.training.<module>`로 호출한다. 운영 노드는 `python3 -m ondevice_ai.src.integrated_node.run_node --mode mock`이다.
 
 ## 9. 현재 개발 상태 및 버전
 SafeNest V4 통합 구조이며 MR60 ESP 어댑터 보강분(`b0d3c95`)을 포함한다.
 
 ## 10. 향후 파일 추가 및 관리 규칙
-절대경로를 코드에 넣지 말고 저장소 루트 기준 경로를 사용하며 새 모듈에는 대응 테스트를 추가한다. 사용자명 디렉터리를 만들지 말고 공용 코드는 기능 주제별, 센서 전용 코드는 기기별 패키지에 추가한다.
+절대경로를 코드에 넣지 말고 `Path(__file__).resolve()` 기준으로 계산하며 새 모듈에는 대응 테스트를 추가한다. 사용자명 디렉터리를 만들지 말고, 공용 AI 코드는 이곳의 기능 주제별 패키지에, 기기 전용 코드는 `devices/<device>/src/`에 추가한다.
 
-## 11. 주요 기여자와 원본 브랜치 추적 정보
-Junwoo Han(`sheepmeat`, `origin/Ondevice_AI`, `d97df3e`)의 V4 구현과 Jinsu Kim(`jinsu1011`, `codex/mmwave-phase-integration`, `b0d3c95`)의 MR60 통합을 계승한다.
+## 11. 주요 기여자와 원본 브랜치·커밋 추적 정보
+담당: Junwoo Han (`@sheepmeat`), Jinsu Kim (`@jinsu1011`).
+`origin/Ondevice_AI` (`d97df3e`)의 원본 경로 `src/`에 있던 V4 구현과 `codex/mmwave-phase-integration` (`b0d3c95`)의 MR60 통합을 계승한다. 이동 커밋 `38274c0`, 경로 수정 `3313f4b`·`32cdd1d`.

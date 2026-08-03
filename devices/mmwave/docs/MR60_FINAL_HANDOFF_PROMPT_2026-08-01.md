@@ -44,7 +44,7 @@ git log -3 --oneline --decorate
 1. `MR60_FINAL_HANDOFF_PROMPT_2026-08-01.md`
 2. `MMWAVE_NEXT_SESSION_CHECKLIST.md`
 3. `PROJECT_PROGRESS.md`의 마지막 `2026-08-01` 구간
-4. `firmware/esp_wroom32_mr60_monitor/analysis/final/2026-08-01_mr60_final_validation_manifest.json`
+4. `devices/mmwave/firmware/analysis/final/2026-08-01_mr60_final_validation_manifest.json`
 5. `docs/ai/MR60_INTEGRATION.md`
 
 ## 검증 완료 상태
@@ -103,7 +103,7 @@ git log -3 --oneline --decorate
 lsof /dev/cu.usbserial-10
 ```
 
-`src/sensors/mmwave/run_mr60_serial_adapter.py`의 실제 포트 입력과 `src/integrated_node/safenest_risk_engine.py`의 소비 경로를 확인한다. replay가 아니라 실제 ESP JSONL을 사용해 다음을 증명한다.
+`devices/mmwave/src/run_mr60_serial_adapter.py`의 실제 포트 입력과 `ondevice_ai/src/integrated_node/safenest_risk_engine.py`의 소비 경로를 확인한다. replay가 아니라 실제 ESP JSONL을 사용해 다음을 증명한다.
 
 - schema 1.2 레코드를 파싱한다.
 - firmware/config hash 불일치를 숨기지 않는다.
@@ -118,7 +118,7 @@ lsof /dev/cu.usbserial-10
 
 ```bash
 git diff --check
-cd firmware/esp_wroom32_mr60_monitor
+cd devices/mmwave/firmware
 pio run
 .venv/bin/python -m py_compile \
   export_mmwave_csv.py analysis_tools/*.py capture_serial.py analyze_mmwave_log.py

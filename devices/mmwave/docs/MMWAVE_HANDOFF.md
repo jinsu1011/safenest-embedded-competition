@@ -31,11 +31,11 @@ RX       ───────  GPIO17/TX2
 
 ## 현재 코드
 
-- 펌웨어: `firmware/esp_wroom32_mr60_monitor/src/main.cpp`
-- PlatformIO 설정: `firmware/esp_wroom32_mr60_monitor/platformio.ini`
-- 캡처 도구: `firmware/esp_wroom32_mr60_monitor/capture_serial.py`
-- 분석 도구: `firmware/esp_wroom32_mr60_monitor/analyze_mmwave_log.py`
-- 대시보드: `firmware/esp_wroom32_mr60_monitor/mmwave_dashboard.py`
+- 펌웨어: `devices/mmwave/firmware/src/main.cpp`
+- PlatformIO 설정: `devices/mmwave/firmware/platformio.ini`
+- 캡처 도구: `devices/mmwave/firmware/capture_serial.py`
+- 분석 도구: `devices/mmwave/firmware/analyze_mmwave_log.py`
+- 대시보드: `devices/mmwave/firmware/mmwave_dashboard.py`
 - 현재 펌웨어는 MR60 Tiny Frame을 직접 파싱하고 10Hz JSONL을 USB로 출력한다. 아직 새 필터나 최종 유효성 임계값을 적용하지 않은 raw 모니터 단계다.
 
 ## 버전
@@ -70,7 +70,7 @@ RX       ───────  GPIO17/TX2
 
 ```bash
 /private/tmp/safenest-mmwave-venv/bin/python \
-  firmware/esp_wroom32_mr60_monitor/capture_serial.py \
+  devices/mmwave/firmware/capture_serial.py \
   --port /dev/cu.usbserial-110 \
   --baud 115200 \
   --duration 15 \

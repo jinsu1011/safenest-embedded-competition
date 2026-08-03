@@ -1,0 +1,30 @@
+# SafeNest 책임 영역별 기본 리뷰어
+#
+# 사람이 아니라 기기·책임 영역을 기준으로 지정한다.
+# 아래 handle은 2026-08-03에 저장소 collaborator 목록으로 실재와 권한(write 이상)을
+# 확인했다. 팀원이 바뀌면 이 파일과 각 영역 README의 11절을 함께 갱신한다.
+#
+# 나중에 매칭되는 규칙이 앞 규칙을 덮어쓴다. 따라서 포괄 규칙을 맨 위에 둔다.
+
+# 기본 리뷰어 (아래 규칙에 걸리지 않는 모든 경로)
+*                           @jinsu1011
+
+# 기기별 책임 영역
+/devices/co2/               @yuseungha @jinsu1011
+/devices/pir/               @yuname121 @jinsu1011
+/devices/mmwave/            @jinsu1011
+/devices/thermal/           @rla1729 @jinsu1011
+
+# 온디바이스 AI V4 패키지
+/ondevice_ai/               @sheepmeat @jinsu1011
+
+# 공용 센서 계약 — 모든 영역이 의존하므로 AI/통합 담당이 함께 검토한다
+/shared/contracts/          @sheepmeat @jinsu1011
+
+# 하드웨어 자산
+/hardware/3d_models/        @yuname121 @jinsu1011
+
+# 문서, 이력, 저장소 설정
+/docs/                      @jinsu1011
+/archive/                   @jinsu1011
+/.github/                   @jinsu1011

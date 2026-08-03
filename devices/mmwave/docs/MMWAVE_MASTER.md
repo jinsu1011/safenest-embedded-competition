@@ -54,10 +54,10 @@ UART 115200bps. RX0/TX0 사용 금지. USB 하나로 급전, 별도 5V 금지.
 
 - 작업 폴더: `/Users/kimjinsu/Documents/임베디드 소프트웨어 경진대회`
 - GitHub: `jinsu1011/safenest-embedded-competition` (**private**), 브랜치 `codex/mmwave-phase-integration`
-- Python: `firmware/esp_wroom32_mr60_monitor/.venv/bin/python` (pyserial, rich)
+- Python: `devices/mmwave/firmware/.venv/bin/python` (pyserial, rich)
 - 시리얼 포트는 **재연결마다 바뀐다**: `find /dev -maxdepth 1 -name 'cu.usb*' -print`
   - 최근 값 `/dev/cu.usbserial-10`
-- 펌웨어 소스: `firmware/esp_wroom32_mr60_monitor/src/main.cpp`
+- 펌웨어 소스: `devices/mmwave/firmware/src/main.cpp`
 - 샘플레이트 약 **10Hz**
 
 ### MR60BHA2 UART 프레임 (main.cpp:15~21)
@@ -69,7 +69,7 @@ UART 115200bps. RX0/TX0 사용 금지. USB 하나로 급전, 별도 5V 금지.
 
 ## 3. 지금까지 한 것 (전부 완료, 재측정 불필요)
 
-원본 로그는 전부 `firmware/esp_wroom32_mr60_monitor/logs/` 에 있고 GitHub에 푸시돼 있다.
+원본 로그는 전부 `devices/mmwave/firmware/logs/` 에 있고 GitHub에 푸시돼 있다.
 **원본 수정 금지. 파생 파일만 만든다.**
 
 ### 3-1. 환경 검증
@@ -329,7 +329,7 @@ breath_rpm, range_m, quality, signal_source, device_id
 
 ---
 
-## 10. 분석 도구 — `firmware/esp_wroom32_mr60_monitor/analysis_tools/`
+## 10. 분석 도구 — `devices/mmwave/firmware/analysis_tools/`
 
 하드웨어 없이 로그만으로 위 결론을 전부 재현할 수 있다. 표준 라이브러리만 쓴다.
 자세한 사용법은 그 폴더의 `README.md`에 있다.
@@ -368,7 +368,7 @@ cd safenest-embedded-competition
 **Python 환경 재생성** (`.venv`는 `.gitignore`로 제외돼 저장소에 없다):
 
 ```bash
-cd firmware/esp_wroom32_mr60_monitor
+cd devices/mmwave/firmware
 python3 -m venv .venv
 .venv/bin/pip install pyserial rich
 ```
@@ -401,8 +401,8 @@ cd "/Users/kimjinsu/Documents/임베디드 소프트웨어 경진대회"
 find /dev -maxdepth 1 -name 'cu.usb*' -print          # 포트 확인 (매번 바뀜)
 
 # 15초 healthcheck — 약 150샘플(10Hz), 오류 0이면 정상
-firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
-  firmware/esp_wroom32_mr60_monitor/capture_serial.py \
+devices/mmwave/firmware/.venv/bin/python \
+  devices/mmwave/firmware/capture_serial.py \
   --port /dev/cu.usbserial-10 --duration 15 --output /tmp/hc.jsonl
 ```
 

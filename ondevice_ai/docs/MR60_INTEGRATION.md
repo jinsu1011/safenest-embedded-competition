@@ -23,7 +23,7 @@ ESP는 Mac 또는 Pi USB에서 전원을 받을 수 있다. MR60 5V와 ESP GND�
 
 ## 재현 가능한 설정
 
-- ESP 설정 원본: `firmware/esp_wroom32_mr60_monitor/config/mmwave_sensor_config.json`
+- ESP 설정 원본: `devices/mmwave/firmware/config/mmwave_sensor_config.json`
 - ESP 설정 SHA-256: `b817e8bfd5e52b18275626f7b6a9bd60098ea4b108428a5aaf63600dbc987834`
 - ESP 펌웨어: `safenest-mr60-esp/1.2.0`
 - Pi 설정: `config/mmwave_processing.json`
@@ -36,7 +36,7 @@ ESP는 Mac 또는 Pi USB에서 전원을 받을 수 있다. MR60 5V와 ESP GND�
 저장소 최상위에서:
 
 ```bash
-cd firmware/esp_wroom32_mr60_monitor
+cd devices/mmwave/firmware
 pio run
 ```
 
@@ -47,13 +47,13 @@ Pi에서 ESP JSONL을 표준 `mmwave_mr60` 패킷으로 변환:
 ```bash
 cd safenest-embedded-competition
 python3 -m pip install -r requirements-pi.txt
-python3 src/sensors/mmwave/run_mr60_serial_adapter.py --port /dev/ttyUSB0
+python3 devices/mmwave/src/run_mr60_serial_adapter.py --port /dev/ttyUSB0
 ```
 
 실제 ESP 입력을 통합 위험 엔진까지 전달하고 buffer·안전 metadata를 함께 확인:
 
 ```bash
-python3 src/integrated_node/run_mr60_usb_node.py --port /dev/ttyUSB0
+python3 -m ondevice_ai.src.integrated_node.run_mr60_usb_node --port /dev/ttyUSB0
 ```
 
 이 경로는 schema `1.2`, ESP firmware `safenest-mr60-esp/1.2.0`, ESP config
@@ -65,15 +65,15 @@ SHA-256을 엄격히 검사한다. 불일치·serial timeout·잘못된 JSON·ti
 기존 실측 로그를 장비 없이 재생:
 
 ```bash
-python3 src/sensors/mmwave/run_mr60_serial_adapter.py \
+python3 devices/mmwave/src/run_mr60_serial_adapter.py \
   --allow-legacy-provenance \
-  --replay firmware/esp_wroom32_mr60_monitor/logs/breath/2026-07-28_breath_paced_15rpm_explicit_full_v3.jsonl
+  --replay devices/mmwave/firmware/logs/breath/2026-07-28_breath_paced_15rpm_explicit_full_v3.jsonl
 ```
 
 ## 유효 데이터와 검증
 
 - manifest: `datasets/mmwave/mr60_20260728_manifest.json`
-- 생성: `python3 firmware/esp_wroom32_mr60_monitor/build_valid_log_manifest.py`
+- 생성: `python3 devices/mmwave/firmware/build_valid_log_manifest.py`
 - hash 검증: `python3 -m unittest tests/test_mr60_manifest.py -v`
 - 어댑터/안전 계약: `python3 -m unittest tests.test_mr60_esp_adapter tests.test_risk_rules tests.test_mmwave_stream_adapter -v`
 
@@ -105,4 +105,4 @@ python3 src/sensors/mmwave/run_mr60_serial_adapter.py \
 - 심박: 동기 기준기기가 없어 `UNVERIFIED`; 무호흡: 검증 데이터가 없어 `UNVERIFIED`.
 - 남은 필수 통합 작업: 팀 통합 노드에서 실제 ESP USB JSONL 입력 확인.
 
-의료 정확도, 심박 정확도, 무호흡 검출 완료로 발표하면 안 된다. 최종 근거는 `firmware/esp_wroom32_mr60_monitor/analysis/final/2026-08-01_mr60_final_validation_manifest.json`을 사용한다.
+의료 정확도, 심박 정확도, 무호흡 검출 완료로 발표하면 안 된다. 최종 근거는 `devices/mmwave/firmware/analysis/final/2026-08-01_mr60_final_validation_manifest.json`을 사용한다.

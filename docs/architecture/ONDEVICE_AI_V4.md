@@ -8,7 +8,7 @@
 
 팀원들이 각자 담당하는 센서 및 파트(Thermal, mmWave, CO2, PIR, 라즈베리 파이 5, 웹 UI)에 즉시 복사하여 적용할 수 있는 통합 인수인계 설명서는 아래 단일 문서에 작성되어 있습니다:
 
-👉 **[통합 팀원 인수인계 가이드](../ai/TEAM_HANDOFF_GUIDE.md)**
+👉 **[통합 팀원 인수인계 가이드](../../ondevice_ai/docs/TEAM_HANDOFF_GUIDE.md)**
 
 ---
 
@@ -57,12 +57,12 @@ $$R = 100 \times (0.35 S_1 + 0.35 S_2 + 0.15 S_3 + 0.15 S_4)$$
 
 ### (1) 실시간 스트리밍 노드 실행 (Mock 모드)
 ```bash
-python3 src/integrated_node/run_node.py --mode mock
+python3 ondevice_ai/src/integrated_node/run_node.py --mode mock
 ```
 
 ### (2) 실기기 라즈베리 파이 5 센서 연동 실행
 ```bash
-python3 src/integrated_node/run_node.py --mode real
+python3 ondevice_ai/src/integrated_node/run_node.py --mode real
 ```
 
 ### (3) 전체 유닛 & 통합 테스트 실행
@@ -70,4 +70,4 @@ python3 src/integrated_node/run_node.py --mode real
 python3 -m unittest discover -s tests -p "test_*.py"
 ```
 
-MR60 ESP 실측 연동과 재생 검증은 [MR60 통합 가이드](../ai/MR60_INTEGRATION.md)를 따릅니다.
+MR60 ESP 실측 연동과 재생 검증은 [MR60 통합 가이드](../../ondevice_ai/docs/MR60_INTEGRATION.md)를 따릅니다.

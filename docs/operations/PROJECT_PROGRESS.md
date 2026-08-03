@@ -1,5 +1,23 @@
 # SANDI 프로젝트 진행 기록
 
+> [!NOTE]
+> **경로 표기 안내 (2026-08-03 추가)**
+> 이 문서는 시간순 작업 기록이므로 본문의 경로는 **기록 당시의 경로**를 그대로 둔다.
+> 2026-08-03 책임 영역 재편(`38274c0`) 이후의 현재 경로는 아래와 같이 대응한다.
+>
+> | 기록 당시 경로 | 현재 경로 |
+> |---|---|
+> | `firmware/esp_wroom32_mr60_monitor/` | `devices/mmwave/firmware/` |
+> | `src/sensors/<device>/` | `devices/<device>/src/` |
+> | `src/sensors/base_sensor.py` | `shared/contracts/base_sensor.py` |
+> | `src/inference|risk|integrated_node|training|tools/` | `ondevice_ai/src/` 아래 동일 이름 |
+> | `models/`, `datasets/`, `config/` | `ondevice_ai/` 아래 동일 이름 |
+> | `tests/`, `tests/benchmarks/` | `ondevice_ai/tests/`, `ondevice_ai/benchmarks/` (mmWave 기기 단독 4종은 `devices/mmwave/tests/`) |
+> | `hardware/3d_print/` | `hardware/3d_models/` |
+> | `SafeNest_V4_OnDevice_AI/` | `ondevice_ai/` |
+>
+> 전체 매핑과 무결성 검증 근거는 [`docs/architecture/BRANCH_PROVENANCE.md`](../architecture/BRANCH_PROVENANCE.md)에 있다.
+
 ## 2026-07-13 MR60BHA2 ESP 안정화 작업
 
 ### 작업 체크리스트

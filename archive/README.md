@@ -19,7 +19,7 @@
 기본 런타임 입력·출력에는 연결되지 않으며 비교나 수동 복구 시에만 읽는다.
 
 ## 7. 다른 기능 영역과의 관계
-공식 구현은 `src/risk/`, 공식 설정은 `config/risk_rules.yaml`이며 archive에서 import하지 않는다.
+공식 구현은 `ondevice_ai/src/risk/`, 공식 설정은 `ondevice_ai/config/risk_rules.yaml`이며 archive에서 import하지 않는다.
 
 ## 8. 실행·학습·추론 또는 활용 방법
 직접 운영 실행하지 말고 필요한 경우 별도 브랜치에서 현재 구현과 diff·테스트한다.
@@ -30,5 +30,5 @@
 ## 10. 향후 파일 추가 및 관리 규칙
 삭제 대안으로만 사용하며 원본 경로·ref·대체 구현·이관 날짜를 반드시 기록한다.
 
-## 11. 주요 기여자와 원본 브랜치 추적 정보
+## 11. 주요 기여자와 원본 브랜치·커밋 추적 정보
 초기 위험 엔진은 `origin/main` 계보, V4 JSON은 `origin/Ondevice_AI` 계보에서 왔으며 상세 해시는 `INTEGRATION_PROGRESS.md`에 있다.

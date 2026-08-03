@@ -46,7 +46,7 @@ UART 115200bps. RX0/TX0 금지. USB 하나 급전, 별도 5V 금지.
 Mac 포트 (재연결마다 바뀜): find /dev -maxdepth 1 -name 'cu.usb*' -print
 직전 포트: /dev/cu.usbserial-10  (capture_serial.py 기본값도 이 값)
 
-Python venv: firmware/esp_wroom32_mr60_monitor/.venv/bin/python
+Python venv: devices/mmwave/firmware/.venv/bin/python
 설치됨: pyserial 3.5, rich 15.0.0
 
 ════════════════════════════════════════════════
@@ -66,12 +66,12 @@ CWD: /Users/kimjinsu/Documents/임베디드 소프트웨어 경진대회
 - current/walkthrough/P0-6_mmwave_input_adapter.md
 - models/mmwave_sensor_stats_metadata_v0.1.0.json
 
-펌웨어 소스: firmware/esp_wroom32_mr60_monitor/src/main.cpp
+펌웨어 소스: devices/mmwave/firmware/src/main.cpp
   프레임 타입: 0x0A13 위상 / 0x0A14 호흡 / 0x0A15 심박 / 0x0A16 거리 / 0x0F09 재실 / 0xFFFF 펌웨어
   → 전부 스칼라 1개 값. 타깃 배열·인덱스 없음 = 단일 타깃 센서.
 
 ════════════════════════════════════════════════
-5. 스크립트 (firmware/esp_wroom32_mr60_monitor/)
+5. 스크립트 (devices/mmwave/firmware/)
 ════════════════════════════════════════════════
 - capture_serial.py       무필터 JSONL 캡처 (--port --baud --duration --output)
 - analyze_mmwave_log.py   통계 리포트

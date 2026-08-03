@@ -66,10 +66,10 @@ ESP firmware 1.2.0 업로드, schema 1.2 회귀, 빈 공간·정지 인체 장�
 
 ## FILES
 
-- ESP firmware/config: `firmware/esp_wroom32_mr60_monitor/src/main.cpp`, `include/mmwave_config.h`, `config/mmwave_sensor_config.json`.
+- ESP firmware/config: `devices/mmwave/firmware/src/main.cpp`, `include/mmwave_config.h`, `config/mmwave_sensor_config.json`.
 - filter 분석: `compare_breath_filters.py`, `analysis/breath/2026-07-28_breath_filter_comparison.json`.
-- Pi adapter/config: `src/sensors/mmwave/mr60_esp_adapter.py`, `run_mr60_serial_adapter.py`, `config/mmwave_processing.json`.
-- 위험도 안전 계약: `src/risk/`, `src/integrated_node/safenest_risk_engine.py`, `sensors/mmwave/mmwave_adapter.py`.
+- Pi adapter/config: `devices/mmwave/src/mr60_esp_adapter.py`, `run_mr60_serial_adapter.py`, `devices/mmwave/config/mmwave_processing.json`.
+- 위험도 안전 계약: `ondevice_ai/src/risk/`, `ondevice_ai/src/integrated_node/safenest_risk_engine.py`, `sensors/mmwave/mmwave_adapter.py`.
 - 원본 manifest: `datasets/mmwave/mr60_20260728_manifest.json`.
 - 통합 절차: `docs/ai/MR60_INTEGRATION.md`.
 - 채택 원본 로그: manifest에 SHA-256과 함께 명시된 6개 JSONL. 중단·사전시험 로그는 보존하되 제출 manifest에서 제외했다.
@@ -96,4 +96,4 @@ ESP firmware 1.2.0 업로드, schema 1.2 회귀, 빈 공간·정지 인체 장�
 - 마지막 5분의 센서 보고 거리 166.46cm는 피험자 이동 증거로 단정하지 않고 MR60의 타깃 전환 또는 거리 추적 이상 후보로 기록한다.
 - 심박은 동시 기준기기가 없어 `heart_verified=false/UNVERIFIED`, 무호흡은 안전한 정답 데이터가 없어 `apnea_verified=false/UNVERIFIED`를 유지한다.
 - 거리 4종, 진입·퇴장 20회, 페이싱 12/15/20rpm 원본과 SHA-256은 재검증했으며 재측정하지 않는다.
-- 최종 증거 manifest: `firmware/esp_wroom32_mr60_monitor/analysis/final/2026-08-01_mr60_final_validation_manifest.json`.
+- 최종 증거 manifest: `devices/mmwave/firmware/analysis/final/2026-08-01_mr60_final_validation_manifest.json`.

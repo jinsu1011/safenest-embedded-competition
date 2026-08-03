@@ -48,7 +48,7 @@
 모든 명령은 저장소 최상위에서 실행한다. Python은 반드시 아래 프로젝트 가상환경을 사용한다.
 
 ```bash
-firmware/esp_wroom32_mr60_monitor/.venv/bin/python
+devices/mmwave/firmware/.venv/bin/python
 ```
 
 명령의 `YYYY-MM-DD`는 실제 시험일, `/dev/cu.usbserial-XXXX`는 A단계에서 확인한 실제 포트로 한 번만 치환한다.
@@ -75,7 +75,7 @@ lsof /dev/cu.usb*
 - [x] 2026-08-01 업로드 완료(해시 검증 통과, RAM 6.7%/Flash 20.3%). MR60 firmware가 아니라 ESP firmware만 업로드한다.
 
 ```bash
-cd firmware/esp_wroom32_mr60_monitor
+cd devices/mmwave/firmware
 pio run
 pio run -t upload --upload-port /dev/cu.usbserial-XXXX
 cd ../..
@@ -84,10 +84,10 @@ cd ../..
 - [x] 2026-08-01 완료: schema 1.2 최종 로그 `logs/final/2026-08-01_healthcheck_v120_75s.jsonl`, SHA-256 `eb4c57a16ea00d6b4314364f298cac2420a0f9cf3023eed15d02dcdd95835382`, 통과 기준 충족.
 
 ```bash
-firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
-  firmware/esp_wroom32_mr60_monitor/capture_serial.py \
+devices/mmwave/firmware/.venv/bin/python \
+  devices/mmwave/firmware/capture_serial.py \
   --port /dev/cu.usbserial-XXXX --duration 15 \
-  --output firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_healthcheck_v120_75s.jsonl
+  --output devices/mmwave/firmware/logs/final/YYYY-MM-DD_healthcheck_v120_75s.jsonl
 ```
 
 통과 기준:
@@ -108,15 +108,15 @@ firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
   - 17,995패킷/1,799.781초, reboot·checksum/parse 오류·raw/stable presence·생체신호·freeze 오탐 전부 0.
 
 ```bash
-firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
-  firmware/esp_wroom32_mr60_monitor/capture_serial.py \
+devices/mmwave/firmware/.venv/bin/python \
+  devices/mmwave/firmware/capture_serial.py \
   --port /dev/cu.usbserial-XXXX --duration 1800 \
-  --output firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_empty_v120_30min.jsonl
+  --output devices/mmwave/firmware/logs/final/YYYY-MM-DD_empty_v120_30min.jsonl
 
-firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
-  firmware/esp_wroom32_mr60_monitor/analyze_mmwave_log.py \
-  firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_empty_v120_30min.jsonl \
-  --output firmware/esp_wroom32_mr60_monitor/analysis/final/YYYY-MM-DD_empty_v120_30min_summary.json
+devices/mmwave/firmware/.venv/bin/python \
+  devices/mmwave/firmware/analyze_mmwave_log.py \
+  devices/mmwave/firmware/logs/final/YYYY-MM-DD_empty_v120_30min.jsonl \
+  --output devices/mmwave/firmware/analysis/final/YYYY-MM-DD_empty_v120_30min_summary.json
 ```
 
 통과 기준: ESP reboot 0, UART checksum/parse 오류율 보고, stable presence 오탐 0 목표, 호흡·심박 0을 유효값으로 세지 않음.
@@ -135,16 +135,16 @@ firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
   - 마지막 5분을 제외한 가운데 25분 재분석에서도 stable/vital presence 98.52%, freeze·통신 오류 0으로 재실은 통과했지만 filtered breath 유효률 25.90%, 저진폭 69.95%로 호흡 지속성은 미통과다. 따라서 마지막 5분만 제외해 전체 PASS로 바꾸지 않는다.
 
 ```bash
-firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
-  firmware/esp_wroom32_mr60_monitor/capture_serial.py \
+devices/mmwave/firmware/.venv/bin/python \
+  devices/mmwave/firmware/capture_serial.py \
   --port /dev/cu.usbserial-XXXX --duration 1860 \
-  --output firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_occupied_d09_v120_31min.jsonl
+  --output devices/mmwave/firmware/logs/final/YYYY-MM-DD_occupied_d09_v120_31min.jsonl
 
-firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
-  firmware/esp_wroom32_mr60_monitor/analyze_mmwave_log.py \
-  firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_occupied_d09_v120_31min.jsonl \
+devices/mmwave/firmware/.venv/bin/python \
+  devices/mmwave/firmware/analyze_mmwave_log.py \
+  devices/mmwave/firmware/logs/final/YYYY-MM-DD_occupied_d09_v120_31min.jsonl \
   --skip-seconds 60 \
-  --output firmware/esp_wroom32_mr60_monitor/analysis/final/YYYY-MM-DD_occupied_d09_v120_after60s_summary.json
+  --output devices/mmwave/firmware/analysis/final/YYYY-MM-DD_occupied_d09_v120_after60s_summary.json
 ```
 
 통과 기준: 분석 30분, ESP reboot 0, stable presence 감지율 95% 이상, UART 오류율 보고. 자연호흡 vendor 값은 정확도 기준으로 사용하지 않고 Pi phase 추정의 유효률·표준편차를 함께 계산한다.
@@ -179,10 +179,10 @@ YYYY-MM-DD_occupied_d15_v120_120s.jsonl
   - 퇴장 해제는 19/20, 평균 15.491초이며 2초 기준 0/19이다. MR60 vendor hysteresis 한계로 기록하고 Pi Thermal/PIR 융합으로 보완한다.
 
 ```bash
-firmware/esp_wroom32_mr60_monitor/.venv/bin/python \
-  firmware/esp_wroom32_mr60_monitor/entry_exit_trial.py \
+devices/mmwave/firmware/.venv/bin/python \
+  devices/mmwave/firmware/entry_exit_trial.py \
   --port /dev/cu.usbserial-XXXX --trials 20 \
-  --output firmware/esp_wroom32_mr60_monitor/logs/final/YYYY-MM-DD_entry_exit_v120_20.jsonl
+  --output devices/mmwave/firmware/logs/final/YYYY-MM-DD_entry_exit_v120_20.jsonl
 ```
 
 기록할 값: raw와 stable 진입 지연, raw와 stable 퇴장 해제 지연, 미탐 횟수. 진입 전달 2초 목표를 확인한다. MR60 자체 퇴장 해제가 약 15초면 ESP 필터를 억지로 바꾸지 말고 `센서 한계/PI 융합 필요`로 기록한다.

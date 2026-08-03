@@ -8,9 +8,9 @@
 실행에 필요한 건 표준 라이브러리뿐이다 (json, statistics). pyserial·rich는 캡처용이지 분석용이 아니다.
 
 ```bash
-PY=firmware/esp_wroom32_mr60_monitor/.venv/bin/python   # 또는 시스템 python3
-L=firmware/esp_wroom32_mr60_monitor/logs
-T=firmware/esp_wroom32_mr60_monitor/analysis_tools
+PY=devices/mmwave/firmware/.venv/bin/python   # 또는 시스템 python3
+L=devices/mmwave/firmware/logs
+T=devices/mmwave/firmware/analysis_tools
 ```
 
 ## 호흡 (핵심 결론)
@@ -50,7 +50,7 @@ $PY $T/phase_period.py $L/breath/2026-07-26_breath_paced_15rpm.jsonl 15
 schema 1.0/1.1 필드명 차이를 자동 처리한다.
 
 ### hr_ref_compare.py — 애플워치 대조 (±5초 창)
-스크립트 안 `watch=[...]` 리스트에 워치 실측 10개를 넣고 실행. 파일 경로도 상단 상수.
+스크립트 안 `watch=[...]` 리스트에 워치 실측 10개를 넣고 실행. 로그 경로는 스크립트 위치(`Path(__file__)`) 기준으로 자동 계산한다.
 
 ### hr_window_sweep.py — 중앙값 창 크기별 오차
 창을 키워도 계통 오차가 안 줄어드는 것을 보여준다.
@@ -72,7 +72,7 @@ $PY $T/freeze_watchdog.py <출력_jsonl_경로> <감시_초>
 
 ### hr_ref_capture_run.sh — 심박 대조 캡처 러너
 300초 캡처 + 30초마다 Yuna 음성 체크 신호 + watchdog 동시 실행.
-**macOS 전용** (`say`, `afplay`). 경로가 하드코딩되어 있으니 다른 컴퓨터에서는 상단 변수를 고칠 것.
+**macOS 전용** (`say`, `afplay`). 저장소 경로는 스크립트 위치 기준으로 자동 계산하며, 임시 작업 디렉터리는 환경변수 `SCR`로 덮어쓸 수 있다.
 
 ## 다른 컴퓨터에서 쓸 때 주의
 

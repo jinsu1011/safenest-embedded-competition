@@ -19,7 +19,7 @@ Thermal-44, CO2, mmWave 추론기가 로드할 불변 모델 artifact와 스케�
 입력은 정규화된 센서 텐서이며 출력 shape·dtype·클래스는 매니페스트에 정의된다.
 
 ## 7. 다른 기능 영역과의 관계
-`src/inference/`가 읽고 `config/models.yaml`이 선택하며 `tests/`가 파일·해시·계약을 검증한다.
+`ondevice_ai/src/inference/`가 읽고 `ondevice_ai/config/models.yaml`이 선택하며 `ondevice_ai/tests/`가 파일·해시·계약을 검증한다.
 
 ## 8. 실행·학습·추론 또는 활용 방법
 저장소 루트에서 통합 노드를 실행하면 매니페스트 상대경로로 자동 로드된다.
@@ -30,5 +30,6 @@ SafeNest V4의 INT8 모델 3종 v0.1.0과 메타데이터를 보존한다.
 ## 10. 향후 파일 추가 및 관리 규칙
 모델 교체 시 파일명을 버전화하고 SHA-256, 입출력 계약, 관련 설정과 테스트를 같은 변경에 갱신한다.
 
-## 11. 주요 기여자와 원본 브랜치 추적 정보
-Junwoo Han(`sheepmeat`)의 `origin/Ondevice_AI`(`d97df3e`)에서 이관했으며 원본 blob은 해당 ref로 추적한다.
+## 11. 주요 기여자와 원본 브랜치·커밋 추적 정보
+담당: Junwoo Han (`@sheepmeat`).
+`origin/Ondevice_AI` (`d97df3e`)의 원본 경로 `models/`에서 이관했으며 원본 blob은 해당 ref로 추적한다. 이동 커밋 `38274c0`.

@@ -1119,3 +1119,68 @@ Phase 2B S1의 확정 FAIL(MAE 16.6bpm, bias +14.4bpm)을 뒤집지 않고, 자�
 - 자체 호흡 추정은 `breath_phase`의 30초 causal window, 10Hz, 5~40rpm FFT, phase std≥0.05, gap≤0.5초 계약을 재사용한다.
 - cue 정렬은 Phase 2B host monotonic receipt/prompt를 사용하며 각 cue 직전 30초 창을 분석한다.
 - S1의 Watch 범위가 68~81bpm으로 좁으므로 S1 회귀는 예비 증거이며, H1 최종 기준은 사전등록대로 S1+S2 통합에서만 판정한다.
+
+# 2026-08-03 MR60 R1 펌웨어 C++ ↔ Python 동치성 검증
+
+하드웨어 캡처 전 선행 단계. 포팅 버그가 있으면 이후 캡처가 전부 무의미하므로 먼저 수행했다.
+원본 로그는 읽기만 했고 수정·이동·이름 변경은 없다.
+
+- 대상: `devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl`
+  (SHA-256 `7f9e9ac65377c6dc217af92f9dee2401b6162540e2245fce97acf2ed49368a34`, schema 1.2 패킷 18,574개, 파싱 불가 0줄)
+- 검증 도구(신규): `devices/mmwave/firmware/analysis_tools/r1_fw_python_equivalence.py`
+  `src/main.cpp`의 `appendSample()`/`windowReady()`/`windowStddev()`/`breathStats()`를 표준 라이브러리만으로 재현하고,
+  같은 시점 ESP 출력 `breath_phase_std`/`breath_rate_filtered`/`breath_filtered_valid`와 비교한다.
+  파라미터는 `include/mmwave_config.h`와 동일(창 30,000ms, 용량 640, 게이팅 100ms, ready 허용 200ms,
+  히스테리시스 0.15, 최소 std 0.2, 최소 영교차 2).
+
+## 결론: C++ ↔ Python 알고리즘 포팅 버그 없음
+
+| 비교 항목 | 전체 불일치 | phase 신선(age≤200ms) 구간 | 차이 분포 |
+|---|---|---|---|
+| `breath_window_ready` | 298 / 18,574 (1.604%) | — | replay 워밍업 아티팩트 |
+| `breath_phase_std` | 3,626 / 18,276 (19.84%) | 790 / 15,393 (5.13%) | p50 0.00249, p99 0.00609, max 0.01605 |
+| `breath_rate_filtered` | 2,275 / 3,879 (58.65%) | 동일 | p50 0.0328, p90 0.1182, p99 2.1985, max 6.657 rpm |
+| `breath_filtered_valid` 게이트 판정 | 51 / 18,276 (0.279%) | 0.331% | — |
+
+불일치 3건은 전부 원인이 특정되며 계산식 차이가 아니다.
+
+1. `window_ready` 298건은 정확히 300패킷(30초)이다. 로그 시작 시점에 ESP 창은 이미 차 있었고
+   replay는 창을 채우는 데 30초가 필요하다. 비교 아티팩트이며 실제 불일치가 아니다.
+2. `breath_phase_std` 불일치의 대부분(14.7%p)은 26~30분 구간에 몰려 있다(분당 600건).
+   이 구간은 phase 프레임이 두절돼 `phase_age_ms`가 최대 288,530ms까지 올라갔다.
+   ESP는 새 샘플이 들어올 때만 창을 비우므로 std=0.13을 그대로 유지하는 반면,
+   replay는 로그에 반복 기록된 마지막 값을 계속 넣어 std→0이 된다. 창 갱신 시점 차이다.
+   phase 신선 구간만 보면 p99 0.00609로 ESP 출력 정밀도(소수 2자리, ±0.005) 수준이다.
+3. `breath_rate_filtered`의 판정 기준 0.005 rpm은 ESP 출력 반올림 폭과 같아 변별력이 없다.
+   실질 기준으로는 >0.5 rpm 155건(4.00%), >1.0 rpm 118건(3.04%)이다.
+   이 꼬리는 전부 게이트 경계(esp_std≈0.20)에서 발생하며 원인은 로그의 `breath_phase`가
+   소수 2자리로 양자화된 것이다. 진폭 0.20에서 히스테리시스 문턱은 0.15×0.20=0.030으로
+   양자화 3단계뿐이라 영교차 개수가 1~2개씩 바뀐다.
+   알고리즘을 고정한 채 입력 정밀도만 2자리→1자리로 낮춘 민감도 시험에서
+   p50 0.067, p99 7.499, max 24.227 rpm(>1rpm 27.5%)이 흔들려 이 설명이 확인됐다.
+
+## 부수 발견 — 잠재 결함 1건 (실제 발생 0건, 오늘 수정 보류)
+
+`windowReady()`(`src/main.cpp:97`)는 phase 프레임이 288초 두절된 뒤에도 `true`를 유지한다.
+`appendSample()`(`src/main.cpp:81`)이 새 샘플이 들어올 때만 오래된 샘플을 버리기 때문이다.
+`phase_age_ms>30s`인데 `breath_window_ready=true`인 패킷이 2,585개 있었다.
+또한 `filteredBreathValid`(`src/main.cpp:328`)는 phase 신선도를 검사하지 않는다.
+
+이번 로그에서는 두절 직전 창의 std가 0.13(<0.2)이라 `breath_rate_filtered`가 null로 나가
+실제 사고는 0건이다(`phase_age_ms>500` AND `breath_filtered_valid=true`인 패킷 0/18,574).
+그러나 그 값이 0.2 이상이었다면 288초 묵은 호흡수를 유효값으로 내보냈을 것이므로
+"0/null/NaN/timeout을 정상 호흡으로 변환 금지" 계약에 걸리는 잠재 결함이다.
+오늘 펌웨어를 고치면 config 해시가 바뀌어 같은 설치·같은 펌웨어 비교가 깨지므로
+캡처 세션 종료 후 별도 항목으로 처리한다.
+
+## H1 해석에 미리 반영할 제약
+
+로그의 `breath_phase` 정밀도가 소수 2자리이므로, 자연 대역(std 0.10~0.20)에서
+Python 후처리 재현값은 3% 수준의 큰 꼬리를 갖는다.
+따라서 H1의 1차 근거는 ESP가 직접 출력한 `breath_rate_filtered`로 하고,
+Python 영교차 값은 교차검증 용도로만 사용한다.
+
+## 세션 환경 메모
+
+- USB 포트가 `/dev/cu.usbserial-10`에서 `/dev/cu.usbserial-110`으로 바뀌었다. 문서상 옛 값은 스테일이다.
+- `lsof` 결과 포트 점유 프로세스 없음. venv pyserial 3.5 정상.

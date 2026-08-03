@@ -14,6 +14,8 @@
 - 최신 인수인계 우선 규칙: 12/15/20rpm, 거리 4종, 진입·퇴장 20회는 재측정하지 않는다. 심박 하강은 기준기기 없이는 탐색용이며 정확도 근거로 사용하지 않는다.
 - 주의: 2026-08-01 세션 중 ESP32-C6(`cu.usbmodem101`, ESP32-C6FH4)를 잠시 연결했으나 본 펌웨어와 비호환(`board=esp32dev`, `HardwareSerial(2)`, USB CDC 미설정)이라 원래 WROOM-32으로 되돌렸다. 보드를 바꾸려면 펌웨어 포팅과 config 해시 갱신이 선행되어야 한다.
 - MR60 센서 자체 firmware는 승인 없이 업데이트하지 않는다.
+- 2026-08-03: USB 포트가 `/dev/cu.usbserial-110`으로 바뀌었다. 위의 `-10`을 포함해 문서에 적힌 옛 포트 값은 스테일이다. 매 세션 `find /dev -maxdepth 1 -name 'cu.usb*' -print`로 다시 확인한다.
+- 2026-08-03 미처리 잠재 결함(캡처 세션 종료 후 처리): `windowReady()`(`src/main.cpp:97`)가 phase 프레임 288초 두절 뒤에도 `true`를 유지하고, `filteredBreathValid`(`src/main.cpp:328`)가 phase 신선도를 검사하지 않는다. 실제 오출력은 0건이나 조건이 맞으면 묵은 호흡수를 유효값으로 내보낼 수 있다. 펌웨어를 고치면 config 해시가 바뀌므로 진행 중인 캡처 비교가 끝난 뒤에만 수정한다.
 
 ## 1. 다시 하지 않을 작업
 
@@ -28,6 +30,13 @@
 - [x] 0/null/NaN/timeout/부재의 UNKNOWN/FAULT 처리
 - [x] 심박 `UNVERIFIED`, 무호흡 `apnea_verified=false` 안전 계약
 - [x] Pi 전체 회귀 80 PASS, 2 SKIP
+- [x] **R1 펌웨어 C++ ↔ Python 동치성 (2026-08-03 완료)** — 포팅 버그 없음. 다시 하지 않는다.
+  - 도구: `devices/mmwave/firmware/analysis_tools/r1_fw_python_equivalence.py`
+  - `breath_filtered_valid` 게이트 판정 불일치 51/18,276 (0.279%), std p99 0.00609, rate p50 0.0328rpm
+  - 잔여 불일치는 전부 (a) replay 워밍업 300패킷, (b) 26~30분 phase 두절 구간,
+    (c) 로그 `breath_phase` 소수 2자리 양자화로 설명된다. 상세는 `docs/operations/PROJECT_PROGRESS.md` 2026-08-03 절.
+  - 파생 제약: 자연 대역(std 0.10~0.20)에서 Python 후처리 재현은 3% 수준의 큰 꼬리를 가지므로
+    호흡수 정확도의 1차 근거는 ESP가 직접 출력한 `breath_rate_filtered`로 한다.
 
 채택된 원본 6개의 경로와 SHA-256은 `datasets/mmwave/mr60_20260728_manifest.json`이 기준이다. `preflight`, `attempt02`, `quickcheck`, `retry` 파일은 실패·진단 기록이므로 최종 통계에 넣지 않는다.
 

@@ -11,9 +11,9 @@ import unittest
 import time
 from typing import Optional
 
-from src.inference.inference_result import InferenceResult
-from src.risk.fallback import FallbackEngine
-from src.risk.risk_engine import SafeNestRiskEngine
+from ondevice_ai.src.inference.inference_result import InferenceResult
+from ondevice_ai.src.risk.fallback import FallbackEngine
+from ondevice_ai.src.risk.risk_engine import SafeNestRiskEngine
 
 
 class TestFallbackEngine(unittest.TestCase):

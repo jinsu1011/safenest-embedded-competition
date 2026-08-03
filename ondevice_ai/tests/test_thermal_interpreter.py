@@ -16,10 +16,11 @@ import numpy as np
 
 # 프로젝트 루트 경로 추가
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-from src.inference.thermal_interpreter import ThermalInterpreter
+from ondevice_ai.src.inference.thermal_interpreter import ThermalInterpreter
 
 
 class TestThermalInterpreter(unittest.TestCase):

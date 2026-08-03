@@ -10,14 +10,15 @@ from unittest.mock import Mock
 import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-from src.inference.infer_pi_thermal import NpyThermal44Source, ThermalRealtimeRunner, VirtualThermal44Source
-from src.inference.thermal_interpreter import ThermalPrediction
-from src.risk.risk_engine import RiskEngineV4
-from src.risk.risk_rules import calculate_v4_risk, classify_v4_risk
-from src.integrated_node.safenest_risk_engine import SafeNestRiskEngine
+from ondevice_ai.src.inference.infer_pi_thermal import NpyThermal44Source, ThermalRealtimeRunner, VirtualThermal44Source
+from ondevice_ai.src.inference.thermal_interpreter import ThermalPrediction
+from ondevice_ai.src.risk.risk_engine import RiskEngineV4
+from ondevice_ai.src.risk.risk_rules import calculate_v4_risk, classify_v4_risk
+from ondevice_ai.src.integrated_node.safenest_risk_engine import SafeNestRiskEngine
 
 
 class TestV4RiskEngine(unittest.TestCase):

@@ -9,16 +9,16 @@ import unittest
 
 import numpy as np
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 REPO_ROOT = PROJECT_ROOT
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.sensors.mmwave.mr60_esp_adapter import MR60ESPAdapter
-from src.integrated_node.run_mr60_usb_node import MR60IntegratedPipeline
+from devices.mmwave.src.mr60_esp_adapter import MR60ESPAdapter
+from ondevice_ai.src.integrated_node.run_mr60_usb_node import MR60IntegratedPipeline
 
 
-LOG_ROOT = REPO_ROOT / "firmware" / "esp_wroom32_mr60_monitor" / "logs" / "breath"
+LOG_ROOT = REPO_ROOT / "devices" / "mmwave" / "firmware" / "logs" / "breath"
 
 
 class TestMR60ESPAdapter(unittest.TestCase):

@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Generator, Tuple, Optional, Callable, List
 import numpy as np
 
-from src.inference.thermal_interpreter import ThermalInterpreter, ThermalPrediction
-from src.inference.inference_result import InferenceResult
+from ondevice_ai.src.inference.thermal_interpreter import ThermalInterpreter, ThermalPrediction
+from ondevice_ai.src.inference.inference_result import InferenceResult
 
 
 class PiThermalRunner:

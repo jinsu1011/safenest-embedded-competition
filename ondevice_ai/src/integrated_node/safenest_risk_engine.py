@@ -18,15 +18,16 @@ import collections
 import time
 import numpy as np
 
-# 프로젝트 루트 경로 추가
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+# 저장소 루트는 영역 간 import에, 패키지 루트는 모델·설정 탐색에 사용한다.
+package_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+repository_root = os.path.abspath(os.path.join(package_root, ".."))
+if repository_root not in sys.path:
+    sys.path.insert(0, repository_root)
 
-from src.inference.model_registry import ModelRegistry
-from src.sensors.mmwave.mmwave_stream_adapter import MMWaveStreamAdapter
-from src.risk.risk_rules import RiskRulesEvaluator
-from src.risk.risk_engine import RiskEngineV4
+from ondevice_ai.src.inference.model_registry import ModelRegistry
+from devices.mmwave.src.mmwave_stream_adapter import MMWaveStreamAdapter
+from ondevice_ai.src.risk.risk_rules import RiskRulesEvaluator
+from ondevice_ai.src.risk.risk_engine import RiskEngineV4
 
 class MMWaveClutterCalibrator:
     """FMCW 60GHz 복소 rFFT Clutter Subtraction 엔진"""
@@ -74,7 +75,7 @@ def find_adaptive_chest_bin(rfft_buffer, distances, fs=10.0):
 class SafeNestRiskEngine:
     def __init__(self, manifest_path="models/model_manifest.json"):
         # 1. ModelRegistry 중앙 로드
-        self.registry = ModelRegistry(project_root=project_root, manifest_path=manifest_path)
+        self.registry = ModelRegistry(project_root=package_root, manifest_path=manifest_path)
         self.thermal_runner = self.registry.thermal
         self.co2_runner = self.registry.co2
         self.mmwave_runner = self.registry.mmwave

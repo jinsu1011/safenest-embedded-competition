@@ -11,10 +11,10 @@ import time
 from pathlib import Path
 import numpy as np
 
-from src.sensors.base_sensor import BaseSensor, SensorState
-from src.sensors.thermal44.frame_parser import ThermalFrameParser
-from src.inference.inference_result import InferenceResult
-from src.inference.thermal_interpreter import ThermalInterpreter, ThermalPrediction
+from shared.contracts.base_sensor import BaseSensor, SensorState
+from devices.thermal.src.frame_parser import ThermalFrameParser
+from ondevice_ai.src.inference.inference_result import InferenceResult
+from ondevice_ai.src.inference.thermal_interpreter import ThermalInterpreter, ThermalPrediction
 
 
 class Thermal44Sensor(BaseSensor):

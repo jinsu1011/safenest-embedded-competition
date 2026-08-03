@@ -15,9 +15,10 @@ import numpy as np
 
 # 프로젝트 루트를 Python 모듈 경로에 추가
 base_dir = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(base_dir))
+repository_root = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(repository_root))
 
-from src.inference.thermal_interpreter import ThermalInterpreter
+from ondevice_ai.src.inference.thermal_interpreter import ThermalInterpreter
 
 def main():
     print("=" * 70)

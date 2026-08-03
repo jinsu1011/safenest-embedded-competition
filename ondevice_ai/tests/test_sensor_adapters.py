@@ -9,11 +9,11 @@ Unit tests for SafeNest V4 BaseSensor contract and Mock Sensor Adapters
 import unittest
 import time
 
-from src.sensors.base_sensor import SensorState
-from src.sensors.thermal44.mock_sensor import MockThermalSensor
-from src.sensors.mmwave.mock_sensor import MockMMWaveSensor
-from src.sensors.co2.mock_sensor import MockCO2Sensor
-from src.sensors.pir.mock_sensor import MockPIRSensor
+from shared.contracts.base_sensor import SensorState
+from devices.thermal.src.mock_sensor import MockThermalSensor
+from devices.mmwave.src.mock_sensor import MockMMWaveSensor
+from devices.co2.src.mock_sensor import MockCO2Sensor
+from devices.pir.src.mock_sensor import MockPIRSensor
 
 
 class TestSensorAdapters(unittest.TestCase):

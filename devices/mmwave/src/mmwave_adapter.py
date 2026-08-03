@@ -12,9 +12,9 @@ from pathlib import Path
 from collections import deque
 import numpy as np
 
-from src.sensors.base_sensor import BaseSensor, SensorState
-from src.inference.inference_result import InferenceResult
-from src.inference.mmwave_interpreter import MMWaveInterpreter, MMWavePrediction
+from shared.contracts.base_sensor import BaseSensor, SensorState
+from ondevice_ai.src.inference.inference_result import InferenceResult
+from ondevice_ai.src.inference.mmwave_interpreter import MMWaveInterpreter, MMWavePrediction
 
 
 class MMWaveSensorAdapter(BaseSensor):

@@ -158,5 +158,5 @@ def train_and_quantize_thermal_model(base_dir):
     print("\n✅ Thermal-44 80x62 파이프라인 학습 및 INT8 양자화 모델 갱신 완료!")
 
 if __name__ == "__main__":
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     train_and_quantize_thermal_model(base_dir)

@@ -17,11 +17,12 @@ from typing import Optional
 
 
 ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
 
-from src.sensors.mmwave.mmwave_stream_adapter import MMWaveStreamAdapter
-from src.risk.risk_rules import RiskRulesEvaluator
+from devices.mmwave.src.mmwave_stream_adapter import MMWaveStreamAdapter
+from ondevice_ai.src.risk.risk_rules import RiskRulesEvaluator
 
 
 def load_co2_contract() -> tuple[dict, dict]:

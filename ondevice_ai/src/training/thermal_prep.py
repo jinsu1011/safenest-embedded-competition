@@ -264,5 +264,5 @@ def process_thermal_datasets(base_dir):
     print(f"💾 80x62 파싱 데이터 압축 저장 완료: {output_npz} (용량: {os.path.getsize(output_npz)/1024/1024:.2f} MB)")
 
 if __name__ == "__main__":
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     process_thermal_datasets(base_dir)

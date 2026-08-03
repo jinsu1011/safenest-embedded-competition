@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-sensors/base_sensor.py
+shared/contracts/base_sensor.py
 SafeNest V4 On-Device AI BaseSensor Contract & State Machine
 """
 
@@ -13,7 +13,7 @@ from dataclasses import dataclass
 import time
 from typing import Optional
 
-from src.inference.inference_result import InferenceResult
+from ondevice_ai.src.inference.inference_result import InferenceResult
 
 
 class SensorState(Enum):

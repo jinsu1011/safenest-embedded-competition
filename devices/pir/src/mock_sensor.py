@@ -8,8 +8,8 @@ Mock PIR Motion Sensor Adapter for Simulation / Mac Testing
 
 from __future__ import annotations
 import time
-from src.sensors.base_sensor import BaseSensor, SensorState
-from src.inference.inference_result import InferenceResult
+from shared.contracts.base_sensor import BaseSensor, SensorState
+from ondevice_ai.src.inference.inference_result import InferenceResult
 
 
 class MockPIRSensor(BaseSensor):

@@ -138,7 +138,7 @@ class MR60ESPAdapter:
     def __init__(self, config_path: str | Path | None = None,
                  strict_provenance: bool = True) -> None:
         if config_path is None:
-            config_path = Path(__file__).resolve().parents[3] / "config" / "mmwave_processing.json"
+            config_path = Path(__file__).resolve().parents[1] / "config" / "mmwave_processing.json"
         self.config_path = Path(config_path)
         self.config = json.loads(self.config_path.read_text(encoding="utf-8"))
         canonical = json.dumps(self.config, sort_keys=True, separators=(",", ":")).encode()

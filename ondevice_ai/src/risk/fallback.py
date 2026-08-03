@@ -9,7 +9,7 @@ SafeNest V4 Safe Fallback Handler for Sensor Faults & Missing Models
 from __future__ import annotations
 import time
 from typing import Dict, Any, List
-from src.inference.inference_result import InferenceResult, SafeNestRiskOutput
+from ondevice_ai.src.inference.inference_result import InferenceResult, SafeNestRiskOutput
 
 
 class FallbackEngine:

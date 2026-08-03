@@ -12,7 +12,7 @@ if __package__ in (None, ""):
     project_root = Path(__file__).resolve().parents[3]
     sys.path.insert(0, str(project_root))
 
-from src.sensors.mmwave.mr60_esp_adapter import MR60ESPAdapter
+from devices.mmwave.src.mr60_esp_adapter import MR60ESPAdapter
 
 
 def parse_args() -> argparse.Namespace:

@@ -25,8 +25,8 @@ import time
 from typing import Dict, Any, List, Optional
 import numpy as np
 
-from src.inference.inference_result import InferenceResult, SafeNestRiskOutput
-from src.risk.fallback import FallbackEngine
+from ondevice_ai.src.inference.inference_result import InferenceResult, SafeNestRiskOutput
+from ondevice_ai.src.risk.fallback import FallbackEngine
 
 
 @dataclass

@@ -12,10 +12,11 @@ from pathlib import Path
 import unittest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-from src.risk.risk_rules import RiskRulesEvaluator, validate_timestamp
+from ondevice_ai.src.risk.risk_rules import RiskRulesEvaluator, validate_timestamp
 
 
 class TestRiskRules(unittest.TestCase):

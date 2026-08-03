@@ -10,11 +10,11 @@ import sys
 from typing import Iterator
 
 if __package__ in (None, ""):
-    project_root = Path(__file__).resolve().parents[2]
-    sys.path.insert(0, str(project_root))
+    repository_root = Path(__file__).resolve().parents[3]
+    sys.path.insert(0, str(repository_root))
 
-from src.sensors.mmwave.mr60_esp_adapter import MR60ESPAdapter
-from src.integrated_node.safenest_risk_engine import SafeNestRiskEngine
+from devices.mmwave.src.mr60_esp_adapter import MR60ESPAdapter
+from ondevice_ai.src.integrated_node.safenest_risk_engine import SafeNestRiskEngine
 
 
 class MR60IntegratedPipeline:

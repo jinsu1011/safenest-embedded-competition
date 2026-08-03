@@ -12,7 +12,7 @@ import time
 import argparse
 from pathlib import Path
 
-from src.integrated_node.run_node import SafeNestIntegratedNode
+from ondevice_ai.src.integrated_node.run_node import SafeNestIntegratedNode
 
 
 def run_demo_simulation(steps: int = 10):

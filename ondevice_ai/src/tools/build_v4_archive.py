@@ -7,32 +7,42 @@ import hashlib
 from pathlib import Path
 import zipfile
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 OUTPUT = ROOT / "output" / "SafeNest_v4.0_commercialization_package.zip"
 CORE_INCLUDES = (
-    "README.md", "docs/ai/walkthrough.md", "requirements-mac.txt", "requirements-pi.txt",
-    "src/inference/__init__.py", "src/inference/thermal_interpreter.py", "src/inference/infer_pi_thermal.py",
-    "src/inference/co2_interpreter.py", "src/inference/mmwave_interpreter.py", "src/inference/model_registry.py",
-    "src/risk/__init__.py", "src/risk/risk_rules.py", "src/risk/risk_engine.py", "config/risk_engine.json",
-    "src/integrated_node/run_demo.py", "src/integrated_node/virtual_sensor_streamer.py",
-    "src/integrated_node/safenest_integrated_plotter.py", "src/integrated_node/safenest_risk_engine.py",
-    "src/sensors/mmwave/__init__.py", "src/sensors/mmwave/mmwave_stream_adapter.py",
-    "src/sensors/mmwave/mmwave_csv_adapter.py",
-    "models/model_manifest.json", "models/thermal/thermal_fall_int8_v0.1.0.tflite",
-    "models/co2/co2_occupancy_int8_v0.1.0.tflite", "models/co2/co2_scaling_metadata_v0.1.0.json",
-    "models/mmwave/mmwave_resp_int8_v0.1.0.tflite", "models/mmwave/sensor_stats_metadata_v0.1.0.json",
-    "models/mmwave/source_sensor_stats_metadata_20260713.json",
-    "tests/benchmarks/benchmark_thermal.py", "src/tools/build_v4_archive.py",
-    "src/tools/test_thermal_tflite.py", "src/training/thermal_prep.py", "src/training/thermal_train.py",
+    "README.md", "ondevice_ai/README.md", "ondevice_ai/docs/walkthrough.md",
+    "ondevice_ai/requirements-mac.txt", "ondevice_ai/requirements-pi.txt",
+    "ondevice_ai/src/inference/__init__.py", "ondevice_ai/src/inference/thermal_interpreter.py",
+    "ondevice_ai/src/inference/infer_pi_thermal.py", "ondevice_ai/src/inference/co2_interpreter.py",
+    "ondevice_ai/src/inference/mmwave_interpreter.py", "ondevice_ai/src/inference/model_registry.py",
+    "ondevice_ai/src/risk/__init__.py", "ondevice_ai/src/risk/risk_rules.py",
+    "ondevice_ai/src/risk/risk_engine.py", "ondevice_ai/config/risk_engine.json",
+    "ondevice_ai/src/integrated_node/run_demo.py", "ondevice_ai/src/integrated_node/virtual_sensor_streamer.py",
+    "ondevice_ai/src/integrated_node/safenest_integrated_plotter.py",
+    "ondevice_ai/src/integrated_node/safenest_risk_engine.py", "shared/contracts/base_sensor.py",
+    "ondevice_ai/models/model_manifest.json", "ondevice_ai/models/thermal/thermal_fall_int8_v0.1.0.tflite",
+    "ondevice_ai/models/co2/co2_occupancy_int8_v0.1.0.tflite",
+    "ondevice_ai/models/co2/co2_scaling_metadata_v0.1.0.json",
+    "ondevice_ai/models/mmwave/mmwave_resp_int8_v0.1.0.tflite",
+    "ondevice_ai/models/mmwave/sensor_stats_metadata_v0.1.0.json",
+    "ondevice_ai/models/mmwave/source_sensor_stats_metadata_20260713.json",
+    "ondevice_ai/benchmarks/benchmark_thermal.py", "ondevice_ai/src/tools/build_v4_archive.py",
+    "ondevice_ai/src/tools/test_thermal_tflite.py", "ondevice_ai/src/training/thermal_prep.py",
+    "ondevice_ai/src/training/thermal_train.py",
 )
 
 
 def archive_inputs() -> tuple[str, ...]:
     tests = tuple(
         path.relative_to(ROOT).as_posix()
-        for path in sorted((ROOT / "tests").glob("test_*.py"))
+        for test_root in (ROOT / "ondevice_ai/tests", ROOT / "devices/mmwave/tests")
+        for path in sorted(test_root.glob("test_*.py"))
     )
-    return tuple(sorted(set(CORE_INCLUDES + tests)))
+    device_sources = tuple(
+        path.relative_to(ROOT).as_posix()
+        for path in sorted((ROOT / "devices").glob("*/src/*.py"))
+    )
+    return tuple(sorted(set(CORE_INCLUDES + tests + device_sources)))
 
 
 def main() -> None:

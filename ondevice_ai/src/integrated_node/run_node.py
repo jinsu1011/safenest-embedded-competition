@@ -15,17 +15,17 @@ import signal
 import argparse
 from pathlib import Path
 
-from src.sensors.thermal44.mock_sensor import MockThermalSensor
-from src.sensors.thermal44.thermal44_driver import Thermal44Sensor
-from src.sensors.mmwave.mock_sensor import MockMMWaveSensor
-from src.sensors.mmwave.mmwave_adapter import MMWaveSensorAdapter
-from src.sensors.co2.mock_sensor import MockCO2Sensor
-from src.sensors.co2.co2_adapter import CO2SensorAdapter
-from src.sensors.pir.mock_sensor import MockPIRSensor
-from src.sensors.pir.pir_adapter import PIRSensorAdapter
+from devices.thermal.src.mock_sensor import MockThermalSensor
+from devices.thermal.src.thermal44_driver import Thermal44Sensor
+from devices.mmwave.src.mock_sensor import MockMMWaveSensor
+from devices.mmwave.src.mmwave_adapter import MMWaveSensorAdapter
+from devices.co2.src.mock_sensor import MockCO2Sensor
+from devices.co2.src.co2_adapter import CO2SensorAdapter
+from devices.pir.src.mock_sensor import MockPIRSensor
+from devices.pir.src.pir_adapter import PIRSensorAdapter
 
-from src.risk.risk_engine import SafeNestRiskEngine
-from src.inference.inference_result import SafeNestRiskOutput
+from ondevice_ai.src.risk.risk_engine import SafeNestRiskEngine
+from ondevice_ai.src.inference.inference_result import SafeNestRiskOutput
 
 
 class SafeNestIntegratedNode:

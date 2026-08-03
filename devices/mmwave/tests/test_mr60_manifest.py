@@ -6,8 +6,8 @@ from pathlib import Path
 import unittest
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-MANIFEST = Path(__file__).resolve().parents[1] / "datasets/mmwave/mr60_20260728_manifest.json"
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+MANIFEST = PROJECT_ROOT / "ondevice_ai/datasets/mmwave/mr60_20260728_manifest.json"
 
 
 class TestMR60Manifest(unittest.TestCase):

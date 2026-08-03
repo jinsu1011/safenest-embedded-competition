@@ -9,50 +9,50 @@ import json
 from pathlib import Path
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT = (
-    PROJECT_ROOT / "datasets" / "mmwave"
+    PROJECT_ROOT / "ondevice_ai" / "datasets" / "mmwave"
     / "mr60_20260728_manifest.json"
 )
 
 SOURCES = [
     {
-        "path": "firmware/esp_wroom32_mr60_monitor/logs/baseline/2026-07-28_empty_v2_360s.jsonl",
+        "path": "devices/mmwave/firmware/logs/baseline/2026-07-28_empty_v2_360s.jsonl",
         "condition": "empty_room",
         "duration_s": 360,
         "label": "ABSENT",
         "accepted": True,
     },
     {
-        "path": "firmware/esp_wroom32_mr60_monitor/logs/baseline/2026-07-28_occupied_d09_v2_360s.jsonl",
+        "path": "devices/mmwave/firmware/logs/baseline/2026-07-28_occupied_d09_v2_360s.jsonl",
         "condition": "one_stationary_person_front_0.8_to_1.0m",
         "duration_s": 360,
         "label": "PRESENT_STATIONARY",
         "accepted": True,
     },
     {
-        "path": "firmware/esp_wroom32_mr60_monitor/logs/kpi/2026-07-28_entry_exit_20_v2.jsonl",
+        "path": "devices/mmwave/firmware/logs/kpi/2026-07-28_entry_exit_20_v2.jsonl",
         "condition": "entry_still_exit_20_trials",
         "trials": 20,
         "label": "ENTRY_EXIT",
         "accepted": True,
     },
     {
-        "path": "firmware/esp_wroom32_mr60_monitor/logs/breath/2026-07-28_breath_paced_12rpm_explicit_v2_attempt03.jsonl",
+        "path": "devices/mmwave/firmware/logs/breath/2026-07-28_breath_paced_12rpm_explicit_v2_attempt03.jsonl",
         "condition": "paced_breathing_front_12rpm_warmup60_measure180",
         "reference_breath_rpm": 12,
         "label": "PACED_BREATHING",
         "accepted": True,
     },
     {
-        "path": "firmware/esp_wroom32_mr60_monitor/logs/breath/2026-07-28_breath_paced_15rpm_explicit_full_v3.jsonl",
+        "path": "devices/mmwave/firmware/logs/breath/2026-07-28_breath_paced_15rpm_explicit_full_v3.jsonl",
         "condition": "paced_breathing_front_15rpm_warmup60_measure180",
         "reference_breath_rpm": 15,
         "label": "PACED_BREATHING",
         "accepted": True,
     },
     {
-        "path": "firmware/esp_wroom32_mr60_monitor/logs/breath/2026-07-28_breath_paced_20rpm_explicit_full_v2.jsonl",
+        "path": "devices/mmwave/firmware/logs/breath/2026-07-28_breath_paced_20rpm_explicit_full_v2.jsonl",
         "condition": "paced_breathing_front_20rpm_warmup60_measure180",
         "reference_breath_rpm": 20,
         "label": "PACED_BREATHING",

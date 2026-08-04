@@ -14,12 +14,11 @@ import unittest
 import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-from ondevice_ai.src.inference.model_registry import ModelRegistry
-from ondevice_ai.src.integrated_node.safenest_risk_engine import SafeNestRiskEngine
+from inference.model_registry import ModelRegistry
+from integrated_node.safenest_risk_engine import SafeNestRiskEngine
 
 
 class TestThreeModelIntegration(unittest.TestCase):
@@ -71,13 +70,7 @@ class TestThreeModelIntegration(unittest.TestCase):
         packet = {
             "thermal_80x62": np.zeros((62, 80), dtype=np.float32),
             "co2_scd40": {"co2_ppm": 500, "humidity": 45.0},
-            "mmwave_mr60": {
-                "breath_rpm": 16.0,
-                "apnea": 1,
-                "apnea_verified": True,
-                "heart_bpm": 35.0,
-                "heart_verified": False,
-            },
+            "mmwave_mr60": {"breath_rpm": 0.0, "apnea": 1, "heart_bpm": 35.0},
             "pir": {"motion": 0}
         }
         res = self.engine.evaluate_risk(packet)
@@ -143,17 +136,7 @@ class TestThreeModelIntegration(unittest.TestCase):
                 "timestamp_s": start_ts + i * 0.1,
                 "thermal_80x62": np.zeros((62, 80), dtype=np.float32),
                 "co2_scd40": {"co2_ppm": 500, "humidity": 45.0},
-                "mmwave_mr60": {
-                    "breath_rpm": 16.0,
-                    "breath_valid": True,
-                    "apnea": 0,
-                    "heart_bpm": 72.0,
-                    "resp_phase": 0.01,
-                    "presence": 1,
-                    "state": "VALID",
-                    "valid": True,
-                    "model_allowed": True,
-                },
+                "mmwave_mr60": {"breath_rpm": 16.0, "apnea": 0, "heart_bpm": 72.0, "resp_phase": 0.01, "presence": 1},
                 "pir": {"motion": 1}
             }
             res = self.engine.evaluate_risk(packet)

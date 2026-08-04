@@ -9,8 +9,8 @@ Unit tests for SafeNest V4 Risk Fusion Engine & Boundary Conditions
 import unittest
 import time
 
-from ondevice_ai.src.inference.inference_result import InferenceResult
-from ondevice_ai.src.risk.risk_engine import SafeNestRiskEngine
+from inference.inference_result import InferenceResult
+from risk.risk_engine import SafeNestRiskEngine
 
 
 class TestRiskEngine(unittest.TestCase):
@@ -18,7 +18,7 @@ class TestRiskEngine(unittest.TestCase):
         self.engine = SafeNestRiskEngine()
         self.now = time.time()
 
-    def make_res(self, sensor_id: str, score: float, state: str = "NORMAL", valid: bool = True, metadata=None):
+    def make_res(self, sensor_id: str, score: float, state: str = "NORMAL", valid: bool = True):
         return InferenceResult(
             sensor_id=sensor_id,
             timestamp=self.now,
@@ -26,8 +26,7 @@ class TestRiskEngine(unittest.TestCase):
             state=state,
             confidence=1.0,
             valid=valid,
-            latency_ms=0.1,
-            metadata=metadata or {},
+            latency_ms=0.1
         )
 
     def test_all_zero_normal(self):
@@ -106,9 +105,7 @@ class TestRiskEngine(unittest.TestCase):
 
         # mmWave apnea emergency
         s_apnea = {
-            "mmwave": self.make_res(
-                "mmwave", 1.0, state="APNEA", metadata={"apnea_verified": True}
-            ),
+            "mmwave": self.make_res("mmwave", 1.0, state="APNEA"),
             "co2": self.make_res("co2", 0.0),
             "pir": self.make_res("pir", 0.0),
             "thermal44": self.make_res("thermal44", 0.0)

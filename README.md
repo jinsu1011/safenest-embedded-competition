@@ -53,7 +53,7 @@ devices/                                 기기 담당자가 단독 책임지는
 ├── mmwave/                              MR60 펌웨어·어댑터·실측·설정      @jinsu1011
 │   ├── firmware/                        ESP PlatformIO 프로젝트, logs/, analysis/
 │   ├── src/                             Python 어댑터와 mock
-│   ├── config/, tests/, docs/
+│   ├── config/, tests/
 └── thermal/                             Thermal-44 드라이버·프레임 파서    @rla1729
 
 ondevice_ai/                             SafeNest V4 온디바이스 AI 전체    @sheepmeat @jinsu1011
@@ -73,9 +73,13 @@ ondevice_ai/                             SafeNest V4 온디바이스 AI 전체  
 
 hardware/3d_models/                      외함 STL CAD 4종                  @yuname121
 shared/contracts/                        여러 영역이 공유하는 센서 계약    @sheepmeat @jinsu1011
-docs/                                    운용·구조·기획 공통 문서          @jinsu1011
+docs/                                    사람이 읽는 문서
+├── mmwave/                              MR60 인수인계·튜닝·검증 보고      @jinsu1011
+├── operations/, architecture/, planning/, dashboard/   공통 운용·구조·기획
 archive/                                 구형 prototype과 폐기 설정 보존   @jinsu1011
 ```
+
+**코드는 `devices/<sensor>/`, 읽을 문서는 `docs/<sensor>/`** 로 나눕니다. 원본 로그와 분석 산출물은 문서가 아니므로 `devices/<sensor>/` 아래에 둡니다. 새 센서 문서를 추가할 때는 [`CONTRIBUTING.md`](CONTRIBUTING.md)의 배치 표를 따르고 `.github/CODEOWNERS`에 담당자를 한 줄 추가합니다.
 
 의존 방향은 한쪽입니다. `devices/`가 `shared/contracts/`의 계약을 구현하고, `ondevice_ai/`가 그 계약과 기기 구현을 소비합니다. 반대로 `devices/`가 `ondevice_ai/`를 import하지 않습니다.
 

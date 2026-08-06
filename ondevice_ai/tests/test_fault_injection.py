@@ -13,12 +13,11 @@ import unittest
 import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-from ondevice_ai.src.risk.risk_rules import RiskRulesEvaluator
-from ondevice_ai.src.integrated_node.safenest_risk_engine import SafeNestRiskEngine
+from risk.risk_rules import RiskRulesEvaluator
+from integrated_node.safenest_risk_engine import SafeNestRiskEngine
 
 
 class TestFaultInjection(unittest.TestCase):
@@ -58,9 +57,7 @@ class TestFaultInjection(unittest.TestCase):
         self.assertIn("CO2_SENSOR_FAULT", sys_eval.reasons)
 
     def test_confirmed_apnea_bypasses_smoothing(self):
-        res_resp = self.evaluator.evaluate_respiration(
-            breath_rpm=16.0, apnea=1, apnea_verified=True, dt_s=2.0
-        )
+        res_resp = self.evaluator.evaluate_respiration(breath_rpm=0.0, apnea=1, dt_s=2.0)
         res_env = self.evaluator.evaluate_environment(co2_ppm=500.0)
         res_hr = self.evaluator.evaluate_vital_hr(72.0)
         res_post = self.evaluator.evaluate_posture(thermal_fall_class=1)

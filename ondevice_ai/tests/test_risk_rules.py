@@ -12,11 +12,10 @@ from pathlib import Path
 import unittest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-from ondevice_ai.src.risk.risk_rules import RiskRulesEvaluator, validate_timestamp
+from risk.risk_rules import RiskRulesEvaluator, validate_timestamp
 
 
 class TestRiskRules(unittest.TestCase):
@@ -37,25 +36,24 @@ class TestRiskRules(unittest.TestCase):
         self.assertEqual(res.status, "CAUTION")
         self.assertIn("ABNORMAL_RESPIRATION_RPM", res.reasons)
 
-    def test_only_verified_apnea_can_raise_emergency(self):
-        """0/결측과 미검증 후보는 무호흡으로 승격하지 않는다."""
-        zero = self.evaluator.evaluate_respiration(0.0, 0, sample_timestamp=10.0)
-        self.assertEqual(zero.status, "FAULT")
-        self.assertIn("RESP_SENSOR_FAULT", zero.reasons)
-        self.assertFalse(zero.emergency_override)
+    def test_apnea_timer_exact_boundary(self):
+        """무호흡 1.9초(비응급) 및 정확히 2.0초(응급) 경계조건 및 리셋 검증"""
+        # 1. 0.0s시작
+        res1 = self.evaluator.evaluate_respiration(0.0, 0, sample_timestamp=10.0)
+        self.assertFalse(res1.emergency_override)
 
-        candidate = self.evaluator.evaluate_respiration(
-            16.0, 1, apnea_verified=False, sample_timestamp=11.0
-        )
-        self.assertEqual(candidate.status, "DEGRADED")
-        self.assertIn("UNVERIFIED_APNEA_IGNORED", candidate.reasons)
-        self.assertFalse(candidate.emergency_override)
+        # 2. 1.9s 경과 -> 비응급
+        res2 = self.evaluator.evaluate_respiration(0.0, 0, sample_timestamp=11.9)
+        self.assertFalse(res2.emergency_override)
 
-        verified = self.evaluator.evaluate_respiration(
-            16.0, 1, apnea_verified=True, sample_timestamp=12.0
-        )
-        self.assertTrue(verified.emergency_override)
-        self.assertEqual(verified.status, "CRITICAL")
+        # 3. 2.0s 경과 -> 응급 발동
+        res3 = self.evaluator.evaluate_respiration(0.0, 0, sample_timestamp=12.0)
+        self.assertTrue(res3.emergency_override)
+        self.assertEqual(res3.status, "CRITICAL")
+
+        # 4. 정상 호흡 수신 시 타이머 초기화 검증
+        self.evaluator.evaluate_respiration(16.0, 0, sample_timestamp=13.0)
+        self.assertIsNone(self.evaluator.apnea_started_at)
 
     def test_pir_no_motion_presence_boundary(self):
         """presence 미확인 시 LONG_NO_MOTION 누적 차단 및 14.9s/15.0s 경계 검증"""
@@ -88,9 +86,9 @@ class TestRiskRules(unittest.TestCase):
         self.assertFalse(valid2)
         self.assertEqual(err2, "SENSOR_TIMESTAMP_NON_MONOTONIC")
 
-        # 정상 호흡 연산 중 타임스탬프 역행 발생 시 FAULT 반환
-        self.evaluator.evaluate_respiration(16.0, 0, sample_timestamp=10.0)
-        res_rev = self.evaluator.evaluate_respiration(16.0, 0, sample_timestamp=9.0)
+        # 무호흡 연산 중 타임스탬프 역행 발생 시 FAULT 반환
+        self.evaluator.evaluate_respiration(0.0, 0, sample_timestamp=10.0)
+        res_rev = self.evaluator.evaluate_respiration(0.0, 0, sample_timestamp=9.0)
         self.assertEqual(res_rev.status, "FAULT")
         self.assertIn("SENSOR_TIMESTAMP_NON_MONOTONIC", res_rev.reasons)
 

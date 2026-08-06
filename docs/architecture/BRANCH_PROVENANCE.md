@@ -11,7 +11,7 @@
 | V4 추론·위험도·통합·테스트 | `origin/Ondevice_AI` (`d97df3e`) | `./`의 `src/`, `models/`, `datasets/`, `config/`, `tests/` | `ondevice_ai/src/`, `ondevice_ai/models/`, `ondevice_ai/datasets/`, `ondevice_ai/config/`, `ondevice_ai/tests/`, `ondevice_ai/benchmarks/` |
 | V4 센서 어댑터 | `origin/Ondevice_AI` (`d97df3e`) | `src/sensors/<device>/` | `devices/co2/src/`, `devices/pir/src/`, `devices/mmwave/src/`, `devices/thermal/src/` |
 | 공용 센서 계약 | `origin/Ondevice_AI` (`d97df3e`) | `src/sensors/base_sensor.py` | `shared/contracts/base_sensor.py` |
-| MR60 AI/ESP 보강 | `codex/mmwave-phase-integration` (`b0d3c95`) | `./`, `firmware/esp_wroom32_mr60_monitor/`, `SafeNest_V4_OnDevice_AI/` | `devices/mmwave/firmware/`, `devices/mmwave/config/`, `devices/mmwave/tests/`, `devices/mmwave/docs/`, `ondevice_ai/` |
+| MR60 AI/ESP 보강 | `codex/mmwave-phase-integration` (`b0d3c95`) | `./`, `firmware/esp_wroom32_mr60_monitor/`, `SafeNest_V4_OnDevice_AI/` | `devices/mmwave/firmware/`, `devices/mmwave/config/`, `devices/mmwave/tests/`, `docs/mmwave/`, `ondevice_ai/` |
 | CAD 4종 | `origin/3D_Print` (`35c1e1f`) | 루트 STL 4종 → `hardware/3d_print/` | `hardware/3d_models/` |
 | 초기 위험도 엔진 | `origin/main` 계보 | `pi/` | `archive/legacy_prototypes/pi/` |
 | 기획 PDF | `66eb105` | `docs/ai/roadmap_and_setup/` | `docs/planning/` |
@@ -53,7 +53,7 @@
 | `tests/`(나머지) | `ondevice_ai/tests/` |
 | `hardware/3d_print/` | `hardware/3d_models/` |
 | `docs/ai/`(V4 문서) | `ondevice_ai/docs/` |
-| `docs/`(mmWave 운용) | `devices/mmwave/docs/` |
+| `docs/`(mmWave 운용) | `docs/mmwave/` |
 | `requirements*.txt` | `ondevice_ai/requirements*.txt` |
 
 ### 이동 무결성 검증

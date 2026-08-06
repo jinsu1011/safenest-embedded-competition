@@ -7,10 +7,10 @@ MR60BHA2 mmWave 레이더 기기의 ESP 펌웨어, Python 어댑터, 기기 설�
 MR60 UART 프레임을 수집·검증해 재실·거리·호흡·심박·phase 원시 텔레메트리를 JSONL로 내보내고, Python 어댑터가 이를 `SensorReading` 계약으로 변환한다.
 
 ## 3. 포함해야 하는 파일 유형
-PlatformIO 설정과 C/C++ 소스·헤더, 기기 설정 JSON, Python 어댑터·mock, 재현 가능한 캡처·분석 도구, 원본 실측 로그와 분석 요약, 운용 문서, mmWave 단독 테스트를 포함한다.
+PlatformIO 설정과 C/C++ 소스·헤더, 기기 설정 JSON, Python 어댑터·mock, 재현 가능한 캡처·분석 도구, 원본 실측 로그와 분석 요약, mmWave 단독 테스트를 포함한다.
 
 ## 4. 포함하면 안 되는 파일 유형
-`.pio/`와 `.venv/` 같은 빌드·환경 산출물, 장치별 비밀값, TFLite 모델·데이터셋·위험도 융합 로직(`ondevice_ai/`), 공용 계약(`shared/contracts/`)은 포함하지 않는다.
+`.pio/`와 `.venv/` 같은 빌드·환경 산출물, 장치별 비밀값, TFLite 모델·데이터셋·위험도 융합 로직(`ondevice_ai/`), 공용 계약(`shared/contracts/`), 그리고 사람이 읽는 인수인계·운용 문서(`docs/mmwave/`)는 포함하지 않는다.
 
 ## 5. 주요 하위 구성
 | 경로 | 역할 |
@@ -19,13 +19,13 @@ PlatformIO 설정과 C/C++ 소스·헤더, 기기 설정 JSON, Python 어댑터�
 | `src/` | `mr60_esp_adapter.py`, `mmwave_stream_adapter.py`, `mmwave_csv_adapter.py`, `mmwave_adapter.py`, `run_mr60_serial_adapter.py`, `mock_sensor.py` |
 | `config/` | `mmwave_processing.json` — mmWave 신호 처리 설정 |
 | `tests/` | 입력 어댑터, 스트림 어댑터, ESP 어댑터, manifest 검증 4종 |
-| `docs/` | MMWAVE_MASTER, 튜닝·인수인계·체크리스트 문서 |
+| (문서) | 인수인계·튜닝·운용 문서는 팀 규칙에 따라 [`docs/mmwave/`](../../docs/mmwave/)에 있다 |
 
 ## 6. 입력과 출력 인터페이스
 입력은 MR60BHA2의 UART 프레임(115200bps, GPIO16 RX2 / GPIO17 TX2)과 리플레이용 JSONL 로그다. 출력은 USB/UART JSONL 텔레메트리, 분석 요약 JSON, `SensorReading` 계약을 따르는 판독값이다. 결측·0·NaN·timeout을 정상값이나 무호흡으로 변환하지 않는다.
 
 ## 7. 다른 기능 영역과의 관계
-`shared/contracts/base_sensor.py`를 구현하고, `ondevice_ai/src/inference/mmwave_interpreter.py`와 `ondevice_ai/src/integrated_node/run_mr60_usb_node.py`가 이 기기의 출력을 소비한다. 설치 각도·거리는 `hardware/3d_models/`와 `docs/operations/HARDWARE_RUNBOOK.md`에 맞춘다.
+`shared/contracts/base_sensor.py`를 구현하고, `ondevice_ai/src/inference/mmwave_interpreter.py`와 `ondevice_ai/src/integrated_node/run_mr60_usb_node.py`가 이 기기의 출력을 소비한다. 설치 각도·거리는 `hardware/3d_models/`와 `docs/operations/HARDWARE_RUNBOOK.md`에 맞춘다. 이 기기의 인수인계·튜닝·운용 문서는 `docs/mmwave/`에 있다.
 
 ## 8. 실행·학습·추론 또는 활용 방법
 펌웨어 빌드:

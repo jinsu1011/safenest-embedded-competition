@@ -10,15 +10,14 @@ from unittest.mock import Mock
 import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-from ondevice_ai.src.inference.infer_pi_thermal import NpyThermal44Source, ThermalRealtimeRunner, VirtualThermal44Source
-from ondevice_ai.src.inference.thermal_interpreter import ThermalPrediction
-from ondevice_ai.src.risk.risk_engine import RiskEngineV4
-from ondevice_ai.src.risk.risk_rules import calculate_v4_risk, classify_v4_risk
-from ondevice_ai.src.integrated_node.safenest_risk_engine import SafeNestRiskEngine
+from inference.infer_pi_thermal import NpyThermal44Source, ThermalRealtimeRunner, VirtualThermal44Source
+from inference.thermal_interpreter import ThermalPrediction
+from risk.risk_engine import RiskEngineV4
+from risk.risk_rules import calculate_v4_risk, classify_v4_risk
+from integrated_node.safenest_risk_engine import SafeNestRiskEngine
 
 
 class TestV4RiskEngine(unittest.TestCase):
@@ -44,7 +43,7 @@ class TestV4RiskEngine(unittest.TestCase):
     def test_missing_channel_uses_raw_rule(self):
         result = RiskEngineV4().evaluate(
             {"S1": None, "S2": None, "S3": None, "S4": None},
-            {"apnea": 1, "apnea_verified": True, "co2_ppm": 2500, "pir_motion": 0,
+            {"apnea": 1, "co2_ppm": 2500, "pir_motion": 0,
              "presence": 1, "thermal_class": 2, "thermal_confidence": 0.9},
         )
         self.assertEqual(result.sensor_scores, {"S1": 1.0, "S2": 1.0, "S3": 1.0, "S4": 1.0})

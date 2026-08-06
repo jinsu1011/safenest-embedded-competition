@@ -1,88 +1,104 @@
-# `ondevice_ai/`
+# SafeNest V5 On-Device AI
 
-SafeNest V4 온디바이스 AI 구현 전체를 하나의 응집된 패키지로 보존하는 영역이다. 모델, 데이터셋, 설정, 추론, 위험도 엔진, 통합 노드, 테스트를 한자리에서 파악할 수 있다.
+SafeNest V5는 검증된 V4 P0 소프트웨어 스냅샷에서 분기한 온디바이스 AI 배포판이다. 프로젝트 버전은 `5.0`이며 세 TFLite 모델 버전과 파일명은 기존 `v0.1.0`을 유지한다.
 
-팀원별 파트 적용 안내는 👉 **[통합 팀원 인수인계 가이드 (`docs/TEAM_HANDOFF_GUIDE.md`)](docs/TEAM_HANDOFF_GUIDE.md)** 를 참고한다.
+현재 상태:
 
-## 1. 디렉터리 목적
-Raspberry Pi 5에서 동작하는 SafeNest V4 온디바이스 AI 파이프라인 전체 — 학습 산출물부터 실행 노드까지 — 를 한 패키지로 관리한다.
+- P0 온디바이스 AI 코어: 검증 완료
+- 실센서 드라이버: 센서 담당 팀원 영역
+- 실센서 통합: 진행 예정
+- 웹 UI: 범위 밖
+- Raspberry Pi 5 성능: 실측 전까지 미검증
 
-## 2. 시스템에서 담당하는 기능
-`devices/`가 제공한 센서 판독값을 INT8 TFLite 모델로 추론하고, 가중치 융합 위험도 엔진으로 정상·주의·위험을 판정하며, 보수적 fallback과 통합 실행 노드를 제공한다.
+실센서 provider가 없는 real mode는 정상값을 합성하지 않는다. 네 센서를 `valid=false`, 오류 `EXTERNAL_SENSOR_PROVIDER_REQUIRED`로 출력하고 시스템을 `FAILED`로 판정한다.
 
-## 3. 포함해야 하는 파일 유형
-추론·위험도·통합 노드·학습·도구 Python 코드, TFLite 모델과 메타데이터, 전처리 NPZ와 매니페스트, YAML/JSON 설정, 벤치마크 결과, V4 테스트와 V4 문서를 포함한다.
+## 공식 production 경로
 
-## 4. 포함하면 안 되는 파일 유형
-기기별 드라이버·펌웨어(`devices/`), 공용 센서 계약(`shared/contracts/`), 3D CAD(`hardware/`), 가상환경·캐시·생성 아카이브는 포함하지 않는다.
-
-## 5. 주요 하위 구성
-| 경로 | 역할 |
-|---|---|
-| `config/` | `models.yaml`, `sensors.yaml`, `risk_rules.yaml`, `risk_engine.json` |
-| `datasets/` | 전처리 NPZ와 수집 매니페스트, `build_processed_npz.py` |
-| `models/` | CO2·mmWave·Thermal INT8 TFLite 3종과 `model_manifest.json` |
-| `src/sensors/` | V4 관점의 센서 registry·orchestration (기기 드라이버 사본은 두지 않는다) |
-| `src/inference/` | TFLite interpreter 3종, `model_registry.py`, `inference_result.py` |
-| `src/risk/` | `risk_engine.py`, `risk_rules.py`, `fallback.py` |
-| `src/integrated_node/` | `run_node.py`(운영), `run_demo.py`, `run_mr60_usb_node.py`, 플로터·스트리머 |
-| `src/training/` | `thermal_prep.py`, `thermal_train.py` |
-| `src/tools/` | 아카이브 빌더, 학습 가이드 생성기, GUI 플로터, 검증 도구 |
-| `benchmarks/` | Thermal 추론 지연 측정 스크립트와 결과 JSON |
-| `tests/` | V4 단위·통합 테스트 9개 파일 |
-| `docs/` | MR60 연동, 인수인계 가이드, walkthrough |
-
-## 6. 입력과 출력 인터페이스
-입력은 `devices/<device>/src/`의 어댑터 판독값, `models/`의 TFLite 산출물, `config/`의 임계값·가중치다. 출력은 `InferenceResult`, 위험도 평가 객체, 통합 노드의 JSON Lines 텔레메트리 스트림(stdout)이다.
-
-## 7. 다른 기능 영역과의 관계
-- `shared/contracts/base_sensor.py`의 계약에 기대어 동작한다.
-- 기기 실구현이 필요하면 `devices.<device>.src...`를 명시적으로 import한다.
-- `devices/mmwave/firmware/`가 내보낸 JSONL 텔레메트리를 리플레이 입력으로 사용할 수 있다.
-- 반대로 `devices/`가 `ondevice_ai/`를 import하지 않는 것이 원칙이다.
-
-## 8. 실행·학습·추론 또는 활용 방법
-모든 명령은 **저장소 루트**에서 실행한다.
-
-```bash
-# 환경 (macOS 기준, Pi에서는 requirements-pi.txt)
-python3 -m venv .venv
-.venv/bin/python -m pip install -r ondevice_ai/requirements-mac.txt
-
-# mock 센서 데모
-.venv/bin/python -m ondevice_ai.src.integrated_node.run_demo
-
-# 운영 통합 노드
-.venv/bin/python -m ondevice_ai.src.integrated_node.run_node --mode mock
-
-# MR60 USB 실기기 노드
-.venv/bin/python -m ondevice_ai.src.integrated_node.run_mr60_usb_node --port /dev/ttyUSB0
-
-# 학습·전처리
-.venv/bin/python -m ondevice_ai.src.training.thermal_prep
-.venv/bin/python -m ondevice_ai.src.training.thermal_train
-
-# 테스트와 벤치마크
-.venv/bin/python -m unittest discover -s ondevice_ai/tests -p 'test_*.py'
-.venv/bin/python ondevice_ai/benchmarks/benchmark_thermal.py
+```text
+integrated_node/run_node.py
+→ sensors/* adapter 또는 주입된 팀원 provider
+→ inference/* interpreter
+→ risk/risk_engine.py
+→ risk/fallback.py
+→ inference/inference_result.py
+→ JSON Lines stdout
 ```
 
-모델·데이터셋·설정 경로는 항상 이 패키지 기준(`ondevice_ai/models/`, `ondevice_ai/datasets/`, `ondevice_ai/config/`)으로 해석한다.
+`integrated_node/safenest_risk_engine.py`는 기존 테스트·데모용 legacy compatibility 모듈이다. 신규 센서 연동과 V5 production 융합에 사용하지 않는다.
 
-## 9. 현재 개발 상태 및 버전
-SafeNest V4 구조에 MR60 ESP 어댑터 보강분(`b0d3c95`)을 통합한 상태다. TFLite 3종은 모두 `v0.1.0`이며, `ondevice_ai/tests` 65개 테스트가 통과한다(skip 2).
+## 실행
 
-**알려진 미해결:** `ondevice_ai/src/tools/verify_safenest_learning_examples.py`가 `non-numeric RPM unexpectedly produced a structured result` AssertionError로 실패한다. 재편 이전 커밋 `2509525`에서도 동일하게 실패하므로 구조 이동과 무관한 기존 결함이다.
+Mock end-to-end:
 
-## 10. 향후 파일 추가 및 관리 규칙
-절대경로를 코드에 넣지 말고 `Path(__file__).resolve()` 기준으로 계산한다. 새 모듈에는 대응 테스트를 추가한다. 기기 드라이버를 `src/sensors/`로 복사하지 말고 `devices/`에서 import한다. 모델 교체 시 `models/model_manifest.json`, `config/models.yaml`, 관련 테스트를 같은 PR에서 갱신하고 SHA-256을 기록한다. 사용자명 디렉터리는 만들지 않는다.
+```bash
+python3 integrated_node/run_node.py --mode mock
+```
 
-## 11. 주요 기여자와 원본 브랜치·커밋 추적 정보
-담당: Junwoo Han (`@sheepmeat`) — 온디바이스 AI 및 융합 / Jinsu Kim (`@jinsu1011`) — MR60 연동 및 통합.
+외부 provider 없는 fail-closed 확인:
 
-| 구성 | 원본 ref | 원본 커밋 | 원본 경로 |
-|---|---|---|---|
-| V4 추론·위험도·통합·테스트 | `origin/Ondevice_AI` | `d97df3e` | `src/`, `models/`, `datasets/`, `config/`, `tests/` |
-| MR60 AI 연동 보강 | `codex/mmwave-phase-integration` | `b0d3c95` | `SafeNest_V4_OnDevice_AI/` (원본 경로) |
+```bash
+python3 integrated_node/run_node.py --mode real
+```
 
-이동 커밋 `38274c0`, 경로 수정 커밋 `3313f4b`·`32cdd1d`. 상세 근거는 [`docs/architecture/BRANCH_PROVENANCE.md`](../docs/architecture/BRANCH_PROVENANCE.md)에 있다.
+팀원 provider 주입:
+
+```python
+from integrated_node.run_node import SafeNestIntegratedNode
+
+node = SafeNestIntegratedNode(
+    mode="real",
+    sensors={
+        "thermal44": thermal_provider,
+        "mmwave": mmwave_provider,
+        "co2": co2_provider,
+        "pir": pir_provider,
+    },
+)
+node.start()
+print(node.step().to_json())
+node.shutdown()
+```
+
+각 provider는 `connect() -> bool`, `read() -> InferenceResult`, `close() -> None`을 구현한다. 상세 계약은 [V5 sensor provider contract](docs/reports/V5_SENSOR_PROVIDER_CONTRACT.md)를 따른다.
+
+## 위험도와 건강 상태
+
+```text
+R = 100 * (
+    0.35 * S_mmwave
+  + 0.35 * S_co2
+  + 0.15 * S_pir
+  + 0.15 * S_thermal
+)
+```
+
+`risk_level`은 사람 위험, `system_health`는 센서·모델 파이프라인 상태다. 일부 센서 장애는 `DEGRADED`, 전 센서 장애는 `FAILED`이며 이때 `risk_score`와 `risk_level`은 `null`이다. Thermal 낙상 또는 mmWave 무호흡은 `DANGER`, `R=100` emergency override를 유지한다. 출력 `metadata.schema_version`은 `5.0`이다.
+
+센서별 stale TTL은 [config/sensors.yaml](config/sensors.yaml)에서 읽어 runtime 위험도 엔진에 전달한다. 현재 합의 전 기본값은 Thermal 3초, mmWave 3초, CO₂ 10초, PIR 10초다. CO₂ 0.2 Hz 갱신은 3초 공통 TTL을 사용하지 않는다.
+
+## 검증과 패키징
+
+```bash
+python3 scripts/validate_v4_config.py
+python3 -m unittest discover -s tests -p "test_*.py" -v
+python3 -m compileall -q inference risk sensors integrated_node scripts tests
+python3 scripts/build_v5_archive.py
+```
+
+검증기 파일명은 기존 자동화 호환성을 위해 유지했지만 현재 파일 위치에서 V5 project root를 찾는다. sibling V4, `archive/`, `version_archives/`, `releases/`를 production dependency로 사용하지 않는다.
+
+배포 산출물:
+
+```text
+releases/SafeNest_v5.0_ondevice_ai_package.zip
+releases/SafeNest_v5.0_ondevice_ai_package.zip.sha256
+```
+
+ZIP 최상위 경로는 `SafeNest_V5_OnDevice_AI/`이며 내부 `SHA256SUMS.txt`로 파일별 무결성을 검증한다.
+
+## 문서
+
+- [팀 인수인계](docs/TEAM_HANDOFF_GUIDE_V5.md)
+- [Sensor provider 계약](docs/reports/V5_SENSOR_PROVIDER_CONTRACT.md)
+- [Release readiness](docs/reports/V5_RELEASE_READINESS.md)
+- [Sensor data contract](docs/reports/SENSOR_DATA_CONTRACT.md)

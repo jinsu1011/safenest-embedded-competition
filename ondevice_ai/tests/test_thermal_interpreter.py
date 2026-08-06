@@ -16,11 +16,10 @@ import numpy as np
 
 # 프로젝트 루트 경로 추가
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-from ondevice_ai.src.inference.thermal_interpreter import ThermalInterpreter
+from inference.thermal_interpreter import ThermalInterpreter
 
 
 class TestThermalInterpreter(unittest.TestCase):
@@ -73,7 +72,7 @@ class TestThermalInterpreter(unittest.TestCase):
                 self.runner.predict(frame)
 
     def test_current_npz_class_smoke(self):
-        dataset_path = PROJECT_ROOT / "datasets/thermal/processed_thermal_80x62.npz"
+        dataset_path = PROJECT_ROOT / "thermal/processed_thermal_80x62.npz"
         if not dataset_path.exists():
             self.skipTest("NPZ dataset file not found")
 
@@ -93,7 +92,7 @@ class TestThermalInterpreter(unittest.TestCase):
         self.assertEqual(seen, {0, 1, 2})
 
     def test_prediction_does_not_collapse_to_one_class(self):
-        dataset_path = PROJECT_ROOT / "datasets/thermal/processed_thermal_80x62.npz"
+        dataset_path = PROJECT_ROOT / "thermal/processed_thermal_80x62.npz"
         if not dataset_path.exists():
             self.skipTest("NPZ dataset file not found")
 

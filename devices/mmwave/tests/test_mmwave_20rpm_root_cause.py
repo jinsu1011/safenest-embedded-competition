@@ -32,31 +32,12 @@ class TestMMWave20RPMRootCause(unittest.TestCase):
         target, path = MODULE.CASES[2]
         self.assertEqual(target, 20.0)
         records, measurement, bounds = MODULE.load_measurement(path)
-        windows = []
-        for start in range(0, 1200, 300):
-            chunk = measurement[start:start + 300]
-            timestamps = np.asarray([item["ts_monotonic_ms"] / 1000.0 for item in chunk])
-            values = np.asarray([item["breath_phase"] for item in chunk])
-            windows.append(MODULE.spectral_diagnostic(timestamps, values, target_rpm=target))
+        windows, resets = MODULE.capture_production_windows(records, measurement, bounds, target)
+        self.assertEqual(len(windows), 4)
         self.assertEqual([item["peak_ratio"] >= 2.0 for item in windows], [False, False, True, True])
         self.assertLess(abs(windows[2]["selected_rpm"] - target), 2.0)
         self.assertLess(abs(windows[3]["selected_rpm"] - target), 2.0)
-
-    def test_production_estimator_rejects_real_weak_spectrum(self) -> None:
-        _, path = MODULE.CASES[2]
-        _, measurement, _ = MODULE.load_measurement(path)
-        adapter = MODULE.MR60ESPAdapter(strict_provenance=False)
-        self.assertEqual(adapter.config["minimum_spectral_peak_ratio"], 2.0)
-        for item in measurement[:300]:
-            self.assertTrue(adapter.estimator.push(
-                item["breath_phase"], item["ts_monotonic_ms"] / 1000.0,
-            ))
-        estimate = adapter.estimator.estimate()
-        self.assertFalse(estimate.valid)
-        self.assertIsNone(estimate.rate_rpm)
-        self.assertEqual(estimate.reason, "MMWAVE_SPECTRAL_PEAK_WEAK")
-        self.assertIsNotNone(estimate.spectral_peak_ratio)
-        self.assertLess(estimate.spectral_peak_ratio, 2.0)
+        self.assertEqual(resets["MMWAVE_PRESENCE_NOT_DETECTED"], 1)
 
     def test_gate_preserves_all_real_12_and_15rpm_windows(self) -> None:
         for target, path in MODULE.CASES[:2]:

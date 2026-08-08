@@ -15,13 +15,11 @@
   "respiration_band_min_rpm": 5.0,
   "respiration_band_max_rpm": 40.0,
   "minimum_phase_std": 0.05,
-  "minimum_spectral_peak_ratio": 2.0,
   "heart_source": "mr60_vendor_provisional",
   "heart_verified": false,
   "heart_confidence_cap": 0.25,
   "notes": [
     "Zero, NaN, timeout, absence and gaps remain UNKNOWN and reset the phase window.",
-    "Spectral peak ratios below the configured minimum remain UNKNOWN.",
     "The MR60 vendor breath rate is diagnostic only; no fixed offset correction is used.",
     "Heart rate is display-only until synchronized external reference validation."
   ]

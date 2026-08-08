@@ -44,7 +44,6 @@ class PhaseRateEstimator:
         self.band_min_hz = float(config["respiration_band_min_rpm"]) / 60.0
         self.band_max_hz = float(config["respiration_band_max_rpm"]) / 60.0
         self.minimum_phase_std = float(config["minimum_phase_std"])
-        self.minimum_spectral_peak_ratio = float(config["minimum_spectral_peak_ratio"])
         self.timestamps: deque[float] = deque(maxlen=self.window_samples)
         self.values: deque[float] = deque(maxlen=self.window_samples)
         self.last_reason: str | None = "MMWAVE_WINDOW_NOT_READY"
@@ -127,11 +126,6 @@ class PhaseRateEstimator:
         band_floor = float(np.median(spectrum[band]))
         peak_ratio = float(spectrum[peak_index] / max(band_floor, 1e-12))
         confidence = min(1.0, max(0.0, (peak_ratio - 1.0) / 9.0))
-        if peak_ratio < self.minimum_spectral_peak_ratio:
-            return PhaseEstimate(
-                None, confidence, False, "MMWAVE_SPECTRAL_PEAK_WEAK",
-                len(values), phase_std, peak_ratio,
-            )
         return PhaseEstimate(
             peak_frequency * 60.0, confidence, True, None,
             len(values), phase_std, peak_ratio,

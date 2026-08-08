@@ -268,8 +268,8 @@ class SessionMetrics:
         # may therefore need sample 301 before its 30 s warm-up gate opens.
         # Never turn that expected one-sample wait into a failed trial.
         reached_invalid_boundary = (
-            after_count >= 300
-            and before_count < 300
+            self.active_window
+            and after_count >= 300
             and error not in RESET_EXEMPT_ERRORS
         )
         reset_during_window = self.active_window and before_count > 0 and after_count == 0
@@ -309,6 +309,11 @@ def build_event(
     result: Any | None,
 ) -> dict[str, Any]:
     metadata = result.metadata if result is not None else {}
+    provider_result = (
+        result.to_dict()
+        if result is not None and callable(getattr(result, "to_dict", None))
+        else None
+    )
     record = stream.last_record
     return {
         "kind": kind,
@@ -331,6 +336,7 @@ def build_event(
         "schema_version": record.get("schema_version"),
         "esp_firmware_version": record.get("firmware_version"),
         "sensor_firmware_version": record.get("sensor_firmware_version"),
+        "provider_result": provider_result,
     }
 
 

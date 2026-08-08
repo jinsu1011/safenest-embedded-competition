@@ -18,6 +18,7 @@ for path in (REPO_ROOT, TOOLS_ROOT):
 from mmwave_performance_monitor import (
     SessionMetrics,
     StreamMetrics,
+    build_event,
     latency_stats,
     progress_bar,
     sparkline,
@@ -33,6 +34,15 @@ class FakeResult:
         self.metadata = metadata or {}
         self.state = "NORMAL" if valid else "WARMUP"
         self.confidence = 0.9 if valid else 0.0
+
+    def to_dict(self):
+        return {
+            "sensor_id": "mmwave",
+            "state": self.state,
+            "valid": self.valid,
+            "error": self.error,
+            "metadata": self.metadata,
+        }
 
 
 def record(seq: int, timestamp_ms: int, **overrides):
@@ -121,11 +131,34 @@ class TestSessionMetrics(unittest.TestCase):
         self.assertTrue(session.active_window)
         self.assertEqual(session.failed_windows, 0)
 
+    def test_full_flat_window_after_warmup_is_terminal_failure(self):
+        session = SessionMetrics("no-person", None, None)
+        with patch("mmwave_performance_monitor.time.monotonic", return_value=10.0):
+            session.note_read(FakeResult(), 0, 1)
+            session.note_read(FakeResult(error="MMWAVE_WARMUP"), 299, 300)
+            event = session.note_read(
+                FakeResult(error="MMWAVE_PHASE_SIGNAL_TOO_FLAT"), 300, 300
+            )
+        self.assertEqual(event, "failed")
+        self.assertEqual(session.failed_windows, 1)
+        self.assertEqual(
+            session.reset_reasons["MMWAVE_PHASE_SIGNAL_TOO_FLAT"], 1
+        )
+
     def test_summary_never_calls_normal_agreement_accuracy_for_unlabeled(self):
         session = SessionMetrics("unlabeled", None, None)
         stream = StreamMetrics()
         summary = summary_event(session, stream)
         self.assertIsNone(summary["normal_agreement_rate"])
+
+    def test_event_preserves_full_provider_contract_result(self):
+        session = SessionMetrics("normal", 70.0, "seated")
+        stream = StreamMetrics()
+        stream.observe(record(1, 1000))
+        result = FakeResult(valid=True, error=None, metadata={"class_name": "NORMAL"})
+        event = build_event("window_completed", session, stream, result)
+        self.assertEqual(event["provider_result"]["sensor_id"], "mmwave")
+        self.assertEqual(event["provider_result"]["state"], "NORMAL")
 
 
 class TestFormatting(unittest.TestCase):

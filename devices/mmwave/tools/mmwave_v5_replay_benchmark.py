@@ -650,7 +650,7 @@ def write_outputs(
         "presence_detection_rate", "false_presence_rate", "respiration_mae_rpm",
     ]
     with (output_dir / "benchmark_summary.csv").open("x", newline="", encoding="utf-8") as stream:
-        writer = csv.DictWriter(stream, fieldnames=columns)
+        writer = csv.DictWriter(stream, fieldnames=columns, lineterminator="\n")
         writer.writeheader()
         for summary in summaries:
             writer.writerow({

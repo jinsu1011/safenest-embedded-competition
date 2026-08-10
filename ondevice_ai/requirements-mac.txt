@@ -1,0 +1,8 @@
+numpy>=1.24,<2
+pandas>=1.5,<3
+matplotlib>=3.7
+Pillow>=9
+tensorflow>=2.15,<2.20
+joblib>=1.3
+scikit-learn>=1.3
+

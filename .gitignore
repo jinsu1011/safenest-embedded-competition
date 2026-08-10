@@ -21,6 +21,20 @@
 *.sqlite
 *.sqlite3
 
+# ESP32 Wi-Fi/host credentials. secrets.example.h만 커밋한다.
+**/secrets.h
+
+# Node (integration/web)
+node_modules/
+.pnpm-store/
+npm-debug.log*
+
+# integration 런타임 산출물
+integration/web/data/store.json
+integration/pi_lcd/state.json
+integration/pi_lcd/logs/
+integration/pi_lcd/.chromium-kiosk/
+
 # Rendered/intermediate documents
 tmp/
 

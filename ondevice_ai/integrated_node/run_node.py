@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SafeNest V5 official production node with external-provider injection."""
+"""SafeNest active integrated node with external-provider injection."""
 
 from __future__ import annotations
 
@@ -36,8 +36,35 @@ from integrated_node.runtime_config import (
     load_runtime_settings,
     validate_provider_settings,
 )
-from risk.risk_engine import SafeNestRiskEngine
+import json
 from inference.inference_result import InferenceResult, SafeNestRiskOutput
+from risk.risk_engine import SafeNestRiskEngine
+
+
+def assert_model_deployable(
+    model_name: str,
+    manifest: dict,
+    mode: str,
+) -> None:
+    models = manifest.get("models", {})
+    if model_name not in models:
+        return
+    model = models[model_name]
+    # `real` is the hardware-integration/fail-closed diagnostic mode. It must be
+    # able to report missing or broken providers even while a model is blocked.
+    # Only `production` asserts the release gate before startup.
+    if mode == "production" and not model.get("deployment_allowed", False):
+        reason = model.get("block_reason", "UNSPECIFIED")
+        raise RuntimeError(
+            f"MODEL_RELEASE_BLOCKED: model={model_name}, reason={reason}"
+        )
+
+
+SENSOR_TO_MODEL_KEY = {
+    "thermal44": "thermal",
+    "mmwave": "mmwave",
+    "co2": "co2",
+}
 
 
 class SafeNestIntegratedNode:
@@ -47,18 +74,22 @@ class SafeNestIntegratedNode:
         project_root: str | Path | None = None,
         sensors: Mapping[str, object] | None = None,
         config_path: str | Path = "config/sensors.yaml",
+        disabled_sensors: list[str] | set[str] | None = None,
     ):
-        if mode not in {"mock", "real"}:
-            raise ValueError("mode must be 'mock' or 'real'")
+        if mode not in {"mock", "real", "production"}:
+            raise ValueError("mode must be 'mock', 'real', or 'production'")
         self.mode = mode
         self.project_root = (
             Path(project_root).resolve()
             if project_root
             else Path(__file__).resolve().parent.parent
         )
+        self.disabled_sensors = set(disabled_sensors or [])
         self.runtime_settings: NodeRuntimeSettings = load_runtime_settings(
             self.project_root, config_path=config_path
         )
+        self.manifest = self._load_manifest()
+        self._validate_model_deployability()
         self.running = False
         self.backend_errors: dict[str, str] = {}
         self.backend_error_details: dict[str, str] = {}
@@ -67,6 +98,24 @@ class SafeNestIntegratedNode:
         self.risk_engine = SafeNestRiskEngine(
             stale_sec=self.runtime_settings.stale_by_sensor
         )
+
+    def _load_manifest(self) -> dict:
+        manifest_path = self.project_root / "models" / "model_manifest.json"
+        if not manifest_path.exists():
+            return {}
+        try:
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+    def _validate_model_deployability(self) -> None:
+        if not self.manifest:
+            return
+        for sensor_key, model_key in SENSOR_TO_MODEL_KEY.items():
+            if sensor_key in self.disabled_sensors:
+                continue
+            assert_model_deployable(model_key, self.manifest, self.mode)
 
     def _mock_sensors(self) -> dict[str, object]:
         thermal = self.runtime_settings.sensors["thermal44"]
@@ -135,7 +184,11 @@ class SafeNestIntegratedNode:
         self.backend_error_details.clear()
         for name, sensor in self.sensors.items():
             settings = self.runtime_settings.sensors[name]
-            if not settings.enabled:
+            if name in self.disabled_sensors:
+                self.backend_errors[name] = "SENSOR_DISABLED_BY_CLI"
+                self.backend_error_details[name] = "Disabled via CLI flag --disable-sensor"
+                connected = False
+            elif not settings.enabled:
                 self.backend_errors[name] = "SENSOR_DISABLED_BY_CONFIG"
                 self.backend_error_details[name] = "enabled=false in config/sensors.yaml"
                 connected = False
@@ -204,6 +257,10 @@ class SafeNestIntegratedNode:
         output = self.risk_engine.evaluate(results, now=time.time())
         output.metadata["runtime_config"] = self.runtime_settings.to_metadata()
         output.metadata["mode"] = self.mode
+        if self.disabled_sensors:
+            output.system_health = "DEGRADED"
+            output.metadata["disabled_sensors"] = sorted(self.disabled_sensors)
+            output.metadata["deployment_status"] = "DEVELOPMENT_ONLY"
         return output
 
     def run_loop(self, interval_sec: float | None = None) -> None:
@@ -243,8 +300,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="SafeNest V5 On-Device AI Node")
     parser.add_argument("--mode", choices=["mock", "real"], default="mock")
     parser.add_argument("--interval", type=float, default=None)
+    parser.add_argument(
+        "--disable-sensor",
+        action="append",
+        default=[],
+        help="Disable specific sensor and bypass deployment block check for development",
+    )
     args = parser.parse_args()
-    node = SafeNestIntegratedNode(mode=args.mode)
+    node = SafeNestIntegratedNode(
+        mode=args.mode, disabled_sensors=args.disable_sensor
+    )
 
     def signal_handler(sig, frame):
         print(f"\nReceived signal {sig}. Stopping node...", file=sys.stderr)

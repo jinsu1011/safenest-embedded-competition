@@ -123,14 +123,14 @@ quantization   : Full INT8
 - `ThermalFrameParser` 실기기 프레임 통과 테스트
 
 **검증 체크리스트:**
-- [ ] 전체 프레임 바이트 수 = 10,080 bytes
-- [ ] `ThermalFrameParser.parse_raw_buffer()` 성공
-- [ ] 출력 shape = `(62, 80)`, dtype = `float32`
-- [ ] 온도 min/max/mean 현실적인 범위 (예: 15~40°C)
-- [ ] NaN/Inf 픽셀 = 0개
-- [ ] 프레임 간격 / 실측 FPS
-- [ ] 연속 10+ 프레임 캡처 성공
-- [ ] SNST CRC16 검증 통과
+- [✅] 전체 프레임 바이트 수 = 10,080 bytes
+- [✅] `ThermalFrameParser.parse_raw_buffer()` 성공 (어댑터 적용)
+- [✅] 출력 shape = `(62, 80)`, dtype = `float32`
+- [✅] 온도 min/max/mean 현실적인 범위 (예: 15~40°C)
+- [✅] NaN/Inf 픽셀 = 0개
+- [✅] 프레임 간격 / 실측 FPS
+- [✅] 연속 10+ 프레임 캡처 성공
+- [✅] SNST CRC16 검증 통과
 
 **태균님이 하실 일:**
 - RPi에서 제가 알려주는 명령어 실행
@@ -151,9 +151,9 @@ quantization   : Full INT8
 - 매니페스트 일치 확인
 
 **핵심 PASS 기준:**
-- [ ] **실제** 열화상 프레임으로 추론 (합성 24°C/33.5°C 프레임 ❌)
-- [ ] `fallback_used = false`
-- [ ] 추론 결과: class_index (0~2), class_name, probabilities[3], latency_ms
+- [✅] **실제** 열화상 프레임으로 추론 (합성 24°C/33.5°C 프레임 ❌)
+- [✅] `fallback_used = false`
+- [✅] 추론 결과: class_index (0~2), class_name, probabilities[3], latency_ms
 
 **모델 경계 선언 (Phase 6):**
 | 사실 | 진술 |
@@ -236,18 +236,18 @@ quantization   : Full INT8
 ┌──────────────────────────────────────────────────┬────────┐
 │ 항목                                              │ 상태   │
 ├──────────────────────────────────────────────────┼────────┤
-│ 1. 실제 Thermal-44 하드웨어 프레임 수신            │  ?     │
-│ 2. 실제 프레임 Parser 동작                         │  ?     │
-│ 3. 합성 24°C/33.5°C 프레임을 PASS 근거로 미사용    │  ?     │
-│ 4. 실제 온도 행렬이 V5 전처리에 도달                │  ?     │
-│ 5. 실제 INT8 TFLite 추론 실행                      │  ?     │
-│ 6. fallback = false                               │  ?     │
-│ 7. V5 InferenceResult 통과                        │  ?     │
-│ 8. Provider 통과                                  │  ?     │
-│ 9. 손상/단선 프레임 Fail-closed                    │  ?     │
-│ 10. 관련 테스트 통과                               │  ?     │
+│ 1. 실제 Thermal-44 하드웨어 프레임 수신            │  ✅    │
+│ 2. 실제 프레임 Parser 동작                         │  ✅    │
+│ 3. 합성 24°C/33.5°C 프레임을 PASS 근거로 미사용    │  ✅    │
+│ 4. 실제 온도 행렬이 V5 전처리에 도달                │  ✅    │
+│ 5. 실제 INT8 TFLite 추론 실행                      │  ✅    │
+│ 6. fallback = false                               │  ✅    │
+│ 7. V5 InferenceResult 통과                        │  ✅    │
+│ 8. Provider 통과                                  │  ✅    │
+│ 9. 손상/단선 프레임 Fail-closed                    │  ✅    │
+│ 10. 관련 테스트 통과                               │  ✅    │
 ├──────────────────────────────────────────────────┼────────┤
-│ 최종: 모두 ✅ → PASS / 하나라도 ❌ → INCOMPLETE     │        │
+│ 최종: 모두 ✅ → PASS / 하나라도 ❌ → INCOMPLETE     │  ✅ PASS │
 └──────────────────────────────────────────────────┴────────┘
 ```
 

@@ -11,7 +11,7 @@
 | V4 추론·위험도·통합·테스트 | `origin/Ondevice_AI` (`d97df3e`) | `./`의 `src/`, `models/`, `datasets/`, `config/`, `tests/` | `ondevice_ai/src/`, `ondevice_ai/models/`, `ondevice_ai/datasets/`, `ondevice_ai/config/`, `ondevice_ai/tests/`, `ondevice_ai/benchmarks/` |
 | V4 센서 어댑터 | `origin/Ondevice_AI` (`d97df3e`) | `src/sensors/<device>/` | `devices/co2/src/`, `devices/pir/src/`, `devices/mmwave/src/`, `devices/thermal/src/` |
 | 공용 센서 계약 | `origin/Ondevice_AI` (`d97df3e`) | `src/sensors/base_sensor.py` | `shared/contracts/base_sensor.py` |
-| MR60 AI/ESP 보강 | `codex/mmwave-phase-integration` (`b0d3c95`) | `./`, `firmware/esp_wroom32_mr60_monitor/`, `SafeNest_V4_OnDevice_AI/` | `devices/mmwave/firmware/`, `devices/mmwave/config/`, `devices/mmwave/tests/`, `devices/mmwave/docs/`, `ondevice_ai/` |
+| MR60 AI/ESP 보강 | `codex/mmwave-phase-integration` (`b0d3c95`) | `./`, `firmware/esp_wroom32_mr60_monitor/`, `SafeNest_V4_OnDevice_AI/` | `devices/mmwave/firmware/`, `devices/mmwave/config/`, `devices/mmwave/tests/`, `docs/mmwave/`, `ondevice_ai/` |
 | CAD 4종 | `origin/3D_Print` (`35c1e1f`) | 루트 STL 4종 → `hardware/3d_print/` | `hardware/3d_models/` |
 | 초기 위험도 엔진 | `origin/main` 계보 | `pi/` | `archive/legacy_prototypes/pi/` |
 | 기획 PDF | `66eb105` | `docs/ai/roadmap_and_setup/` | `docs/planning/` |
@@ -53,7 +53,7 @@
 | `tests/`(나머지) | `ondevice_ai/tests/` |
 | `hardware/3d_print/` | `hardware/3d_models/` |
 | `docs/ai/`(V4 문서) | `ondevice_ai/docs/` |
-| `docs/`(mmWave 운용) | `devices/mmwave/docs/` |
+| `docs/`(mmWave 운용) | `docs/mmwave/` |
 | `requirements*.txt` | `ondevice_ai/requirements*.txt` |
 
 ### 이동 무결성 검증
@@ -75,6 +75,24 @@ git ls-tree -r 38274c0 | awk '{print $3}' | while read b; do git cat-file blob $
 ### legacy가 `archive/`로 간 이유
 
 `archive/legacy_prototypes/pi/`의 초기 위험도 엔진은 `origin/main` 계보의 규칙 기반 프로토타입으로, V4 가중치 융합 엔진(`ondevice_ai/src/risk/risk_engine.py`)이 대체했다. 삭제하지 않고 보존한 이유는 판정 로직 변화를 비교·감사할 수 있어야 하기 때문이다. `archive/legacy_prototypes/config/legacy_risk_rules.json`은 V4 `ondevice_ai/config/risk_rules.yaml`로 대체된 JSON 사본이며, 실행 경로에서 분리해 이중 원본이 생기지 않게 했다. archive에서는 import하지 않는다.
+
+## 팀 문서 배치 규칙 적용 (2026-08-03, 후속)
+
+팀 규칙을 **코드는 `devices/<sensor>/`, 읽을 문서는 `docs/<sensor>/`** 로 확정하고, mmWave 문서 7개를 `devices/mmwave/docs/`에서 `docs/mmwave/`로 옮겼다. 코드·펌웨어·실측 로그·분석 산출물은 `devices/mmwave/`에 그대로 있다.
+
+| 커밋 | 제목 | 범위 |
+|---|---|---|
+| `f0470c6` | `docs: move mmWave device docs into docs/mmwave` | `git mv`만 사용한 순수 이동. 7 files, **0 insertions, 0 deletions** |
+| `def9a24` | `docs: update references to relocated mmWave docs` | 이동한 문서를 가리키던 참조 갱신 |
+| (본 커밋) | `docs: establish team doc placement rule` | CONTRIBUTING 배치 표, CODEOWNERS, README, `docs/mmwave/README.md` 색인 |
+
+이동 무결성:
+
+- 추적 파일 수: 이동 전 **360** → 이동 후 **360**
+- 경로 독립 SHA-256 multiset digest: `dec35e35935020a4a69b5b612384113fb2ac565064d4c21b7545023f3fec4743` — 이동 전후 동일
+- 7개 전부 rename으로 인식됨
+
+`ondevice_ai/docs/`의 V4 패키지 내부 문서(`MR60_INTEGRATION.md`, `TEAM_HANDOFF_GUIDE.md`, `walkthrough.md`)는 이번 이동 대상이 아니며 `@sheepmeat` 담당 영역에 그대로 있다.
 
 ## 중복 처리 원칙
 

@@ -28,3 +28,10 @@
 /docs/                      @jinsu1011
 /archive/                   @jinsu1011
 /.github/                   @jinsu1011
+
+# 기기별 문서는 docs/<sensor>/ 에 모으고, 그 기기 담당자가 리뷰한다.
+# 새 센서 문서를 추가할 때 이 블록에 한 줄씩 같이 추가한다.
+/docs/mmwave/               @jinsu1011
+# /docs/co2/                @yuseungha @jinsu1011
+# /docs/pir/                @yuname121 @jinsu1011
+# /docs/thermal/            @rla1729 @jinsu1011

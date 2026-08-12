@@ -1,11 +1,31 @@
 # Contributing
 
+## 어디에 커밋하는가
+
+파일 종류가 아니라 **기기와 책임 영역**을 기준으로 둡니다. 사람 이름 폴더는 만들지 않습니다.
+
+| 무엇을 | 어디에 |
+|---|---|
+| 센서 펌웨어·드라이버·어댑터·기기 설정·기기 단독 테스트 | `devices/<sensor>/` |
+| 인수인계, 센서별 읽을 문서, 튜닝·검증 보고서 | `docs/<sensor>/` |
+| 공통 운용·구조·기획 문서 | `docs/operations|architecture|planning/` |
+| 온디바이스 AI 모델·추론·위험도·통합 노드 | `ondevice_ai/` |
+| 여러 영역이 함께 쓰는 센서 계약 | `shared/contracts/` |
+| 3D 프린팅 CAD/STL | `hardware/3d_models/` |
+
+즉 **코드는 `devices/<sensor>/`, 읽을 문서는 `docs/<sensor>/`** 로 나눕니다. 원본 로그와 분석 산출물은 문서가 아니므로 `devices/<sensor>/` 아래에 둡니다.
+
+새 센서 문서 디렉터리를 만들면 `.github/CODEOWNERS`에 담당자 한 줄을 같이 추가합니다.
+
 ## Branches
 
 - `main`: 실행·검증된 통합 상태
 - 기능 브랜치: `feature/<sensor-or-feature>`
 - 수정 브랜치: `fix/<issue>`
 - 실험 브랜치: `experiment/<topic>`
+- 문서 브랜치: `docs/<topic>`
+
+`main`에 direct push하지 않습니다. Pull Request로만 반영하며, 병합은 팀 확인 후 진행합니다.
 
 ## Pull requests
 

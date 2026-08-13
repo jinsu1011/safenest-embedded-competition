@@ -1,4 +1,20 @@
-# ondevice_ai Integration Collision Summary
+# ondevice_ai Intermediate Release Collision Summary
+
+## 2026-08-13 incremental synchronization
+
+- Standalone source SHA: `77b1695ac66fd595bd037e4574d1626b8917654c`
+- Previous synchronized source SHA: `9a66a3b21baef9a6a51cb1a66942284c63d0b8a4`
+- Team base SHA: `f3bd342eabcad27dc2c3ecdc16f035b8b13cb153`
+- Destination: `ondevice_ai/`
+- Source changes reviewed: 489 files, comprising 484 additions and 5 modifications.
+- Track distribution: mmWave 268, CO₂ 141, Thermal 61, and shared documentation 19.
+- Collision result: all five modified paths were byte-identical to the previously synchronized source before replacement; no team-diverged collision was overwritten.
+- Device and shared-contract impact: none. No file under team `devices/`, `shared/contracts/`, root `.github/`, root `docs/`, or root `archive/` is changed.
+- `sensors/mmwave/finalist_mock_provider.py` is included only as a bounded offline B9 test provider. It is not a real MR60 driver and does not replace `devices/mmwave/`.
+
+The exact five collision decisions and the inclusion/exclusion plan are recorded in `20260813_intermediate_release_collision_matrix.json` and `20260813_intermediate_release_apply_plan.json`. The material below is retained as the historical summary of the initial synchronization.
+
+## Initial synchronization retained for history
 
 - Standalone source SHA: `9a66a3b21baef9a6a51cb1a66942284c63d0b8a4`
 - Team base SHA: `6baf38d8df936b694a1ff2e9b5e5fb2af2bfe50f`

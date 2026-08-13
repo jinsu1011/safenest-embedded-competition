@@ -58,9 +58,9 @@
 - Missing, invalid, stale, NaN, or unavailable device/sensor data must not become a synthetic normal value.
 - Real mode without an injected team provider must report `valid=false` and fail closed.
 
-## Current synced development status (source SHA `9a66a3b`)
+## Current synced development status (source SHA `77b1695`)
 
-- mmWave: M-A0..M-A6 and M-B0..M-B5 completed with recorded warnings/conditions. M-B6+ pending. LOCKED_TEST unused for model selection. MR60/Pi not validated.
-- CO₂: C-A0..C-A6 completed. C-B+ not started. SCD40 device-domain validation not completed.
-- Thermal: T-A0..T-A4 completed with limitations. T-A5+ and T-B not started. Thermal-44 device validation not completed.
-- This component sync is development synchronization, not production release approval.
+- mmWave: M-A0..M-A6 and M-B0..M-B12 completed with recorded warnings and a non-pristine final-evaluation limitation. The locked artifact is an offline candidate only. MR60 and Raspberry Pi validation remain pending.
+- CO₂: C-A0..C-A6 and C-B0..C-B5 completed. The locked UCI occupancy artifact is an offline candidate only. SCD40 device-domain validation remains pending.
+- Thermal: T-A0..T-A6 completed with recorded data and evaluation limitations. T-B is not authorized (`t_b_authorized=false`), so there is no new Thermal model candidate. Thermal device-domain validation remains pending.
+- The synchronized checkpoint is the standalone prerelease `multisensor-intermediate-2026-08-13`; it is not production, physical-sensor, Raspberry Pi, clinical, safety, or multisensor-integration approval.

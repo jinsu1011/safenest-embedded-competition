@@ -45,7 +45,10 @@
 - `tools/run_negative_tests.py`: 오류 입력 검출 테스트
 - `tools/tflite_offline_benchmark.py`: 기존 CSV를 locked TFLite model에 넣는 offline benchmark
 - `tools/live_mr60_monitor.py`: ESP32 serial raw 저장과 실시간 상태 표시
+- `tools/physical_capture_qa.py`: 실제 immutable JSONL의 cadence·jitter·gap·sequence·field coverage QA
 - `templates/`: 실제 측정에 사용할 manifest·환경 metadata·capture checklist
+- `reports/M-C0_PILOT_DESKWORK_001.md`: 작은 팔 움직임이 있는 첫 physical Pilot 결과와 claim boundary
+- `reports/M-C0_TEAMMATE_CONTINUATION_PROMPT.md`: 완료된 측정을 반복하지 않고 QA·Phase-B 대응을 이어가는 팀원 프롬프트
 
 ## 실행
 

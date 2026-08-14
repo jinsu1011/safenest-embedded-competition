@@ -21,6 +21,10 @@
 - CSV/JSONL one-command bundle audit와 strict negative tests 추가
 - 실제 측정용 session manifest·환경 metadata·capture checklist 템플릿 추가
 - USB serial raw 저장과 1초 주기 상태 표시 monitor 작성 및 기존 raw replay dry-run
+- standalone ESP32 firmware를 실제 보드에 빌드·플래시하고 100ms structured JSON 출력 확인
+- `M-C0-PILOT-DESKWORK-001` 180초 물리 Pilot 기록 및 manifest·환경 metadata·QA 생성
+- 실제 1,799-record raw에서 cadence·jitter·gap·sequence·timestamp·UART·checksum·physical field coverage 검증
+- `M-C0-PILOT-STATIONARY-001` 180초 raw 1,799개 수집 완료; 사용자 요청에 따라 추가 QA·해석은 보류하고 원본 해시만 기록
 
 ## Verification
 
@@ -35,16 +39,20 @@
 - negative tests: backward timestamp·malformed JSON·duplicate timestamp·privacy violation 4/4 검출
 - TFLite 실제 `invoke` 완료: locked SHA-256 model로 620회 성공, host p95 latency 약 0.008333 ms; label alignment 부재로 accuracy/F1은 산출하지 않음
 - live monitor dry-run: 10.00Hz, max gap 103ms, JSON/UART/checksum 오류 0/0/0, 30초 window READY
+- desk-work physical Pilot: 1,799 records, 9.993997Hz, jitter 0.299715ms, max gap 103ms, sequence/timestamp/UART/checksum 위반 0
+- physical Pilot field coverage: presence·distance·raw respiration·raw heart·total/breath/heart phase 100%; `sensor_firmware_version` 0%
+- desk-work Pilot state: `VALID` 838, `DEGRADED` 961, `BREATH_PHASE_LOW_AMPLITUDE` 961, filtered respiration 46.58%
+- desk-work Pilot strict contract validator와 stream-integrity QA `PASS`; 전체 판정은 reference·geometry·movement 제한 때문에 `PASS_WITH_LIMITATIONS`
 - 메인 작업 폴더의 기존 파일은 수정하지 않음. 별도 레포 디렉터리만 새로 생성됨.
 
-## Pending: mmWave 연결 후
+## Pending after physical captures
 
-- 실제 MR60 → ESP32 → USB JSONL 기록
-- 실제 cadence/gap/jitter/packet error와 phase semantics 확인
-- 독립 reference 동기화가 필요한 세션 기록
-- 실제 환경·거리·자세·방향·주변 움직임 metadata와 raw checksum 추가
+- stationary raw의 manifest·QA 및 desk-work Pilot과 derived 비교
+- 센서 절대 높이 측정, 주변인을 FOV 밖으로 둔 baseline metadata 작성
+- phase 단위·scale·reset·missing-value semantics 확인
+- 독립 respiration reference 동기화 세션 기록
 - Pi end-to-end가 범위에 들어오면 별도 runtime evidence 추가
 
 ## Offline completion boundary
 
-센서 없이 가능한 기존 자료 감사·CSV 대조·adapter replay·입력 계약 비교·locked preprocessing replay·quantization smoke test·negative test·측정 템플릿 작성은 완료했다. 새 환경 capture, 독립 reference 동기화, phase semantics, MR60→ESP32→USB→Pi E2E, 실제 장치 raw의 locked preprocessing 검증은 mmWave 연결 후 수행한다.
+센서 없이 가능한 감사와 백테스트는 완료했고, desk-work physical Pilot으로 MR60→ESP32→USB JSON, 실제 cadence와 transport integrity, physical phase population까지 확인했다. stationary raw도 별도 수집했지만 QA·해석은 아직 승인 전 상태다. 독립 reference, phase semantics, Pi E2E와 실제 장치 raw의 locked preprocessing 비교는 아직 남아 있다.

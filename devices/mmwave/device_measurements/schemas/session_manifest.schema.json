@@ -47,7 +47,11 @@
       "required": ["distance_cm", "sensor_height_cm", "sensor_angle_deg", "orientation", "posture", "environment", "other_people_present"],
       "properties": {
         "distance_cm": {"type": "number", "minimum": 0},
-        "sensor_height_cm": {"type": "number", "minimum": 0},
+        "sensor_height_cm": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Absolute floor height in cm; null only when an explicitly documented Pilot limitation prevents measurement."
+        },
         "sensor_angle_deg": {"type": "number"},
         "orientation": {"type": "string"},
         "posture": {"type": "string"},
@@ -121,7 +125,7 @@
       "additionalProperties": false,
       "required": ["status"],
       "properties": {
-        "status": {"type": "string", "enum": ["pending", "pass", "fail", "unknown"]},
+        "status": {"type": "string", "enum": ["pending", "pass", "pass_with_limitations", "fail", "unknown"]},
         "validator_version": {"type": "string"},
         "notes": {"type": "string"}
       }

@@ -79,7 +79,15 @@ def main() -> int:
     parser.add_argument("--output", type=Path, help="raw output JSONL; required for live port capture")
     parser.add_argument("--status-interval", type=float, default=1.0)
     parser.add_argument("--replay-delay", type=float, default=0.0)
+    parser.add_argument(
+        "--duration-seconds",
+        type=float,
+        help="stop a live capture after this many host-monotonic seconds",
+    )
     args = parser.parse_args()
+
+    if args.duration_seconds is not None and args.duration_seconds <= 0:
+        parser.error("--duration-seconds must be greater than zero")
 
     if args.port:
         port = args.port
@@ -110,6 +118,12 @@ def main() -> int:
             return 2
         print(f"Opening {port} at {args.baud} baud")
         stream = serial.Serial(port, baudrate=args.baud, timeout=0.5)
+        stream.reset_input_buffer()
+        boundary_line = stream.readline()
+        print(
+            "Capture boundary synchronized before raw recording "
+            f"(discarded_pre_capture_bytes={len(boundary_line)})"
+        )
         close_stream = True
     else:
         print(f"Replaying {args.replay}")
@@ -126,9 +140,11 @@ def main() -> int:
     previous_seq = None
     window_timestamps: deque[float] = deque(maxlen=300)
     last = {}
+    start_utc = datetime.now(timezone.utc)
     start_wall = time.monotonic()
+    print(f"Capture start UTC: {start_utc.isoformat().replace('+00:00', 'Z')}")
     next_status = start_wall
-    output_handle = args.output.open("a", encoding="utf-8") if args.output else None
+    output_handle = args.output.open("x", encoding="utf-8") if args.output else None
 
     def handle_line(text: str) -> None:
         nonlocal previous_ts, previous_seq, next_status, last
@@ -176,6 +192,9 @@ def main() -> int:
     try:
         if port:
             while True:
+                if args.duration_seconds is not None and time.monotonic() - start_wall >= args.duration_seconds:
+                    print(f"\nCapture duration reached: {args.duration_seconds:.1f}s")
+                    break
                 raw = stream.readline()
                 if raw:
                     handle_line(raw.decode("utf-8", errors="replace"))
@@ -195,7 +214,9 @@ def main() -> int:
         if close_stream:
             stream.close()
 
+    end_utc = datetime.now(timezone.utc)
     print(status_line(stats, last, window_timestamps, start_wall), flush=True)
+    print(f"Capture end UTC: {end_utc.isoformat().replace('+00:00', 'Z')}")
     if args.output and args.output.is_file():
         digest = hashlib.sha256(args.output.read_bytes()).hexdigest()
         print(f"Saved raw: {args.output}")

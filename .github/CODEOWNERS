@@ -14,9 +14,13 @@
 /devices/pir/               @yuname121 @jinsu1011
 /devices/mmwave/            @jinsu1011
 /devices/thermal/           @rla1729 @jinsu1011
+/devices/esp32_node/        @yuseungha @jinsu1011
 
 # 온디바이스 AI V4 패키지
 /ondevice_ai/               @sheepmeat @jinsu1011
+
+# Pi 수신·표시·통합 웹 실행 계층
+/integration/               @yuseungha @jinsu1011
 
 # 공용 센서 계약 — 모든 영역이 의존하므로 AI/통합 담당이 함께 검토한다
 /shared/contracts/          @sheepmeat @jinsu1011
@@ -32,6 +36,7 @@
 # 기기별 문서는 docs/<sensor>/ 에 모으고, 그 기기 담당자가 리뷰한다.
 # 새 센서 문서를 추가할 때 이 블록에 한 줄씩 같이 추가한다.
 /docs/mmwave/               @jinsu1011
+/docs/esp32_node/           @yuseungha @jinsu1011
 # /docs/co2/                @yuseungha @jinsu1011
 # /docs/pir/                @yuname121 @jinsu1011
 # /docs/thermal/            @rla1729 @jinsu1011

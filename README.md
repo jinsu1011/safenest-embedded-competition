@@ -54,7 +54,14 @@ devices/                                 기기 담당자가 단독 책임지는
 │   ├── firmware/                        ESP PlatformIO 프로젝트, logs/, analysis/
 │   ├── src/                             Python 어댑터와 mock
 │   ├── config/, tests/
-└── thermal/                             Thermal-44 드라이버·프레임 파서    @rla1729
+├── thermal/                             Thermal-44 드라이버·프레임 파서    @rla1729
+└── esp32_node/                          4센서 수집 노드 ESP32 펌웨어      @yuseungha
+    └── firmware/                        esp32_sensor_node.ino, secrets.example.h
+
+integration/                             Pi 수신·표시·경보 실행 계층       @yuseungha
+├── pi_lcd/                              TCP 수신, LCD·열화상 화면, 부저, 테스트
+├── web/                                 Express 통합 웹(관리자·방문자), QR
+└── install_raspberry_pi.sh, start_all.sh   설치·일괄 기동
 
 ondevice_ai/                             SafeNest V4 온디바이스 AI 전체    @sheepmeat @jinsu1011
 ├── config/                              센서·모델·위험도 설정
@@ -75,13 +82,14 @@ hardware/3d_models/                      외함 STL CAD 4종                  @y
 shared/contracts/                        여러 영역이 공유하는 센서 계약    @sheepmeat @jinsu1011
 docs/                                    사람이 읽는 문서
 ├── mmwave/                              MR60 인수인계·튜닝·검증 보고      @jinsu1011
+├── esp32_node/                          ESP32 셋업·통신규격·통합 검증 기록 @yuseungha
 ├── operations/, architecture/, planning/, dashboard/   공통 운용·구조·기획
 archive/                                 구형 prototype과 폐기 설정 보존   @jinsu1011
 ```
 
 **코드는 `devices/<sensor>/`, 읽을 문서는 `docs/<sensor>/`** 로 나눕니다. 원본 로그와 분석 산출물은 문서가 아니므로 `devices/<sensor>/` 아래에 둡니다. 새 센서 문서를 추가할 때는 [`CONTRIBUTING.md`](CONTRIBUTING.md)의 배치 표를 따르고 `.github/CODEOWNERS`에 담당자를 한 줄 추가합니다.
 
-의존 방향은 한쪽입니다. `devices/`가 `shared/contracts/`의 계약을 구현하고, `ondevice_ai/`가 그 계약과 기기 구현을 소비합니다. 반대로 `devices/`가 `ondevice_ai/`를 import하지 않습니다.
+의존 방향은 한쪽입니다. `devices/`가 `shared/contracts/`의 계약을 구현하고, `ondevice_ai/`가 그 계약과 기기 구현을 소비합니다. 반대로 `devices/`가 `ondevice_ai/`를 import하지 않습니다. `integration/`은 `devices/esp32_node/`가 보내는 텔레메트리를 소비하는 실행 계층이며 펌웨어를 import하지 않습니다.
 
 각 최상위 디렉터리의 `README.md`에 목적, 허용·금지 파일, 입력·출력, 실행법, 담당자와 원본 브랜치·커밋이 기록돼 있습니다. 리뷰어 지정은 [`.github/CODEOWNERS`](.github/CODEOWNERS), 전체 이관 근거는 [`docs/architecture/BRANCH_PROVENANCE.md`](docs/architecture/BRANCH_PROVENANCE.md)를 확인하세요.
 
@@ -144,6 +152,13 @@ python3 -m venv .venv
 .venv/bin/python -m unittest discover -s devices/mmwave/tests -p "test_*.py"
 ```
 
+`integration/pi_lcd`의 테스트는 `server.py`를 직접 import하므로 해당 디렉터리에서 실행합니다. 표준 라이브러리만 사용하므로 가상환경이 없어도 됩니다.
+
+```bash
+cd integration/pi_lcd
+PYTHONPATH=. python3 -m unittest discover -s tests -p "test_*.py"
+```
+
 통합 노드 실행은 다음과 같습니다.
 
 ```bash
@@ -197,7 +212,7 @@ git push -u origin '<branch-name>'
 |---|---|---|
 | Jinsu | `@jinsu1011` | `devices/mmwave/`, 통합, `docs/` |
 | Junwoo | `@sheepmeat` | `ondevice_ai/`, `shared/contracts/` |
-| Seungha | `@yuseungha` | `devices/co2/` |
+| Seungha | `@yuseungha` | `devices/co2/`, `devices/esp32_node/`, `integration/` |
 | Taegyun | `@rla1729` | `devices/thermal/` |
 | Yuna | `@yuname121` | `devices/pir/`, `hardware/3d_models/` |
 

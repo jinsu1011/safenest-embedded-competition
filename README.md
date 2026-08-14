@@ -54,6 +54,7 @@ devices/                                 기기 담당자가 단독 책임지는
 │   ├── firmware/                        ESP PlatformIO 프로젝트, logs/, analysis/
 │   ├── src/                             Python 어댑터와 mock
 │   ├── config/, tests/
+│   └── device_measurements/             M-C0 물리 측정 계약·QA·증거
 ├── thermal/                             Thermal-44 드라이버·프레임 파서    @rla1729
 └── esp32_node/                          4센서 수집 노드 ESP32 펌웨어      @yuseungha
     └── firmware/                        esp32_sensor_node.ino, secrets.example.h
@@ -87,7 +88,7 @@ docs/                                    사람이 읽는 문서
 archive/                                 구형 prototype과 폐기 설정 보존   @jinsu1011
 ```
 
-**코드는 `devices/<sensor>/`, 읽을 문서는 `docs/<sensor>/`** 로 나눕니다. 원본 로그와 분석 산출물은 문서가 아니므로 `devices/<sensor>/` 아래에 둡니다. 새 센서 문서를 추가할 때는 [`CONTRIBUTING.md`](CONTRIBUTING.md)의 배치 표를 따르고 `.github/CODEOWNERS`에 담당자를 한 줄 추가합니다.
+**코드는 `devices/<sensor>/`, 읽을 문서는 `docs/<sensor>/`** 로 나눕니다. 원본 로그와 분석 산출물은 문서가 아니므로 `devices/<sensor>/` 아래에 둡니다. M-C0 physical evidence는 [`devices/mmwave/device_measurements/`](devices/mmwave/device_measurements/)에, 사람용 프로토콜은 [`docs/mmwave/`](docs/mmwave/)에 둡니다. 새 센서 문서를 추가할 때는 [`CONTRIBUTING.md`](CONTRIBUTING.md)의 배치 표를 따르고 `.github/CODEOWNERS`에 담당자를 한 줄 추가합니다.
 
 의존 방향은 한쪽입니다. `devices/`가 `shared/contracts/`의 계약을 구현하고, `ondevice_ai/`가 그 계약과 기기 구현을 소비합니다. 반대로 `devices/`가 `ondevice_ai/`를 import하지 않습니다. `integration/`은 `devices/esp32_node/`가 보내는 텔레메트리를 소비하는 실행 계층이며 펌웨어를 import하지 않습니다.
 

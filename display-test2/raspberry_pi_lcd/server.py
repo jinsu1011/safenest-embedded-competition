@@ -69,6 +69,9 @@ class SensorStore:
             "resp_rate_bpm": None,
             "heart_rate_bpm": None,
             "co2_ppm": None,
+            "co2_measurement_event_id": None,
+            "co2_measurement_monotonic_ms": None,
+            "co2_measurement_event_valid": False,
             "pir_motion": None,
             "valid": {
                 "respiration": False,
@@ -96,6 +99,14 @@ class SensorStore:
             raise ValueError(f"{name} must be a number or null")
         return value
 
+    @staticmethod
+    def _optional_nonnegative_integer(value: object, name: str) -> int | None:
+        if value is None:
+            return None
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"{name} must be a non-negative integer or null")
+        return value
+
     def record_telemetry(self, payload: dict[str, object]) -> None:
         if payload.get("schema") != EXPECTED_TELEMETRY_SCHEMA:
             raise ValueError(f"unsupported telemetry schema: {payload.get('schema')!r}")
@@ -117,6 +128,17 @@ class SensorStore:
                 payload.get("heart_rate_bpm"), "heart_rate_bpm"
             ),
             "co2_ppm": self._optional_number(payload.get("co2_ppm"), "co2_ppm"),
+            "co2_measurement_event_id": self._optional_nonnegative_integer(
+                payload.get("co2_measurement_event_id"),
+                "co2_measurement_event_id",
+            ),
+            "co2_measurement_monotonic_ms": self._optional_nonnegative_integer(
+                payload.get("co2_measurement_monotonic_ms"),
+                "co2_measurement_monotonic_ms",
+            ),
+            "co2_measurement_event_valid": payload.get(
+                "co2_measurement_event_valid", False
+            ),
             "pir_motion": pir_motion,
             "valid": {
                 "respiration": valid.get("respiration") is True,
@@ -124,6 +146,8 @@ class SensorStore:
                 "co2": valid.get("co2") is True,
             },
         }
+        if not isinstance(telemetry["co2_measurement_event_valid"], bool):
+            raise ValueError("co2_measurement_event_valid must be a boolean")
         with self._lock:
             self._telemetry = telemetry
             self._last_received_monotonic = time.monotonic()

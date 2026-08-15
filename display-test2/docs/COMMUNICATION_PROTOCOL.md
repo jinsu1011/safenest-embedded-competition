@@ -35,6 +35,9 @@ TCP는 패킷 경계를 보존하지 않으므로 Raspberry Pi는 `recv_exact()`
   "resp_rate_bpm": 16.25,
   "heart_rate_bpm": 72.5,
   "co2_ppm": 820,
+  "co2_measurement_event_id": 7,
+  "co2_measurement_monotonic_ms": 5000,
+  "co2_measurement_event_valid": true,
   "pir_motion": true,
   "valid": {
     "respiration": true,
@@ -45,6 +48,14 @@ TCP는 패킷 경계를 보존하지 않으므로 Raspberry Pi는 `recv_exact()`
 ```
 
 유효하지 않거나 아직 측정되지 않은 수치 값은 `null`로 보냅니다. `valid` 플래그와 값을 함께 확인해야 합니다.
+
+`co2_measurement_event_id`와 `co2_measurement_monotonic_ms`는 SCD40의
+`readMeasurement()`가 성공하고 유효한 CO₂ 값이 수락된 시점에만 갱신됩니다.
+따라서 telemetry packet의 `seq` 또는 Raspberry Pi 수신 시각과 다릅니다.
+동일한 event id가 반복되면 새 측정이 아니라 이전 측정값의 재전송입니다.
+`valid.co2`는 마지막 성공 측정값의 transport/availability 상태를 나타내며,
+새 측정 event 여부를 나타내지 않습니다. 첫 측정 전에는 event id와 시각이
+`0`, `co2_measurement_event_valid`가 `false`입니다.
 
 ## Type 2: 열화상 frame
 

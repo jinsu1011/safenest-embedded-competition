@@ -20,6 +20,9 @@ def sample_telemetry() -> dict[str, object]:
         "resp_rate_bpm": 16.25,
         "heart_rate_bpm": 72.5,
         "co2_ppm": 820,
+        "co2_measurement_event_id": 7,
+        "co2_measurement_monotonic_ms": 5_000,
+        "co2_measurement_event_valid": True,
         "pir_motion": True,
         "valid": {"respiration": True, "heart": True, "co2": True},
     }
@@ -38,7 +41,27 @@ class SensorStoreTests(unittest.TestCase):
         self.assertEqual(snapshot["resp_rate_bpm"], 16.25)
         self.assertEqual(snapshot["heart_rate_bpm"], 72.5)
         self.assertEqual(snapshot["co2_ppm"], 820)
+        self.assertEqual(snapshot["co2_measurement_event_id"], 7)
+        self.assertEqual(snapshot["co2_measurement_monotonic_ms"], 5_000)
+        self.assertTrue(snapshot["co2_measurement_event_valid"])
         self.assertTrue(snapshot["pir_motion"])
+
+    def test_retransmission_keeps_measurement_event_identity(self) -> None:
+        store = server.SensorStore(stale_seconds=5.0)
+        first = sample_telemetry()
+        first["seq"] = 42
+        store.record_telemetry(first)
+
+        retransmission = sample_telemetry()
+        retransmission["seq"] = 43
+        retransmission["co2_ppm"] = 821
+        store.record_telemetry(retransmission)
+
+        snapshot = store.snapshot()
+        self.assertEqual(snapshot["seq"], 43)
+        self.assertEqual(snapshot["co2_ppm"], 821)
+        self.assertEqual(snapshot["co2_measurement_event_id"], 7)
+        self.assertEqual(snapshot["co2_measurement_monotonic_ms"], 5_000)
 
     def test_disconnect_marks_previous_values_stale(self) -> None:
         store = server.SensorStore(stale_seconds=5.0)

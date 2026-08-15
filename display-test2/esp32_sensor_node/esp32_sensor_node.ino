@@ -113,6 +113,9 @@ struct TelemetrySnapshot {
   bool respirationValid;
   bool heartValid;
   bool co2Valid;
+  uint32_t co2MeasurementEventId;
+  uint32_t co2MeasurementMonotonicMs;
+  bool co2MeasurementEventValid;
 };
 
 struct ThermalTxFrame {
@@ -148,6 +151,11 @@ bool pirMotion = false;
 uint32_t lastRespirationMs = 0;
 uint32_t lastHeartMs = 0;
 uint32_t lastCo2Ms = 0;
+// These identify the accepted SCD40 read event, not the surrounding telemetry
+// packet. They remain unchanged when a cached CO2 value is retransmitted.
+uint32_t co2MeasurementEventId = 0;
+uint32_t co2MeasurementMonotonicMs = 0;
+bool co2MeasurementEventValid = false;
 uint32_t lastThermalMs = 0;
 uint32_t lastThermalStatusPollMs = 0;
 uint32_t lastPirPollMs = 0;
@@ -346,8 +354,12 @@ void pollCo2(uint32_t now) {
   float humidity = NAN;
   if (scd4x.readMeasurement(newCo2, temperature, humidity) == 0 &&
       newCo2 != 0) {
+    const uint32_t measurementMonotonicMs = millis();
     co2Ppm = newCo2;
-    lastCo2Ms = millis();
+    lastCo2Ms = measurementMonotonicMs;
+    ++co2MeasurementEventId;
+    co2MeasurementMonotonicMs = measurementMonotonicMs;
+    co2MeasurementEventValid = true;
   }
 }
 
@@ -380,6 +392,9 @@ void publishTelemetrySnapshot(uint32_t now) {
   snapshot.respirationValid = isFresh(lastRespirationMs, now, MMWAVE_STALE_MS);
   snapshot.heartValid = isFresh(lastHeartMs, now, MMWAVE_STALE_MS);
   snapshot.co2Valid = isFresh(lastCo2Ms, now, CO2_STALE_MS);
+  snapshot.co2MeasurementEventId = co2MeasurementEventId;
+  snapshot.co2MeasurementMonotonicMs = co2MeasurementMonotonicMs;
+  snapshot.co2MeasurementEventValid = co2MeasurementEventValid;
   xQueueOverwrite(telemetryQueue, &snapshot);
 }
 
@@ -443,15 +458,21 @@ bool sendTelemetry(WiFiClient &client, const TelemetrySnapshot &snapshot) {
     strlcpy(co2, "null", sizeof(co2));
   }
 
-  char json[512];
+  char json[768];
   const int length = snprintf(
       json, sizeof(json),
       "{\"schema\":\"safenest.telemetry.v1\",\"device_id\":\"%s\","
       "\"seq\":%lu,\"uptime_ms\":%lu,\"resp_rate_bpm\":%s,"
-      "\"heart_rate_bpm\":%s,\"co2_ppm\":%s,\"pir_motion\":%s,"
+      "\"heart_rate_bpm\":%s,\"co2_ppm\":%s,"
+      "\"co2_measurement_event_id\":%lu,"
+      "\"co2_measurement_monotonic_ms\":%lu,"
+      "\"co2_measurement_event_valid\":%s,\"pir_motion\":%s,"
       "\"valid\":{\"respiration\":%s,\"heart\":%s,\"co2\":%s}}",
       DEVICE_ID, static_cast<unsigned long>(snapshot.sequence),
       static_cast<unsigned long>(snapshot.uptimeMs), respiration, heart, co2,
+      static_cast<unsigned long>(snapshot.co2MeasurementEventId),
+      static_cast<unsigned long>(snapshot.co2MeasurementMonotonicMs),
+      snapshot.co2MeasurementEventValid ? "true" : "false",
       snapshot.pirMotion ? "true" : "false",
       snapshot.respirationValid ? "true" : "false",
       snapshot.heartValid ? "true" : "false",

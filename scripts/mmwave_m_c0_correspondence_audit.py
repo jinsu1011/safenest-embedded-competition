@@ -1136,12 +1136,68 @@ def reconstruct_legacy_620_window_forensics(
         for window in per_window
         if window["historical_adapter_interpolated_duration_fraction"] is not None
     ]
+    total_sample_slots = reconstructed_count * window_samples
+    stale_repeat_proxy_count = sum(
+        window["stale_repeat_proxy_count"] or 0 for window in per_window
+    )
+    interpolated_or_synthesised_sample_count = sum(
+        window["interpolated_sample_count"] or 0 for window in per_window
+    )
+    windows_meeting_300_fresh_contract = sum(
+        1 for window in per_window if window["fresh_sample_count_proven"] >= window_samples
+    )
+    headline = {
+        "window_count": reconstructed_count,
+        "samples_per_window": window_samples,
+        "total_window_sample_slots": total_sample_slots,
+        "fresh_sample_fraction_across_windows": {
+            "status": "EVIDENCE_PROVEN_FRACTION_ZERO_ACTUAL_FRACTION_UNKNOWN",
+            "measurement_semantics": "evidence-proven fresh sample fraction, not the unobservable actual fresh fraction",
+            "actual_fraction_status": "UNKNOWN_NOT_OBSERVABLE_FROM_LEGACY_CSV",
+            "min": 0.0,
+            "median": 0.0,
+            "mean": 0.0,
+            "max": 0.0,
+            "computation": "fresh_sample_count_proven / 300 for each window; legacy CSV has no phase_age_ms/0x0A13 freshness field, so proven count is 0 while actual fractions remain unknown",
+        },
+        "overall_stale_repeat_fraction": {
+            "status": "MEASURED_ADJACENT_EQUAL_PROXY_NOT_PROOF_OF_STALENESS",
+            "value": round_value(stale_repeat_proxy_count / total_sample_slots) if total_sample_slots else None,
+            "numerator": stale_repeat_proxy_count,
+            "denominator": total_sample_slots,
+            "computation": "sum(equal adjacent resp_phase counts) / (620 windows * 300 samples); overlapping windows are retained exactly as evaluated",
+        },
+        "overall_interpolated_or_synthesised_fraction": {
+            "status": "MEASURED_RECONSTRUCTED_TARGET_GRID",
+            "value": (
+                round_value(interpolated_or_synthesised_sample_count / total_sample_slots)
+                if total_sample_slots
+                else None
+            ),
+            "numerator": interpolated_or_synthesised_sample_count,
+            "denominator": total_sample_slots,
+            "synthesised_sample_count": 0,
+            "computation": "sum(target-grid samples without an exact source timestamp match) / (620 windows * 300 samples); no additional synthesis was applied",
+        },
+        "windows_meeting_300_fresh_sample_contract": {
+            "count": windows_meeting_300_fresh_contract,
+            "denominator_windows": reconstructed_count,
+            "computation": "count windows with fresh_sample_count_proven >= 300",
+        },
+        "input_contract_divergence": {
+            "frozen_contract": FROZEN["contract_id"],
+            "stage": "LEGACY_CSV_WINDOW_GENERATION_FRESHNESS_PROVENANCE",
+            "timing": "BEFORE_BPF_ZSCORE",
+        },
+        "historical_620_of_620_all_apnea_interpretation": "The historical 620/620 all-APNEA result demonstrates that the evaluated inputs came from a window generator whose freshness provenance violates or fails to establish the frozen input contract before BPF_ZSCORE; it does not demonstrate model performance.",
+    }
     return {
-        "schema_version": "M-C0_620_WINDOW_INPUT_FORENSICS_V1",
+        "schema_version": "M-C0_620_WINDOW_INPUT_FORENSICS_V2",
         "requested_historical_window_count": 620,
         "reconstructed_historical_window_count": reconstructed_count,
         "reconstructed_count_matches_historical_count": reconstructed_count == 620,
         "eligible_reconstructed_window_count": eligible_count,
+        "headline": headline,
         "window_generation_path": {
             "source": "ondevice_ai/adapters/mmwave_csv_adapter.py",
             "window_samples": window_samples,
@@ -1391,20 +1447,28 @@ def render_report(
         long_q4 = "No long JSONL session was present, so long-log timestamp numbers were not fabricated."
         long_q7 = "No long JSONL session was present, so interpolation distortion numbers were not fabricated."
         long_q9 = "No long JSONL session was present, so pre/post INT8 distribution numbers were not fabricated."
-    stale_stats = window_forensics["fraction_distributions"]["stale_repeat_proxy_fraction"]["stats"]
-    interp_sample_stats = window_forensics["fraction_distributions"]["interpolated_target_sample_fraction"]["stats"]
-    interp_duration_stats = window_forensics["fraction_distributions"]["historical_adapter_interpolated_duration_fraction"]["stats"]
+    headline = window_forensics["headline"]
+    fresh_headline = headline["fresh_sample_fraction_across_windows"]
+    stale_headline = headline["overall_stale_repeat_fraction"]
+    interpolated_headline = headline["overall_interpolated_or_synthesised_fraction"]
+    contract_headline = headline["windows_meeting_300_fresh_sample_contract"]
     q10 = (
         f"The legacy adapter path `{window_forensics['window_generation_path']['source']}` was replayed as input-side forensics only: "
         f"300 source rows per window, 30-row stride, and nominal 10 Hz `np.interp`. It reconstructs "
         f"`{window_forensics['reconstructed_historical_window_count']}` windows, matching the historical 620 count. "
-        f"For every reconstructed window, genuinely fresh fraction is `UNKNOWN` (fresh samples proven: `0`) because the CSV has no phase_age_ms/0x0A13 field; "
-        f"the stale-repeat fraction is not asserted, with adjacent-equal `resp_phase` proxy stats "
-        f"`median={stale_stats['median']}`, `p95={stale_stats['p95']}`, `max={stale_stats['max']}`. "
-        f"The reconstructed target-grid interpolated sample fraction has `median={interp_sample_stats['median']}`, "
-        f"`p95={interp_sample_stats['p95']}`, `max={interp_sample_stats['max']}`; the adapter's duration-based interpolation fraction has "
-        f"`median={interp_duration_stats['median']}`, `p95={interp_duration_stats['p95']}`, `max={interp_duration_stats['max']}`. "
-        f"The earliest measured divergence from the Phase-B freshness contract is `{window_forensics['stage_of_input_divergence']['stage']}`; no inference or scoring was run."
+        f"The evidence-proven fresh-sample fraction distribution is `min={fresh_headline['min']}`, "
+        f"`median={fresh_headline['median']}`, `mean={fresh_headline['mean']}`, `max={fresh_headline['max']}` with status "
+        f"`{fresh_headline['status']}`. The actual fraction remains `{fresh_headline['actual_fraction_status']}` because the CSV has no "
+        f"`phase_age_ms`/0x0A13 field; the zeros are `fresh_sample_count_proven / 300`, not fabricated actual freshness measurements. "
+        f"Across `{stale_headline['denominator']}` evaluated sample slots, the adjacent-equal stale-repeat proxy is "
+        f"`{stale_headline['numerator']} / {stale_headline['denominator']} = {stale_headline['value']}`; "
+        f"across the same slots, interpolated or synthesised samples are "
+        f"`{interpolated_headline['numerator']} / {interpolated_headline['denominator']} = {interpolated_headline['value']}` "
+        f"(`synthesised_sample_count={interpolated_headline['synthesised_sample_count']}`). "
+        f"Windows meeting the 300-fresh-sample contract are `{contract_headline['count']} / {contract_headline['denominator_windows']}`. "
+        f"The earliest measured divergence from `{FROZEN['contract_id']}` is "
+        f"`{window_forensics['stage_of_input_divergence']['stage']}` before BPF_ZSCORE. "
+        f"These headline values and their numerator/denominator computations are recorded in `{FORENSICS_PATH.as_posix()}` under `headline`."
     )
     lines += [
         "",
@@ -1465,7 +1529,7 @@ def render_report(
         "### Question 10 — 620/620 all-APNEA collapse stage",
         "",
         q10,
-        "The input-side result does not prove that any window was genuinely fresh, and it does not prove that the historical all-APNEA output was caused by BPF, z-score, INT8, or the model. The 620-window input artifact is therefore a measured pre-BPF divergence finding, not an inference result.",
+        headline["historical_620_of_620_all_apnea_interpretation"],
         "",
         "## Decision",
         "",

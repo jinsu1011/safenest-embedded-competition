@@ -50,6 +50,47 @@
       "status": "MEASURED_PROXY"
     }
   },
+  "headline": {
+    "fresh_sample_fraction_across_windows": {
+      "actual_fraction_status": "UNKNOWN_NOT_OBSERVABLE_FROM_LEGACY_CSV",
+      "computation": "fresh_sample_count_proven / 300 for each window; legacy CSV has no phase_age_ms/0x0A13 freshness field, so proven count is 0 while actual fractions remain unknown",
+      "max": 0.0,
+      "mean": 0.0,
+      "measurement_semantics": "evidence-proven fresh sample fraction, not the unobservable actual fresh fraction",
+      "median": 0.0,
+      "min": 0.0,
+      "status": "EVIDENCE_PROVEN_FRACTION_ZERO_ACTUAL_FRACTION_UNKNOWN"
+    },
+    "historical_620_of_620_all_apnea_interpretation": "The historical 620/620 all-APNEA result demonstrates that the evaluated inputs came from a window generator whose freshness provenance violates or fails to establish the frozen input contract before BPF_ZSCORE; it does not demonstrate model performance.",
+    "input_contract_divergence": {
+      "frozen_contract": "M-B10B_SELECTED_REAL_CANDIDATE_BPF_ZSCORE_V1",
+      "stage": "LEGACY_CSV_WINDOW_GENERATION_FRESHNESS_PROVENANCE",
+      "timing": "BEFORE_BPF_ZSCORE"
+    },
+    "overall_interpolated_or_synthesised_fraction": {
+      "computation": "sum(target-grid samples without an exact source timestamp match) / (620 windows * 300 samples); no additional synthesis was applied",
+      "denominator": 186000,
+      "numerator": 169041,
+      "status": "MEASURED_RECONSTRUCTED_TARGET_GRID",
+      "synthesised_sample_count": 0,
+      "value": 0.908822581
+    },
+    "overall_stale_repeat_fraction": {
+      "computation": "sum(equal adjacent resp_phase counts) / (620 windows * 300 samples); overlapping windows are retained exactly as evaluated",
+      "denominator": 186000,
+      "numerator": 53820,
+      "status": "MEASURED_ADJACENT_EQUAL_PROXY_NOT_PROOF_OF_STALENESS",
+      "value": 0.289354839
+    },
+    "samples_per_window": 300,
+    "total_window_sample_slots": 186000,
+    "window_count": 620,
+    "windows_meeting_300_fresh_sample_contract": {
+      "computation": "count windows with fresh_sample_count_proven >= 300",
+      "count": 0,
+      "denominator_windows": 620
+    }
+  },
   "per_session": [
     {
       "candidate_window_count": 90,
@@ -17528,7 +17569,7 @@
   "reconstructed_historical_window_count": 620,
   "rejection_counts": {},
   "requested_historical_window_count": 620,
-  "schema_version": "M-C0_620_WINDOW_INPUT_FORENSICS_V1",
+  "schema_version": "M-C0_620_WINDOW_INPUT_FORENSICS_V2",
   "source_inputs": [
     {
       "bytes": 318036,

@@ -20,7 +20,7 @@
   "expected_input_file_count": 12,
   "expected_input_files_hashed_count": 12,
   "expected_input_present_count": 12,
-  "head_at_run": "e33d67701077a04a4616f1c923c936f7266621a0",
+  "head_at_run": "9280779d8f8d11e293ed9a26d1909681ce34b3f7",
   "known_but_not_provided_count": 0,
   "phase": "M-C0",
   "pilot_evidence_root": "devices/mmwave/device_measurements",

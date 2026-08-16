@@ -2,7 +2,7 @@
 
 - Repository: `jinsu1011/safenest-embedded-competition`
 - Branch: `codex/mmwave-m-c0-correspondence`
-- Head at audit: `e33d67701077a04a4616f1c923c936f7266621a0`
+- Head at audit: `9280779d8f8d11e293ed9a26d1909681ce34b3f7`
 - Evidence-root used: `devices/mmwave/firmware`
 - Decision: **`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`**
 - Blocking reason: **`SIGNAL_CORRESPONDENCE_NOT_ESTABLISHED`**
@@ -139,8 +139,8 @@ The JSON contains diagnostic before-INT8, after-INT8-dequantized, quantized inte
 
 ### Question 10 — 620/620 all-APNEA collapse stage
 
-The legacy adapter path `ondevice_ai/adapters/mmwave_csv_adapter.py` was replayed as input-side forensics only: 300 source rows per window, 30-row stride, and nominal 10 Hz `np.interp`. It reconstructs `620` windows, matching the historical 620 count. For every reconstructed window, genuinely fresh fraction is `UNKNOWN` (fresh samples proven: `0`) because the CSV has no phase_age_ms/0x0A13 field; the stale-repeat fraction is not asserted, with adjacent-equal `resp_phase` proxy stats `median=0.12`, `p95=0.996666667`, `max=0.996666667`. The reconstructed target-grid interpolated sample fraction has `median=0.946666667`, `p95=0.993333333`, `max=0.996666667`; the adapter's duration-based interpolation fraction has `median=0.000466667`, `p95=0.000768334`, `max=0.001`. The earliest measured divergence from the Phase-B freshness contract is `LEGACY_CSV_WINDOW_GENERATION_FRESHNESS_PROVENANCE`; no inference or scoring was run.
-The input-side result does not prove that any window was genuinely fresh, and it does not prove that the historical all-APNEA output was caused by BPF, z-score, INT8, or the model. The 620-window input artifact is therefore a measured pre-BPF divergence finding, not an inference result.
+The legacy adapter path `ondevice_ai/adapters/mmwave_csv_adapter.py` was replayed as input-side forensics only: 300 source rows per window, 30-row stride, and nominal 10 Hz `np.interp`. It reconstructs `620` windows, matching the historical 620 count. The evidence-proven fresh-sample fraction distribution is `min=0.0`, `median=0.0`, `mean=0.0`, `max=0.0` with status `EVIDENCE_PROVEN_FRACTION_ZERO_ACTUAL_FRACTION_UNKNOWN`. The actual fraction remains `UNKNOWN_NOT_OBSERVABLE_FROM_LEGACY_CSV` because the CSV has no `phase_age_ms`/0x0A13 field; the zeros are `fresh_sample_count_proven / 300`, not fabricated actual freshness measurements. Across `186000` evaluated sample slots, the adjacent-equal stale-repeat proxy is `53820 / 186000 = 0.289354839`; across the same slots, interpolated or synthesised samples are `169041 / 186000 = 0.908822581` (`synthesised_sample_count=0`). Windows meeting the 300-fresh-sample contract are `0 / 620`. The earliest measured divergence from `M-B10B_SELECTED_REAL_CANDIDATE_BPF_ZSCORE_V1` is `LEGACY_CSV_WINDOW_GENERATION_FRESHNESS_PROVENANCE` before BPF_ZSCORE. These headline values and their numerator/denominator computations are recorded in `datasets/mmwave/manifests/M-C0_correspondence_audit/620_window_input_forensics.json` under `headline`.
+The historical 620/620 all-APNEA result demonstrates that the evaluated inputs came from a window generator whose freshness provenance violates or fails to establish the frozen input contract before BPF_ZSCORE; it does not demonstrate model performance.
 
 ## Decision
 

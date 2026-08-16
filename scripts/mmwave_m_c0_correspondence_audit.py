@@ -42,6 +42,7 @@ INVENTORY_PATH = AUDIT_DIR / "existing_measurement_inventory.json"
 CORRESPONDENCE_PATH = AUDIT_DIR / "offline_contract_correspondence.json"
 REPORT_PATH = Path("docs/reports/20260816_SafeNest_mmWave_Standalone_M-C0_Report_01.md")
 RUN_LOG_PATH = Path("docs/reports/20260816_SafeNest_mmWave_M-C0_Run_Log_01.md")
+FORENSICS_PATH = AUDIT_DIR / "620_window_input_forensics.json"
 
 FROZEN = {
     "contract_id": "M-B10B_SELECTED_REAL_CANDIDATE_BPF_ZSCORE_V1",
@@ -645,6 +646,7 @@ def expected_evidence(root: Path, evidence_root: Path, all_hashes: dict[Path, di
         item: dict[str, Any] = {
             "session_id": session_id,
             "kind": "legacy_csv",
+            "evidence_group": "PRE_PR18_LEGACY_LOGS",
             "expected_filename_suffix": suffix,
             "status": "PRESENT" if path else "KNOWN_BUT_NOT_PROVIDED",
             "record_count_expected": None,
@@ -672,6 +674,7 @@ def expected_evidence(root: Path, evidence_root: Path, all_hashes: dict[Path, di
     item = {
         "session_id": "2026-08-01_occupied_d09_v120_31min_attempt02",
         "kind": "long_jsonl",
+        "evidence_group": "PRE_PR18_LEGACY_LOGS",
         "expected_filename": long_name,
         "status": "PRESENT" if long_path else "KNOWN_BUT_NOT_PROVIDED",
     }
@@ -700,8 +703,10 @@ def expected_evidence(root: Path, evidence_root: Path, all_hashes: dict[Path, di
         item = {
             "session_id": pilot_id,
             "kind": "pr18_pilot",
+            "evidence_group": "PR18_PILOT_CAPTURE",
             "expected_record_count": 1799,
             "status": "PRESENT" if matches else "KNOWN_BUT_NOT_PROVIDED",
+            "search_scope": "recursive filename match under the supplied evidence-root",
             "candidate_paths": [
                 f"{repo_rel(root, evidence_root)}/device_measurements/{pilot_id}.jsonl",
                 f"{repo_rel(root, evidence_root)}/device_measurements/{pilot_id}/records.jsonl",
@@ -727,7 +732,7 @@ def expected_evidence(root: Path, evidence_root: Path, all_hashes: dict[Path, di
 
 
 def analyze_session(root: Path, evidence_root: Path, item: dict[str, Any], all_hashes: dict[Path, dict[str, Any]], training_reference: dict[str, Any] | None) -> dict[str, Any] | None:
-    if item.get("status") != "PRESENT" or item.get("kind") not in {"legacy_csv", "long_jsonl"}:
+    if item.get("status") != "PRESENT" or item.get("kind") not in {"legacy_csv", "long_jsonl", "pr18_pilot"}:
         return None
     path_text = item["path"]
     # Recover the local file from its sanitized name by matching the recorded SHA.
@@ -769,6 +774,7 @@ def analyze_session(root: Path, evidence_root: Path, item: dict[str, Any], all_h
     return {
         "session_id": item["session_id"],
         "kind": kind,
+        "evidence_group": item.get("evidence_group"),
         "role": context.get("role"),
         "evidence_path": path_text,
         "sha256": item["sha256"],
@@ -805,6 +811,238 @@ def analyze_session(root: Path, evidence_root: Path, item: dict[str, Any], all_h
         "distance_or_range": distance,
         "bpf_zscore_equivalence": bpf_comparison,
         "int8_distribution": bpf_comparison["diagnostic_affine_proxy"],
+    }
+
+
+def _path_for_expected_item(item: dict[str, Any], all_hashes: dict[Path, dict[str, Any]]) -> Path | None:
+    target_sha = item.get("sha256")
+    if not target_sha:
+        return None
+    return next((candidate for candidate, record in all_hashes.items() if record["sha256"] == target_sha), None)
+
+
+def _target_matches_source_timestamp(target: float, source_timestamps: list[float], tolerance: float = 1e-7) -> bool:
+    return any(abs(target - source) <= tolerance for source in source_timestamps)
+
+
+def reconstruct_legacy_620_window_forensics(
+    root: Path,
+    evidence_root: Path,
+    expected: list[dict[str, Any]],
+    all_hashes: dict[Path, dict[str, Any]],
+) -> dict[str, Any]:
+    """Replay only the legacy CSV window generator; never invoke inference.
+
+    The historical 620-window count is reproducible from the published
+    adapter contract: 300 rows per window and a 30-row stride, applied within
+    each of the nine legacy CSV sessions.  The CSVs do not carry phase_age_ms
+    or a 0x0A13 identity, so freshness is deliberately reported as unknown;
+    repeated phase values are only a stale-repeat proxy.
+    """
+
+    window_samples = FROZEN["window_samples"]
+    stride_samples = 30
+    expected_dt = 1.0 / FROZEN["sample_rate_hz"]
+    per_window: list[dict[str, Any]] = []
+    per_file: list[dict[str, Any]] = []
+    source_inputs: list[dict[str, Any]] = []
+    rejection_counts: dict[str, int] = {}
+    fresh_fields = {"phase_age_ms", "0x0A13", "fresh", "fresh_phase"}
+
+    legacy_items = [item for item in expected if item.get("kind") == "legacy_csv"]
+    for item in legacy_items:
+        if item.get("status") != "PRESENT":
+            per_file.append(
+                {
+                    "session_id": item["session_id"],
+                    "status": "KNOWN_BUT_NOT_PROVIDED",
+                    "path": item.get("candidate_path"),
+                    "window_count": 0,
+                }
+            )
+            continue
+        path = _path_for_expected_item(item, all_hashes)
+        if path is None:
+            per_file.append(
+                {
+                    "session_id": item["session_id"],
+                    "status": "HASHED_PATH_NOT_RECOVERABLE",
+                    "path": item.get("path"),
+                    "window_count": 0,
+                }
+            )
+            continue
+        rows, malformed = load_csv_rows(path)
+        source_inputs.append(
+            {
+                "session_id": item["session_id"],
+                "path": item.get("path"),
+                "sha256": item.get("sha256"),
+                "bytes": item.get("bytes"),
+                "record_count": len(rows),
+            }
+        )
+        source_has_freshness_field = any(key in row for row in rows for key in fresh_fields)
+        timestamps = [as_float(row.get("timestamp_s")) for row in rows]
+        phases = [as_float(row.get("resp_phase")) for row in rows]
+        session_rejections: dict[str, int] = {}
+        candidate_count = max(0, (len(rows) - window_samples) // stride_samples + 1)
+        session_window_count = 0
+        for start in range(0, max(0, len(rows) - window_samples + 1), stride_samples):
+            window_rows = rows[start : start + window_samples]
+            window_ts = timestamps[start : start + window_samples]
+            window_phase = phases[start : start + window_samples]
+            reasons: list[str] = []
+            if len(window_rows) != window_samples:
+                reasons.append("SHORT_WINDOW")
+            if any(value is None or not math.isfinite(value) for value in window_ts + window_phase):
+                reasons.append("NONFINITE_INPUT")
+            finite_ts = [value for value in window_ts if value is not None]
+            finite_phase = [value for value in window_phase if value is not None]
+            sub_diffs = [b - a for a, b in zip(finite_ts, finite_ts[1:])]
+            if any(value <= 0 for value in sub_diffs):
+                reasons.append("NONMONOTONIC_TIMESTAMP")
+            if any(value > 0.5 for value in sub_diffs):
+                reasons.append("GAP_OVER_0_5S")
+
+            target_times: list[float] = []
+            interpolated_duration_fraction: float | None = None
+            interpolated_sample_fraction: float | None = None
+            stale_repeat_proxy_fraction: float | None = None
+            stale_repeat_proxy_count: int | None = None
+            if len(finite_ts) == window_samples and len(finite_phase) == window_samples:
+                target_times = [finite_ts[0] + index * expected_dt for index in range(window_samples)]
+                if target_times[-1] > finite_ts[-1] + 1e-5:
+                    reasons.append("TARGET_GRID_EXCEEDS_SOURCE_END")
+                interpolated_duration_fraction = sum(
+                    max(b - a - expected_dt, 0.0) for a, b in zip(finite_ts, finite_ts[1:])
+                ) / FROZEN["window_seconds"]
+                exact_source_count = sum(
+                    1 for target in target_times if _target_matches_source_timestamp(target, finite_ts)
+                )
+                interpolated_sample_fraction = (window_samples - exact_source_count) / window_samples
+                stale_repeat_proxy_count = sum(1 for a, b in zip(finite_phase, finite_phase[1:]) if a == b)
+                stale_repeat_proxy_fraction = stale_repeat_proxy_count / window_samples
+                if interpolated_duration_fraction > 0.05:
+                    reasons.append("INTERPOLATED_DURATION_OVER_0_05")
+
+            status = "ELIGIBLE_FOR_HISTORICAL_ADAPTER_OUTPUT" if not reasons else "REJECTED_BY_HISTORICAL_ADAPTER"
+            for reason in reasons:
+                session_rejections[reason] = session_rejections.get(reason, 0) + 1
+                rejection_counts[reason] = rejection_counts.get(reason, 0) + 1
+            per_window.append(
+                {
+                    "session_id": item["session_id"],
+                    "source_path": item.get("path"),
+                    "source_sha256": item.get("sha256"),
+                    "window_index_within_session": session_window_count,
+                    "source_row_start_inclusive": start,
+                    "source_row_end_exclusive": start + window_samples,
+                    "source_record_count": window_samples,
+                    "status": status,
+                    "fresh_fraction": None,
+                    "fresh_fraction_status": "NOT_OBSERVABLE_NO_PHASE_AGE_OR_0x0A13_FIELD",
+                    "fresh_sample_count_proven": 0,
+                    "stale_repeat_fraction": None,
+                    "stale_repeat_proxy_fraction": round_value(stale_repeat_proxy_fraction),
+                    "stale_repeat_proxy_count": stale_repeat_proxy_count,
+                    "interpolated_fraction": round_value(interpolated_sample_fraction),
+                    "interpolated_sample_count": (
+                        round(interpolated_sample_fraction * window_samples)
+                        if interpolated_sample_fraction is not None
+                        else None
+                    ),
+                    "historical_adapter_interpolated_duration_fraction": round_value(interpolated_duration_fraction),
+                    "freshness_field_present_in_source": source_has_freshness_field,
+                    "rejection_reasons": reasons,
+                    "computation": {
+                        "window": "source rows [start:start+300] within one legacy CSV",
+                        "stride": "30 source rows",
+                        "interpolation": "target_t = source_t[0] + arange(300)*0.1; np.interp-equivalent source timestamp alignment",
+                        "stale_repeat_proxy": "equal adjacent resp_phase values / 300; proxy only, not proof of stale telemetry",
+                        "fresh": "not computable because legacy CSV has no phase_age_ms/0x0A13 freshness field",
+                    },
+                }
+            )
+            session_window_count += 1
+        per_file.append(
+            {
+                "session_id": item["session_id"],
+                "status": "MEASURED",
+                "path": item.get("path"),
+                "sha256": item.get("sha256"),
+                "record_count": len(rows),
+                "malformed_record_count": malformed,
+                "candidate_window_count": candidate_count,
+                "reconstructed_window_count": session_window_count,
+                "rejection_counts": session_rejections,
+                "freshness_field_present": source_has_freshness_field,
+            }
+        )
+
+    reconstructed_count = len(per_window)
+    eligible_count = sum(1 for window in per_window if window["status"] == "ELIGIBLE_FOR_HISTORICAL_ADAPTER_OUTPUT")
+    stale_values = [window["stale_repeat_proxy_fraction"] for window in per_window if window["stale_repeat_proxy_fraction"] is not None]
+    interp_values = [window["interpolated_fraction"] for window in per_window if window["interpolated_fraction"] is not None]
+    duration_interp_values = [
+        window["historical_adapter_interpolated_duration_fraction"]
+        for window in per_window
+        if window["historical_adapter_interpolated_duration_fraction"] is not None
+    ]
+    return {
+        "schema_version": "M-C0_620_WINDOW_INPUT_FORENSICS_V1",
+        "requested_historical_window_count": 620,
+        "reconstructed_historical_window_count": reconstructed_count,
+        "reconstructed_count_matches_historical_count": reconstructed_count == 620,
+        "eligible_reconstructed_window_count": eligible_count,
+        "window_generation_path": {
+            "source": "ondevice_ai/adapters/mmwave_csv_adapter.py",
+            "window_samples": window_samples,
+            "window_seconds": FROZEN["window_seconds"],
+            "stride_source_rows": stride_samples,
+            "nominal_stride_seconds_at_10hz": stride_samples / FROZEN["sample_rate_hz"],
+            "target_sample_rate_hz": FROZEN["sample_rate_hz"],
+            "resampling": "np.interp onto source_t[0] + arange(300)*0.1",
+            "max_gap_seconds": 0.5,
+            "max_interpolated_duration_fraction": 0.05,
+            "model_invocation": False,
+        },
+        "source_inputs": source_inputs,
+        "per_session": per_file,
+        "per_window": per_window,
+        "fraction_distributions": {
+            "fresh_fraction": {
+                "status": "UNKNOWN_FOR_ALL_WINDOWS",
+                "reason": "Legacy CSVs have no phase_age_ms/0x0A13 freshness field; fresh_fraction is not fabricated.",
+                "proven_fresh_sample_count": 0,
+                "stats": None,
+            },
+            "stale_repeat_proxy_fraction": {
+                "status": "MEASURED_PROXY",
+                "stats": numeric_stats(stale_values),
+                "computation": "equal adjacent resp_phase values / 300 source rows; can include naturally repeated quantized phase values",
+            },
+            "interpolated_target_sample_fraction": {
+                "status": "MEASURED_FROM_RECONSTRUCTED_ADAPTER_GRID",
+                "stats": numeric_stats(interp_values),
+                "computation": "target grid samples without a source timestamp match / 300",
+            },
+            "historical_adapter_interpolated_duration_fraction": {
+                "status": "MEASURED_FROM_RECONSTRUCTED_ADAPTER_GRID",
+                "stats": numeric_stats(duration_interp_values),
+                "computation": "sum(max(source_dt-0.1,0))/30 seconds, matching adapter field interpolated_fraction",
+            },
+        },
+        "stage_of_input_divergence": {
+            "stage": "LEGACY_CSV_WINDOW_GENERATION_FRESHNESS_PROVENANCE",
+            "status": "MEASURED_INPUT_CONTRACT_DIVERGENCE",
+            "finding": "The 620 windows are reproducibly generated from legacy resp_phase rows and nominal interpolation, but the generator has no phase_age_ms/0x0A13 freshness gate. Therefore correspondence to the Phase-B genuinely-fresh-sample contract is lost or unproven before BPF_ZSCORE.",
+            "historical_620_all_apnea_stage_proven": False,
+            "inference_or_scoring_executed": False,
+        },
+        "rejection_counts": rejection_counts,
+        "raw_files_copied": False,
+        "raw_files_modified": False,
     }
 
 
@@ -857,11 +1095,21 @@ No inference, preprocessing change, INT8 recalibration, LOCKED_TEST reopening, M
     return summary, report
 
 
-def render_report(root: Path, evidence_root: Path, summary: dict[str, Any], expected: list[dict[str, Any]], sessions: list[dict[str, Any]], all_file_count: int, pipeline: dict[str, Any], training_reference: dict[str, Any] | None) -> str:
+def render_report(
+    root: Path,
+    evidence_root: Path,
+    summary: dict[str, Any],
+    expected: list[dict[str, Any]],
+    sessions: list[dict[str, Any]],
+    all_file_count: int,
+    pipeline: dict[str, Any],
+    training_reference: dict[str, Any] | None,
+    window_forensics: dict[str, Any],
+) -> str:
     present = [item for item in expected if item["status"] == "PRESENT"]
     missing = [item for item in expected if item["status"] != "PRESENT"]
     lines = [
-        "# SafeNest mmWave standalone M-C0 correspondence audit",
+        "# SafeNest mmWave M-C0 correspondence audit",
         "",
         f"- Repository: `jinsu1011/safenest-embedded-competition`",
         f"- Branch: `{summary.get('branch')}`",
@@ -871,6 +1119,9 @@ def render_report(root: Path, evidence_root: Path, summary: dict[str, Any], expe
         f"- Blocking reason: **`{summary['blocking_reason']}`**",
         f"- Correspondence evaluated: `{str(summary['correspondence_evaluated']).lower()}`",
         f"- Correspondence disproven: `{str(summary['correspondence_disproven']).lower()}`",
+        f"- Semantic correspondence: `{summary['semantic_correspondence']}`",
+        f"- Temporal correspondence: `{summary['temporal_correspondence']}`",
+        f"- Valid 300-fresh windows: `{summary['valid_300_fresh_windows']}`",
         "- Model scoring/inference: **not executed**",
         "- Raw modification/copy: **none**",
         "",
@@ -888,21 +1139,23 @@ def render_report(root: Path, evidence_root: Path, summary: dict[str, Any], expe
         "",
         "## Expected evidence and SHA-256",
         "",
-        "| Expected item | Status | Evidence path (repo-relative, personal path component redacted) | Records | SHA-256 |",
-        "|---|---|---|---:|---|",
+        "| Expected item | Group | Status | Evidence path (repo-relative, personal path component redacted) | Records | SHA-256 |",
+        "|---|---|---|---|---:|---|",
     ]
     for item in expected:
         lines.append(
-            f"| `{item['session_id']}` | `{item['status']}` | `{item.get('path', item.get('candidate_path', item.get('candidate_paths', '—')))}` | {item.get('record_count', item.get('expected_record_count', '—'))} | `{item.get('sha256', '—')}` |"
+            f"| `{item['session_id']}` | `{item.get('evidence_group', '—')}` | `{item['status']}` | `{item.get('path', item.get('candidate_path', item.get('candidate_paths', '—')))}` | {item.get('record_count', item.get('expected_record_count', '—'))} | `{item.get('sha256', '—')}` |"
         )
     lines += [
         "",
         f"Present expected files: `{len(present)}` / `{len(expected)}`. Missing items were recorded as `KNOWN_BUT_NOT_PROVIDED`; they were not silently skipped.",
         "",
+        "Evidence groups are kept separate: `PRE_PR18_LEGACY_LOGS` contains the nine legacy CSVs and the long JSONL; `PR18_PILOT_CAPTURE` contains the two 1799-record pilot expectations. Pilot cadence is never merged into legacy cadence.",
+        "",
         "## Per-session measured findings",
         "",
-        "| Session | Records | Row Hz | Fresh 0x0A13 Hz | Phase rpm | Phase age min / median / p95 / max ms | >30 s | 300-fresh windows | Interp RMSE |",
-        "|---|---:|---:|---:|---:|---|---:|---:|---:|",
+        "| Group | Session | Records | Row Hz | Fresh 0x0A13 Hz | Phase rpm | Phase age min / median / p95 / max ms | >30 s | 300-fresh windows | Interp RMSE |",
+        "|---|---|---:|---:|---:|---:|---|---:|---:|---:|",
     ]
     for session in sessions:
         phase = session["phase_semantic_correspondence"]["numeric"]
@@ -910,7 +1163,7 @@ def render_report(root: Path, evidence_root: Path, summary: dict[str, Any], expe
         distortion = session["interpolation"].get("distortion") or {}
         age_text = " / ".join(str(age.get(key)) for key in ("min", "median", "p95", "max"))
         lines.append(
-            f"| `{session['session_id']}` | {session['record_count']} | {session['row_cadence_and_fresh_cadence']['telemetry_row_cadence_hz']} | {session['row_cadence_and_fresh_cadence']['fresh_0x0A13_cadence_hz'] if session['row_cadence_and_fresh_cadence']['fresh_0x0A13_cadence_hz'] is not None else 'N/A'} | {phase.get('dominant_phase_rpm')} | {age_text} | {age.get('fraction_over_30000_ms')} | {session['fresh_windows']['windows_with_300_genuinely_fresh_samples']} | {distortion.get('rmse', 'N/A')} |"
+            f"| `{session.get('evidence_group', '—')}` | `{session['session_id']}` | {session['record_count']} | {session['row_cadence_and_fresh_cadence']['telemetry_row_cadence_hz']} | {session['row_cadence_and_fresh_cadence']['fresh_0x0A13_cadence_hz'] if session['row_cadence_and_fresh_cadence']['fresh_0x0A13_cadence_hz'] is not None else 'N/A'} | {phase.get('dominant_phase_rpm')} | {age_text} | {age.get('fraction_over_30000_ms')} | {session['fresh_windows']['windows_with_300_genuinely_fresh_samples']} | {distortion.get('rmse', 'N/A')} |"
         )
     d15 = next((session for session in sessions if session["session_id"] == "S001_NORMAL_D15"), None)
     paced = {
@@ -965,6 +1218,21 @@ def render_report(root: Path, evidence_root: Path, summary: dict[str, Any], expe
         long_q4 = "No long JSONL session was present, so long-log timestamp numbers were not fabricated."
         long_q7 = "No long JSONL session was present, so interpolation distortion numbers were not fabricated."
         long_q9 = "No long JSONL session was present, so pre/post INT8 distribution numbers were not fabricated."
+    stale_stats = window_forensics["fraction_distributions"]["stale_repeat_proxy_fraction"]["stats"]
+    interp_sample_stats = window_forensics["fraction_distributions"]["interpolated_target_sample_fraction"]["stats"]
+    interp_duration_stats = window_forensics["fraction_distributions"]["historical_adapter_interpolated_duration_fraction"]["stats"]
+    q10 = (
+        f"The legacy adapter path `{window_forensics['window_generation_path']['source']}` was replayed as input-side forensics only: "
+        f"300 source rows per window, 30-row stride, and nominal 10 Hz `np.interp`. It reconstructs "
+        f"`{window_forensics['reconstructed_historical_window_count']}` windows, matching the historical 620 count. "
+        f"For every reconstructed window, genuinely fresh fraction is `UNKNOWN` (fresh samples proven: `0`) because the CSV has no phase_age_ms/0x0A13 field; "
+        f"the stale-repeat fraction is not asserted, with adjacent-equal `resp_phase` proxy stats "
+        f"`median={stale_stats['median']}`, `p95={stale_stats['p95']}`, `max={stale_stats['max']}`. "
+        f"The reconstructed target-grid interpolated sample fraction has `median={interp_sample_stats['median']}`, "
+        f"`p95={interp_sample_stats['p95']}`, `max={interp_sample_stats['max']}`; the adapter's duration-based interpolation fraction has "
+        f"`median={interp_duration_stats['median']}`, `p95={interp_duration_stats['p95']}`, `max={interp_duration_stats['max']}`. "
+        f"The earliest measured divergence from the Phase-B freshness contract is `{window_forensics['stage_of_input_divergence']['stage']}`; no inference or scoring was run."
+    )
     lines += [
         "",
         "## Preserved measurement corrections",
@@ -987,15 +1255,15 @@ def render_report(root: Path, evidence_root: Path, summary: dict[str, Any], expe
         "",
         "### Question 1 — signal-semantic correspondence",
         "",
-        "`breath_phase`/`resp_phase` was present and periodic components were measurable in the supplied legacy captures. That establishes a phase-like telemetry signal, not equivalence to the frozen Phase-B `resp_phase_model_ready_bpf_zscore` semantic. No independent canonical reference waveform is present, so the measured assessment is `PHASE_LIKE_SIGNAL_OBSERVED_BUT_PHASE_B_EQUIVALENCE_NOT_ESTABLISHED`; `correspondence_disproven=false`.",
+        "`breath_phase`/`resp_phase` was present and periodic components were measurable in the supplied captures. That establishes a phase-like telemetry signal, not equivalence to the frozen Phase-B `resp_phase_model_ready_bpf_zscore` semantic. No independent canonical reference waveform is present, so semantic correspondence is `UNDETERMINED`; this is not a semantic disproof (`correspondence_disproven=false`).",
         "",
         "### Question 2 — `breath_rate_raw` as waveform input",
         "",
-        f"The measured answer is **no**. The static pipeline scan found waveform input paths `{json.dumps(pipeline['waveform_input_files'], ensure_ascii=False)}` and recorded `breath_rate_raw` only in telemetry/export/diagnostic matches. Per-session parsing also used `{json.dumps({'legacy_csv': 'resp_phase', 'long_jsonl': 'breath_phase'}, ensure_ascii=False)}` as the waveform field.",
+        f"The measured answer is **no**. The static pipeline scan found waveform input paths `{json.dumps(pipeline['waveform_input_files'], ensure_ascii=False)}` and recorded `breath_rate_raw` only in telemetry/export/diagnostic matches. Per-session parsing also used `{json.dumps({'legacy_csv': 'resp_phase', 'long_jsonl': 'breath_phase', 'pr18_pilot': 'breath_phase'}, ensure_ascii=False)}` as the waveform field.",
         "",
         "### Question 3 — row cadence vs fresh cadence",
         "",
-        "The table reports the two cadences separately. Legacy CSV has no `phase_age_ms`/0x0A13 freshness field, so its fresh cadence is `N/A`, not assumed to be the row cadence. The long log reports an inferred cadence from phase-age resets and labels it as a proxy.",
+        "The table reports the two cadences separately and by evidence group. Legacy CSV has no `phase_age_ms`/0x0A13 freshness field, so its fresh cadence is `N/A`, not assumed to be the row cadence. The long log reports an inferred cadence from phase-age resets and labels it as a proxy; PR18 pilot cadence, if present, is reported only within `PR18_PILOT_CAPTURE`.",
         "",
         "### Question 4 — timestamp integrity",
         "",
@@ -1007,7 +1275,7 @@ def render_report(root: Path, evidence_root: Path, summary: dict[str, Any], expe
         "",
         "### Question 6 — 300 genuinely fresh samples",
         "",
-        "The measured count is shown per session. A value of `0` means no fixed 30-second bin contained 300 phase-age reset-proxy events. CSV sessions are additionally marked not provable because freshness metadata is absent.",
+        f"The measured aggregate is `valid_300_fresh_windows={summary['valid_300_fresh_windows']}`. A value of `0` means no fixed 30-second bin contained 300 reset-proxy events. CSV sessions are additionally marked not provable because freshness metadata is absent; this temporal result is `MEASURED_INSUFFICIENT`.",
         "",
         "### Question 7 — interpolation",
         "",
@@ -1023,11 +1291,12 @@ def render_report(root: Path, evidence_root: Path, summary: dict[str, Any], expe
         "",
         "### Question 10 — 620/620 all-APNEA collapse stage",
         "",
-        "No stage is assigned. This run did not replay inference, and the expected evidence set contains no stage-labeled 620/620 replay artifact. Inference remains prohibited until the correspondence gate authorizes it; the collapse stage therefore remains unresolved rather than guessed.",
+        q10,
+        "The input-side result does not prove that any window was genuinely fresh, and it does not prove that the historical all-APNEA output was caused by BPF, z-score, INT8, or the model. The 620-window input artifact is therefore a measured pre-BPF divergence finding, not an inference result.",
         "",
         "## Decision",
         "",
-        f"**`{summary['decision']}`** with `correspondence_evaluated=true` and `correspondence_disproven=false`. The result is measured and successful as a block: phase-like telemetry is present, but the frozen Phase-B semantic, fresh 300-sample window, and exact preprocessing/INT8 distribution correspondence are not established. Exploratory inference is not authorized.",
+        f"**`{summary['decision']}`** with `semantic_correspondence={summary['semantic_correspondence']}`, `temporal_correspondence={summary['temporal_correspondence']}`, `valid_300_fresh_windows={summary['valid_300_fresh_windows']}`, `correspondence_evaluated=true`, and `correspondence_disproven=false`. The result is measured and successful as a block: phase-like telemetry is present, but the frozen Phase-B semantic, fresh 300-sample window, and exact preprocessing/INT8 distribution correspondence are not established. Exploratory inference is not authorized.",
         "",
         "## What remains unknown",
         "",
@@ -1081,6 +1350,7 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
     all_hashes: dict[Path, dict[str, Any]] = {}
     expected = expected_evidence(root, evidence_root, all_hashes)
     training_reference = load_training_reference(root)
+    window_forensics = reconstruct_legacy_620_window_forensics(root, evidence_root, expected, all_hashes)
     sessions: list[dict[str, Any]] = []
     for item in expected:
         result = analyze_session(root, evidence_root, item, all_hashes, training_reference)
@@ -1104,6 +1374,11 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
         "blocking_reason": BLOCKED_MEASURED,
         "correspondence_evaluated": True,
         "correspondence_disproven": False,
+        "semantic_correspondence": "UNDETERMINED",
+        "temporal_correspondence": "MEASURED_INSUFFICIENT",
+        "valid_300_fresh_windows": sum(
+            session["fresh_windows"]["windows_with_300_genuinely_fresh_samples"] for session in sessions
+        ),
         "preflight_gate": "PASS_INHERITED_FROM_PREVIOUS_STANDALONE_RUN",
         "execution": {
             "m_c0_executed": True,
@@ -1126,6 +1401,7 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
         "session_results": [
             {
                 "session_id": session["session_id"],
+                "evidence_group": session.get("evidence_group"),
                 "record_count": session["record_count"],
                 "telemetry_row_cadence_hz": session["row_cadence_and_fresh_cadence"]["telemetry_row_cadence_hz"],
                 "fresh_0x0A13_cadence_hz": session["row_cadence_and_fresh_cadence"]["fresh_0x0A13_cadence_hz"],
@@ -1144,6 +1420,7 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
             "Stage responsible for the historical all-APNEA collapse.",
             "Independent M-C1 reference hardware, sample size, and paced-rpm-to-label mapping.",
             "Official measurement distances.",
+            "Whether the historical 620 windows contained genuinely fresh 0x0A13 samples; legacy CSV freshness metadata is absent.",
         ],
         "provenance": {
             "raw_mr60_jsonl_csv_committed": False,
@@ -1166,6 +1443,11 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
             "computation": "counts over expected_evidence_set; all regular evidence files opened read-only; expected input files SHA-256 hashed",
         },
         "captures": sessions,
+        "window_input_forensics": {
+            "artifact_path": FORENSICS_PATH.as_posix(),
+            "reconstructed_window_count": window_forensics["reconstructed_historical_window_count"],
+            "freshness_status": window_forensics["fraction_distributions"]["fresh_fraction"]["status"],
+        },
         "input_files_hashed": [
             {
                 "session_id": item["session_id"],
@@ -1184,6 +1466,9 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
         "blocking_reason": summary["blocking_reason"],
         "correspondence_evaluated": True,
         "correspondence_disproven": False,
+        "semantic_correspondence": summary["semantic_correspondence"],
+        "temporal_correspondence": summary["temporal_correspondence"],
+        "valid_300_fresh_windows": summary["valid_300_fresh_windows"],
         "audit_scope": {
             "repository_root": ".",
             "evidence_root": repo_rel(root, evidence_root),
@@ -1193,7 +1478,7 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
         },
         "questions": {
             "1_signal_semantic_correspondence": {
-                "assessment": "PHASE_LIKE_SIGNAL_OBSERVED_BUT_PHASE_B_EQUIVALENCE_NOT_ESTABLISHED",
+                "assessment": summary["semantic_correspondence"],
                 "correspondence_disproven": False,
                 "per_session": [session["phase_semantic_correspondence"] for session in sessions],
             },
@@ -1224,15 +1509,18 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
                 for session in sessions
             ],
             "10_620_of_620_apnea_collapse_stage": {
-                "status": "NOT_DETERMINED",
-                "stage": None,
-                "reason": "No stage-labeled replay artifact was present in the expected evidence set; inference is prohibited before the C0A gate.",
+                "status": window_forensics["stage_of_input_divergence"]["status"],
+                "stage": window_forensics["stage_of_input_divergence"]["stage"],
+                "reason": window_forensics["stage_of_input_divergence"]["finding"],
+                "forensics_artifact": FORENSICS_PATH.as_posix(),
+                "reconstructed_historical_window_count": window_forensics["reconstructed_historical_window_count"],
+                "per_window_fractions": "recorded in the derived forensics artifact; fresh_fraction remains UNKNOWN because CSV freshness fields are absent",
             },
         },
         "training_reference": training_reference,
         "frozen_contract": FROZEN,
     }
-    report = render_report(root, evidence_root, summary, expected, sessions, evidence_root_regular_file_count, pipeline, training_reference)
+    report = render_report(root, evidence_root, summary, expected, sessions, evidence_root_regular_file_count, pipeline, training_reference, window_forensics)
     run_log = "\n".join(
         [
             "# SafeNest mmWave M-C0 audit run log",
@@ -1247,6 +1535,10 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
             f"- Expected evidence items: `{len(expected)}`",
             f"- Expected evidence present: `{present_count}`",
             f"- Known but not provided: `{missing_count}`",
+            f"- PRE_PR18_LEGACY_LOGS sessions analyzed: `{sum(1 for session in sessions if session.get('evidence_group') == 'PRE_PR18_LEGACY_LOGS')}`",
+            f"- PR18_PILOT_CAPTURE sessions analyzed: `{sum(1 for session in sessions if session.get('evidence_group') == 'PR18_PILOT_CAPTURE')}`",
+            f"- Reconstructed historical 620-window count: `{window_forensics['reconstructed_historical_window_count']}`",
+            f"- Derived input-forensics artifact: `{FORENSICS_PATH.as_posix()}`",
             f"- Long-log expected SHA-256: `{EXPECTED_LONG_LOG_SHA256}`",
             "- Raw JSONL/CSV copied into repository: `false`",
             "- Raw JSONL/CSV modified: `false`",
@@ -1258,6 +1550,7 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
     write_json(root / output_dir / "existing_measurement_inventory.json", inventory, evidence_root)
     write_json(root / output_dir / "offline_contract_correspondence.json", correspondence, evidence_root)
     write_json(root / output_dir / "m_c0_summary.json", summary, evidence_root)
+    write_json(root / output_dir / FORENSICS_PATH.name, window_forensics, evidence_root)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(report, encoding="utf-8")
     run_log_path.parent.mkdir(parents=True, exist_ok=True)

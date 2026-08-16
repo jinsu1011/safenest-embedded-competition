@@ -1560,7 +1560,7 @@ def render_report(
             )
     lines += [
         "",
-        "The nine legacy CSV sessions remain `NOT_PROVABLE_NO_PHASE_AGE_FIELD`; their historical 620 adapter windows remain 0/620 contract-proven and are not converted into fresh windows by this JSONL reconstruction.",
+        "The legacy JSONL yields a corrected fresh cadence of `8.419003785 Hz` and `27` valid 300-fresh-sample windows because its `phase_age_ms` field permits timestamp-age reconstruction. The legacy-CSV-derived windows remain `0/620` contract-proven because those CSVs carry no freshness field, so fresh provenance cannot be proven for them; this is a provenance limitation, not a contradiction of the JSONL cadence result.",
     ]
     d15 = next((session for session in sessions if session["session_id"] == "S001_NORMAL_D15"), None)
     paced = {

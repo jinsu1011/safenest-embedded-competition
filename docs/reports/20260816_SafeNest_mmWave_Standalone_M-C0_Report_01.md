@@ -126,7 +126,7 @@ The corrected comparison uses advancing `timestamp-phase_age_ms` update instants
   - `M-C0-PILOT-DESKWORK-001`: window counts `[300, 300, 300, 300, 299, 299]`; valid `4` / evaluated `6`; maximum `300`. Computation: anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples
   - `M-C0-PILOT-STATIONARY-001`: window counts `[300, 300, 300, 300, 299, 300]`; valid `5` / evaluated `6`; maximum `300`. Computation: anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples
 
-The nine legacy CSV sessions remain `NOT_PROVABLE_NO_PHASE_AGE_FIELD`; their historical 620 adapter windows remain 0/620 contract-proven and are not converted into fresh windows by this JSONL reconstruction.
+The legacy JSONL yields a corrected fresh cadence of `8.419003785 Hz` and `27` valid 300-fresh-sample windows because its `phase_age_ms` field permits timestamp-age reconstruction. The legacy-CSV-derived windows remain `0/620` contract-proven because those CSVs carry no freshness field, so fresh provenance cannot be proven for them; this is a provenance limitation, not a contradiction of the JSONL cadence result.
 
 ## Preserved measurement corrections
 

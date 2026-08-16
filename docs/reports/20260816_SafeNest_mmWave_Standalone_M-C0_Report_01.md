@@ -16,6 +16,8 @@
 
 ## Method and write boundary
 
+The audit logic and the raw MR60 evidence are kept separate; raw evidence is accessed read-only and is never modified, rewritten, or committed to the repository.
+
 The script opened `2528` regular files below the evidence-root in `rb` read-only mode and separately SHA-256 hashed every present file in the enumerated expected input set. All output paths were asserted to be outside the evidence-root. Raw MR60 JSONL/CSV remained in place and was not copied into the repository.
 
 Numeric conventions:

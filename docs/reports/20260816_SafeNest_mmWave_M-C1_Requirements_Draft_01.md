@@ -65,6 +65,25 @@ resampling method, an official distance, reference hardware, or sample size.
 Those remain **UNDEFINED**. Existing hardware availability removes the previous
 hardware blocker, but this draft does not approve or begin M-C1 capture.
 
+## M-C1 readiness blockers, in priority order
+
+1. **Select an independent respiratory reference device.** The selection is
+   **UNDEFINED**. Without an independently measured, time-aligned respiratory
+   reference, `semantic_correspondence` remains `UNDETERMINED` regardless of
+   how completely or cleanly M-C1 is captured.
+2. **Obtain explicit approval for the complete M-C1 protocol.** The approval
+   has not been granted; status remains `PENDING_EXPLICIT_PROTOCOL_APPROVAL`.
+3. **Define the reference-to-MR60 synchronization and provenance procedure.**
+   It must support an auditable correspondence comparison without treating a
+   paced-rpm cue as a label; the procedure remains **UNDEFINED**.
+4. **Define the temporal acceptance details.** The official `phase_age_ms`
+   threshold and resampling/interpolation method remain **UNDEFINED**.
+5. **Define the capture design.** Official measurement distances and sample
+   sizes remain **UNDEFINED**.
+
+This prioritized list is a readiness note only. It neither selects a device
+nor authorizes M-C1 to begin.
+
 ## M-C1 capture must guarantee
 
 ### 1. Fresh-phase update rate is measured per session

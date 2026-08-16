@@ -58,8 +58,10 @@
 
 ### Thermal
 - 완료: T-A0..T-A6, T-B0..T-B5 (offline lock, limitations 포함)
-- 준비 완료: Thermal-90 SNTR UDP V2 수집기·validator·XIAO compile-only 확인
+- 현재 분류: `TEAM-THERMAL-INTEGRATION / PRE-T-C DEVICE-CAPTURE PREPARATION`
+- 준비 완료: Thermal-90 SNTR UDP V2 수집기·validator·XIAO compile-only 확인. transport identity와 unverified header word 0을 분리하고 raw chunk exact inventory 및 sender telemetry를 지원
 - 미완: T-C device-domain, git-tracked T-B5 INT8 binary intake, 실제 XIAO/Pi 수신, Thermal-90/44 validation
+- `T_C_EXECUTED = NO`, `T_C_DEVICE_CONTRACT_VERIFIED = NO`, `FINAL_THERMAL_HARDWARE_SELECTION = NOT_YET_FROZEN`
 - `LYING`/`HUMAN_FALL` ≠ verified fall-event onset label
 
 ### 통합/배포

@@ -52,8 +52,11 @@ ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 CHUNK_MAGIC = b"SNTR"
 CHUNK_PROTOCOL_VERSION = 2
 CHUNK_MESSAGE_TYPE_RAW_U16_LE = 1
+CHUNK_MESSAGE_TYPE_SENDER_STATUS = 2
 CHUNK_HEADER = struct.Struct("!4sBBHIHHIIHHI")
 CHUNK_HEADER_BYTES = CHUNK_HEADER.size
+SENDER_STATUS_PACKET = struct.Struct("!4sBBHIIIIII")
+SENDER_STATUS_BYTES = SENDER_STATUS_PACKET.size
 CHUNK_DATAGRAM_BYTES = 1200
 CHUNK_PAYLOAD_BYTES = CHUNK_DATAGRAM_BYTES - CHUNK_HEADER_BYTES
 CHUNK_COUNT = math.ceil(FRAME_BYTES / CHUNK_PAYLOAD_BYTES)
@@ -75,6 +78,16 @@ class FramedChunk:
     chunk_offset: int
     frame_crc32: int
     payload: bytes
+
+
+@dataclass(frozen=True)
+class SenderStatus:
+    sender_uptime_ms: int
+    ready_signals_generated: int
+    dropped_ready_signals: int
+    transport_frames_attempted: int
+    transport_frames_emitted: int
+    send_failures: int
 
 
 @dataclass
@@ -183,6 +196,70 @@ def encode_framed_frame(payload: bytes, frame_id: int) -> List[bytes]:
         )
         datagrams.append(header + chunk)
     return datagrams
+
+
+def decode_sender_status(datagram: bytes) -> SenderStatus:
+    """Decode one machine-readable SNTR V2 sender telemetry packet."""
+
+    if len(datagram) != SENDER_STATUS_BYTES:
+        raise ChunkProtocolError("sender status datagram must be exactly 32 bytes")
+    (
+        magic,
+        version,
+        message_type,
+        header_size,
+        sender_uptime_ms,
+        ready_signals_generated,
+        dropped_ready_signals,
+        transport_frames_attempted,
+        transport_frames_emitted,
+        send_failures,
+    ) = SENDER_STATUS_PACKET.unpack(datagram)
+    if magic != CHUNK_MAGIC or version != CHUNK_PROTOCOL_VERSION:
+        raise ChunkProtocolError("invalid sender status magic or protocol version")
+    if message_type != CHUNK_MESSAGE_TYPE_SENDER_STATUS or header_size != SENDER_STATUS_BYTES:
+        raise ChunkProtocolError("invalid sender status message type or header size")
+    if transport_frames_emitted > transport_frames_attempted:
+        raise ChunkProtocolError("sender emitted-frame count exceeds attempted-frame count")
+    if send_failures > transport_frames_attempted:
+        raise ChunkProtocolError("sender failure count exceeds attempted-frame count")
+    return SenderStatus(
+        sender_uptime_ms=sender_uptime_ms,
+        ready_signals_generated=ready_signals_generated,
+        dropped_ready_signals=dropped_ready_signals,
+        transport_frames_attempted=transport_frames_attempted,
+        transport_frames_emitted=transport_frames_emitted,
+        send_failures=send_failures,
+    )
+
+
+def encode_sender_status(status: SenderStatus) -> bytes:
+    """Reference status encoder used by receiver regression tests."""
+
+    values = asdict(status)
+    if any(isinstance(value, bool) or not 0 <= int(value) <= 0xFFFFFFFF for value in values.values()):
+        raise ValueError("sender status counters must fit uint32")
+    return SENDER_STATUS_PACKET.pack(
+        CHUNK_MAGIC,
+        CHUNK_PROTOCOL_VERSION,
+        CHUNK_MESSAGE_TYPE_SENDER_STATUS,
+        SENDER_STATUS_BYTES,
+        status.sender_uptime_ms,
+        status.ready_signals_generated,
+        status.dropped_ready_signals,
+        status.transport_frames_attempted,
+        status.transport_frames_emitted,
+        status.send_failures,
+    )
+
+
+def is_sender_status_datagram(datagram: bytes) -> bool:
+    return (
+        len(datagram) >= 6
+        and datagram[:4] == CHUNK_MAGIC
+        and datagram[4] == CHUNK_PROTOCOL_VERSION
+        and datagram[5] == CHUNK_MESSAGE_TYPE_SENDER_STATUS
+    )
 
 
 class FramedChunkReassembler:
@@ -379,19 +456,24 @@ class CaptureWriter:
         self.session_path = self.session_dir / "session.json"
         self.collection_path = self.collection_dir / "collection.json"
         self.checksums_path = self.session_dir / "checksums.sha256"
+        self.sender_telemetry_path = self.session_dir / "sender_telemetry.jsonl"
 
         self.started_at = wall_time_now()
         self.frame_index = 0
         self.manifest_frame_count = 0
         self.valid_frame_count = 0
         self.invalid_frame_count = 0
-        self.duplicate_counter_count = 0
-        self.packet_loss_count = 0
+        self.header_word0_duplicate_observations = 0
+        self.header_word0_gap_observations = 0
+        self.header_word0_reversal_observations = 0
         self.decode_failure_count = 0
-        self.last_counter: Optional[int] = None
+        self.last_header_word0: Optional[int] = None
+        self.sender_telemetry_count = 0
+        self.latest_sender_telemetry: Optional[Dict[str, Any]] = None
         self.transport_metrics: Dict[str, Any] = {}
         self.frames_handle: Any = None
         self.annotations_handle: Any = None
+        self.sender_telemetry_handle: Any = None
 
     def _chunk_capture_enabled(self) -> bool:
         return bool(self.args.reassemble_udp_chunks or self.args.legacy_stream_reassembly)
@@ -411,6 +493,8 @@ class CaptureWriter:
         self.decoded_dir.mkdir(parents=True, exist_ok=False)
         self.frames_handle = self.frames_path.open("x", encoding="utf-8")
         self.annotations_handle = self.annotations_path.open("x", encoding="utf-8")
+        if self.args.reassemble_udp_chunks:
+            self.sender_telemetry_handle = self.sender_telemetry_path.open("x", encoding="utf-8")
         self._upsert_collection()
 
     def _upsert_collection(self) -> None:
@@ -500,78 +584,34 @@ class CaptureWriter:
         }
         append_jsonl(self.annotations_handle, annotation)
 
-    def _write_missing_marker(self, missing_counter: int) -> None:
-        frame_id, index = self._next_index()
-        frame = {
-            "schema_version": FRAME_SCHEMA,
-            "frame_id": frame_id,
-            "collection_id": self.args.collection_id,
-            "subject_id": self.args.subject_id,
-            "session_id": self.args.session_id,
-            "recording_id": self.args.recording_id,
-            "sequence_id": self.args.sequence_id,
-            "event_id": None,
-            "sequence_index": index,
-            "sequence_index_status": "RECEIVED_ORDER_ONLY",
-            "sensor_frame_counter": missing_counter,
-            "sensor_frame_counter_status": "UNKNOWN",
-            "sensor_timestamp": None,
-            "sensor_timestamp_unit": None,
-            "sensor_clock_domain": None,
-            "sensor_timestamp_status": "UNKNOWN",
-            "device_monotonic_timestamp_ns": None,
-            "host_receive_monotonic_timestamp_ns": None,
-            "host_wall_time": None,
-            "host_wall_timezone": utc_offset_now(),
-            "raw_file": None,
-            "decoded_native_file": None,
-            "raw_representation": "UNKNOWN",
-            "byte_count": None,
-            "native_shape": None,
-            "native_dtype": None,
-            "raw_encoding": "UNKNOWN",
-            "raw_unit_claim": "UNKNOWN_NOT_VERIFIED",
-            "unit_status": "UNKNOWN",
-            "crc_or_packet_status": "NO_DATAGRAM_RECEIVED",
-            "packet_loss_status": "HEADER_COUNTER_GAP",
-            "validity_status": "MISSING",
-            "exclude_reason": "No UDP datagram arrived for this header-counter value.",
-            "annotation_status": "NOT_APPLICABLE",
-            "raw_sha256": None,
-            "decoded_native_sha256": None,
-            "scalar_thermal_max_c": None,
-            "capture_error_code": "HEADER_COUNTER_GAP",
-            "notes": "Missing-frame marker generated from the next received header counter.",
+    def _observe_header_word0(self, current: int) -> Dict[str, Any]:
+        """Describe header word 0 without assigning sensor-counter semantics."""
+
+        previous = self.last_header_word0
+        self.last_header_word0 = current
+        if previous is None:
+            status = "FIRST_OBSERVED"
+            delta = None
+        else:
+            delta = current - previous
+            if current == previous:
+                status = "UNVERIFIED_COUNTER_LIKE_DUPLICATE"
+                self.header_word0_duplicate_observations += 1
+            elif current < previous:
+                status = "UNVERIFIED_COUNTER_LIKE_REVERSAL"
+                self.header_word0_reversal_observations += 1
+            elif current > previous + 1:
+                status = "UNVERIFIED_COUNTER_LIKE_GAP"
+                self.header_word0_gap_observations += current - previous - 1
+            else:
+                status = "UNVERIFIED_COUNTER_LIKE_CONTIGUOUS"
+        return {
+            "sensor_header_word0_previous": previous,
+            "sensor_header_word0_observed": current,
+            "sensor_header_word0_observed_delta": delta,
+            "sensor_header_word0_semantics": "SEMANTICS_UNVERIFIED",
+            "sensor_header_word0_observation_status": status,
         }
-        append_jsonl(self.frames_handle, frame)
-        self.invalid_frame_count += 1
-
-    def _packet_loss_status(self, frame_counter: int) -> str:
-        if self.last_counter is None:
-            self.last_counter = frame_counter
-            return "FIRST_OBSERVED_HEADER_COUNTER"
-
-        delta = (frame_counter - self.last_counter) & 0xFFFF
-        if delta == 0:
-            self.duplicate_counter_count += 1
-            return "DUPLICATE_HEADER_COUNTER"
-        if delta == 1:
-            self.last_counter = frame_counter
-            return "NO_OBSERVED_HEADER_COUNTER_GAP"
-
-        # A small forward delta represents recoverable packet loss. Preserve a
-        # manifest marker for every absent counter without inventing raw data.
-        if 1 < delta <= self.args.max_gap_markers + 1:
-            for offset in range(1, delta):
-                self._write_missing_marker((self.last_counter + offset) & 0xFFFF)
-            self.packet_loss_count += delta - 1
-            self.last_counter = frame_counter
-            return "HEADER_COUNTER_GAP_{}".format(delta - 1)
-
-        # A very large delta may be counter reset, corruption, or a long outage.
-        # Do not turn an ambiguous reset into a fabricated loss count.
-        self.last_counter = frame_counter
-        return "HEADER_COUNTER_LARGE_OR_RESET_DELTA_{}".format(delta)
 
     def record_invalid_datagram(self, data: bytes, reason: str) -> None:
         frame_id, index = self._next_index()
@@ -641,8 +681,7 @@ class CaptureWriter:
             self.record_invalid_datagram(data, "uint16 decode failed: {}".format(error))
             return
 
-        frame_counter = words[0]
-        packet_loss_status = self._packet_loss_status(frame_counter)
+        header_word0 = self._observe_header_word0(words[0])
         frame_id, index = self._next_index()
         raw_name = "raw/{}.udp.bin".format(frame_id)
         decoded_name = "decoded_native/{}_pixels_u16le.bin".format(frame_id)
@@ -651,7 +690,6 @@ class CaptureWriter:
         raw_path.write_bytes(data)
         decoded_path.write_bytes(PIXEL_UINT16_LE.pack(*words[HEADER_WORDS:]))
 
-        duplicate = packet_loss_status == "DUPLICATE_HEADER_COUNTER"
         frame = {
             "schema_version": FRAME_SCHEMA,
             "frame_id": frame_id,
@@ -663,8 +701,9 @@ class CaptureWriter:
             "event_id": None,
             "sequence_index": index,
             "sequence_index_status": "RECEIVED_ORDER_ONLY",
-            "sensor_frame_counter": frame_counter,
-            "sensor_frame_counter_status": "RECEIVED_ONLY",
+            "sensor_frame_counter": None,
+            "sensor_frame_counter_status": "UNKNOWN",
+            **header_word0,
             "sensor_timestamp": None,
             "sensor_timestamp_unit": None,
             "sensor_clock_domain": None,
@@ -693,9 +732,9 @@ class CaptureWriter:
                 if transport_metadata is not None
                 else "UDP_DATAGRAM_LENGTH_OK_NO_CRC_IN_PROTOCOL"
             ),
-            "packet_loss_status": packet_loss_status,
-            "validity_status": "DUPLICATE" if duplicate else "VALID",
-            "exclude_reason": "Duplicate header counter retained as evidence." if duplicate else None,
+            "packet_loss_status": "NOT_ASSESSED_SENSOR_COUNTER_SEMANTICS_UNVERIFIED",
+            "validity_status": "VALID",
+            "exclude_reason": None,
             "annotation_status": "ANNOTATED",
             "raw_sha256": sha256_file(raw_path),
             "decoded_native_sha256": sha256_file(decoded_path),
@@ -706,14 +745,33 @@ class CaptureWriter:
             "transport_chunk_count": transport_metadata.get("chunk_count") if transport_metadata else None,
             "transport_frame_crc32": transport_metadata.get("frame_crc32") if transport_metadata else None,
             "transport_reassembly_seconds": transport_metadata.get("reassembly_seconds") if transport_metadata else None,
-            "notes": "Header words are preserved only in raw UDP datagram; decoded file contains untransformed pixel words 80..5039.",
+            "notes": "Header word 0 is observed only and is not an authoritative sensor acquisition counter. Header words remain in the raw frame; decoded file contains untransformed pixel words 80..5039.",
         }
         append_jsonl(self.frames_handle, frame)
         self._write_annotation(frame_id)
-        if duplicate:
-            self.invalid_frame_count += 1
-        else:
-            self.valid_frame_count += 1
+        self.valid_frame_count += 1
+
+    def record_sender_status(self, data: bytes) -> None:
+        """Persist one validated sender telemetry packet as machine-readable evidence."""
+
+        status = decode_sender_status(data)
+        record = {
+            "schema_version": "safenest.thermal.sender_status.v1",
+            **asdict(status),
+            "pi_receive_monotonic_ns": time.monotonic_ns(),
+            "pi_receive_wall_time": wall_time_now(),
+            "semantics": {
+                "ready_signals_generated": "ESP32_D_READY_ISR_EVENTS_OBSERVED",
+                "dropped_ready_signals": "READY_EVENTS_COALESCED_BEFORE_SPI_ACQUISITION",
+                "transport_frames_attempted": "LOGICAL_FRAMES_HANDED_TO_SNTR_TRANSPORT",
+                "transport_frames_emitted": "LOGICAL_FRAMES_WITH_ALL_UDP_CHUNKS_EMITTED",
+                "send_failures": "LOGICAL_FRAME_SEND_ATTEMPTS_WITH_AT_LEAST_ONE_FAILED_CHUNK",
+            },
+        }
+        assert self.sender_telemetry_handle is not None
+        append_jsonl(self.sender_telemetry_handle, record)
+        self.sender_telemetry_count += 1
+        self.latest_sender_telemetry = record
 
     def _session_manifest(self) -> Dict[str, Any]:
         if self.args.reassemble_udp_chunks:
@@ -785,11 +843,11 @@ class CaptureWriter:
             "timing": {
                 "continuous_session": True,
                 "sensor_timestamp_status": "UNKNOWN_NO_WIRE_FIELD",
-                "sensor_sequence_counter_status": "PRESENT_HEADER_WORD_0_UNVERIFIED_PHYSICAL_SEMANTICS",
+                "sensor_sequence_counter_status": "UNAVAILABLE_HEADER_WORD_0_SEMANTICS_UNVERIFIED",
                 "device_monotonic_status": "UNKNOWN_NO_WIRE_FIELD",
                 "host_receive_monotonic_status": "PRESENT_PYTHON_TIME_MONOTONIC_NS",
                 "host_wall_clock_status": "PRESENT_LOCAL_TIMEZONE",
-                "timestamp_source_policy": "Use UDP header word 0 and Raspberry Pi receive monotonic clock; never infer time from filenames.",
+                "timestamp_source_policy": "Use Raspberry Pi receive monotonic time for receive order only. Preserve Thermal header word 0 as an unverified observation; never use it or filenames as authoritative sensor time.",
             },
             "environment": {
                 "room_code": self.args.room_code,
@@ -808,15 +866,32 @@ class CaptureWriter:
                 "raw_root": "raw",
                 "raw_chunks_root": "raw_chunks" if self._chunk_capture_enabled() else None,
                 "decoded_native_root": "decoded_native",
+                "sender_telemetry_file": "sender_telemetry.jsonl" if self.args.reassemble_udp_chunks else None,
                 "model_input_root": None,
             },
             "quality": {
                 "expected_frame_count": None,
                 "received_frame_count": self.manifest_frame_count,
-                "sequence_gap_count": self.packet_loss_count,
-                "duplicate_counter_count": self.duplicate_counter_count,
+                "sequence_gap_count": None,
+                "duplicate_counter_count": None,
                 "decode_failure_count": self.decode_failure_count,
-                "packet_loss_count": self.packet_loss_count,
+                "packet_loss_count": None,
+                "sensor_header_word0_observations": {
+                    "semantics": "SEMANTICS_UNVERIFIED",
+                    "duplicate_like_count": self.header_word0_duplicate_observations,
+                    "gap_like_count": self.header_word0_gap_observations,
+                    "reversal_like_count": self.header_word0_reversal_observations,
+                    "authoritative_sensor_loss_count": None,
+                },
+                "sender_telemetry": {
+                    "status_packet_count": self.sender_telemetry_count,
+                    "latest": self.latest_sender_telemetry,
+                    "observability_status": (
+                        "MACHINE_READABLE_STATUS_RECEIVED"
+                        if self.sender_telemetry_count > 0
+                        else "SENDER_SIDE_ACQUISITION_LOSS_NOT_FULLY_OBSERVABLE_FROM_PI_CAPTURE"
+                    ),
+                },
                 "transport_metrics": self.transport_metrics,
             },
             "role_governance": {
@@ -827,7 +902,7 @@ class CaptureWriter:
             },
             "temporal_evidence_claim": {
                 "claimed_status": "TEMPORAL_ORDER_ONLY",
-                "source": "HEADER_COUNTER_AND_HOST_RECEIVE_MONOTONIC_ONLY",
+                "source": "HOST_RECEIVE_MONOTONIC_ONLY_HEADER_WORD0_SEMANTICS_UNVERIFIED",
                 "filename_order_used_as_time": False,
             },
             "safety": {
@@ -835,7 +910,7 @@ class CaptureWriter:
                 "safety_control_status": "NO_FREE_FALL_CAPTURE",
                 "uncontrolled_free_fall_experiment": False,
             },
-            "notes": "DEVICE_CONTRACT_PILOT only. Validator success does not authorize T-C, T-D, training, or locked-test use.",
+            "notes": "TEAM-THERMAL-INTEGRATION / PRE-T-C DEVICE-CAPTURE PREPARATION only. Header word 0 semantics and sender-to-Pi end-to-end completeness require real-device verification. Validator success does not authorize T-C, T-D, training, or locked-test use.",
         }
 
     def _write_checksums(self) -> None:
@@ -843,6 +918,8 @@ class CaptureWriter:
         paths.extend(sorted(path for path in self.raw_dir.rglob("*") if path.is_file()))
         if self._chunk_capture_enabled():
             paths.extend(sorted(path for path in self.raw_chunks_dir.rglob("*") if path.is_file()))
+        if self.sender_telemetry_path.is_file():
+            paths.append(self.sender_telemetry_path)
         paths.extend(sorted(path for path in self.decoded_dir.rglob("*") if path.is_file()))
         paths.sort(key=lambda path: path.relative_to(self.session_dir).as_posix())
         with self.checksums_path.open("w", encoding="utf-8", newline="\n") as handle:
@@ -857,6 +934,9 @@ class CaptureWriter:
         if self.annotations_handle is not None:
             self.annotations_handle.close()
             self.annotations_handle = None
+        if self.sender_telemetry_handle is not None:
+            self.sender_telemetry_handle.close()
+            self.sender_telemetry_handle = None
         write_json(self.session_path, self._session_manifest())
         self._write_checksums()
 
@@ -889,7 +969,6 @@ def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
     parser.add_argument("--max-pending-frames", type=int, default=8)
     parser.add_argument("--duration-seconds", type=float, default=120.0)
     parser.add_argument("--max-frames", type=int, default=None)
-    parser.add_argument("--max-gap-markers", type=int, default=300)
     parser.add_argument("--collection-role", choices=("DEVICE_CONTRACT_PILOT",), default="DEVICE_CONTRACT_PILOT")
     parser.add_argument("--source-label", choices=SOURCE_LABELS, default="NOT_ANNOTATED")
     parser.add_argument("--configured-fps", type=float, default=7.0)
@@ -930,8 +1009,6 @@ def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
         parser.error("--duration-seconds must be positive")
     if args.max_frames is not None and args.max_frames <= 0:
         parser.error("--max-frames must be positive")
-    if args.max_gap_markers < 0:
-        parser.error("--max-gap-markers must be zero or greater")
     if args.configured_fps <= 0:
         parser.error("--configured-fps must be positive")
     if not math.isfinite(args.chunk_timeout_seconds) or args.chunk_timeout_seconds <= 0:
@@ -986,10 +1063,17 @@ def run_capture(args: argparse.Namespace) -> int:
                 writer.record_udp_chunk(data, chunk_index)
                 chunk_index += 1
                 assert reassembler is not None
-                completed = reassembler.accept(data, address)
-                if completed is not None:
-                    frame_data, transport_metadata = completed
-                    writer.record_valid_datagram(frame_data, transport_metadata=transport_metadata)
+                if is_sender_status_datagram(data):
+                    try:
+                        writer.record_sender_status(data)
+                    except ChunkProtocolError as error:
+                        reassembler.metrics.invalid_datagrams += 1
+                        writer.record_invalid_datagram(data, "Invalid SNTR V2 sender status: {}".format(error))
+                else:
+                    completed = reassembler.accept(data, address)
+                    if completed is not None:
+                        frame_data, transport_metadata = completed
+                        writer.record_valid_datagram(frame_data, transport_metadata=transport_metadata)
             elif args.legacy_stream_reassembly:
                 writer.record_udp_chunk(data, chunk_index)
                 chunk_index += 1
@@ -1009,8 +1093,8 @@ def run_capture(args: argparse.Namespace) -> int:
                         "Expected {} bytes from THERMAL_TEST_UDP_RAW_V1, received {} bytes.".format(FRAME_BYTES, len(data)),
                     )
             if packet_count % 30 == 0:
-                print("[capture] datagrams={} valid={} invalid={} packet_loss={}".format(
-                    packet_count, writer.valid_frame_count, writer.invalid_frame_count, writer.packet_loss_count
+                print("[capture] datagrams={} valid={} invalid={} sender_status={}".format(
+                    packet_count, writer.valid_frame_count, writer.invalid_frame_count, writer.sender_telemetry_count
                 ))
     except KeyboardInterrupt:
         print("\n[capture] interrupted by operator; finalizing captured evidence.")

@@ -3,6 +3,8 @@
 ## 1. 디렉터리 목적
 Thermal-44 열화상 센서의 드라이버, 프레임 파서, 배선·보정 자료와 기기 단독 테스트를 담당자가 한곳에서 관리한다.
 
+현재 명칭 경계는 다음과 같다. `Thermal-44`는 기존 team runtime의 `thermal44` sensor ID, mock/parser, historical v0.1.0 inference 경로를 가리키며 실제 장치 연결 검증은 완료되지 않았다. `Thermal-90`은 PR #22의 XIAO ESP32-C6 + SNTR UDP V2 pre-T-C raw capture/pilot 대상이다. 두 명칭 사이의 shape, dtype, unit, orientation, header, FPS, invalid-pixel 계약 호환성은 증명되지 않았고 `FINAL_THERMAL_HARDWARE_SELECTION = NOT_YET_FROZEN`이다.
+
 ## 2. 시스템에서 담당하는 기능
 열화상 센서에서 프레임을 읽고 파싱해 낙상 추론이 소비할 수 있는 정규화된 온도 배열로 제공한다.
 
@@ -21,6 +23,8 @@ little-endian 논리 frame을 SNTR UDP V2 chunk 9개로 전송하며 frame ID,
 chunk index/count, offset/length, 전체 frame CRC32를 포함한다. 기존
 `thermal_sensor_test/`와 `v5_validation/` 송신기는 과거 검증 재현용이며 새
 계약형 수집에는 사용하지 않는다.
+
+SNTR `transport_frame_id`는 UDP 논리 프레임 식별자다. Thermal header word 0은 `SENSOR_HEADER_WORD0_OBSERVED / SEMANTICS_UNVERIFIED`이며 검증된 sensor acquisition counter가 아니다. 펌웨어는 sender-side ready drop, send failure, attempted/emitted frame과 uptime을 별도 status packet으로 내보내지만, Pi에 status가 도달하지 않은 세션에서는 end-to-end acquisition completeness를 주장할 수 없다.
 
 ## 6. 입력과 출력 인터페이스
 입력은 Thermal-44의 원시 프레임 바이트열이며, 출력은 파싱된 온도 배열과 `SensorState` 기반 결측·형식오류 상태다. 결측 픽셀을 임의 보간하지 않는다.

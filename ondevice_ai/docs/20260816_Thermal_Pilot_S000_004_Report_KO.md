@@ -13,7 +13,11 @@
 - `annotations.jsonl`: 129개 (`EMPTY`)
 - `frames.jsonl`: 130개
 - 체크섬: `PASS`
-- sensor counter gap / packet loss: 0
+- 과거 해석: header word 0을 sensor counter로 보고 gap / packet loss `0`으로 기록
+
+## PR #22 교정 주석
+
+`PREVIOUS_SENSOR_COUNTER_INTERPRETATION_REQUIRES_RECLASSIFICATION`: header word 0의 물리 의미는 검증되지 않았다. 따라서 위 `0`은 센서 acquisition 연속성이나 end-to-end 무손실을 증명하지 않는다. 교정된 구현은 이를 `SENSOR_HEADER_WORD0_OBSERVED / SEMANTICS_UNVERIFIED`로만 보존하며, 중복·역전·gap만으로 missing sensor frame을 만들거나 capture를 무효화하지 않는다. 이 역사 세션에는 machine-readable sender telemetry도 없으므로 `SENDER_SIDE_ACQUISITION_LOSS_NOT_FULLY_OBSERVABLE_FROM_PI_CAPTURE`가 적용된다. 새 PASS는 소급 부여하지 않는다.
 
 ## Validator 결과
 

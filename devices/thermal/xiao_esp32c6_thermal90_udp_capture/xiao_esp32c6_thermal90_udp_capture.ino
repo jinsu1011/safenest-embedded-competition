@@ -48,7 +48,9 @@ constexpr uint16_t THERMAL_UDP_LOCAL_PORT = 40000;
 constexpr char THERMAL_UDP_MAGIC[] = "SNTR";
 constexpr uint8_t THERMAL_UDP_VERSION = 2;
 constexpr uint8_t THERMAL_UDP_MESSAGE_TYPE_RAW_U16_LE = 1;
+constexpr uint8_t THERMAL_UDP_MESSAGE_TYPE_SENDER_STATUS = 2;
 constexpr size_t THERMAL_UDP_HEADER_BYTES = 32;
+constexpr size_t THERMAL_UDP_SENDER_STATUS_BYTES = 32;
 constexpr size_t THERMAL_UDP_DATAGRAM_BYTES = 1200;
 constexpr size_t THERMAL_UDP_CHUNK_BYTES =
     THERMAL_UDP_DATAGRAM_BYTES - THERMAL_UDP_HEADER_BYTES;
@@ -66,9 +68,11 @@ uint16_t frameWords[THERMAL_FRAME_WORDS];
 uint8_t thermalUdpDatagram[THERMAL_UDP_DATAGRAM_BYTES];
 
 volatile uint32_t dataReadySignals = 0;
+volatile uint32_t readySignalsGenerated = 0;
 uint32_t sentFrames = 0;
 uint32_t sendFailures = 0;
 uint32_t droppedReadySignals = 0;
+uint32_t transportFramesAttempted = 0;
 uint32_t transportFrameId = 0;
 unsigned long lastWifiAttemptMs = 0;
 
@@ -97,6 +101,7 @@ uint32_t rawFrameCrc32(const uint8_t* data, size_t length) {
 
 void IRAM_ATTR onDataReady() {
   dataReadySignals++;
+  readySignalsGenerated++;
 }
 
 bool parseReceiverIp() {
@@ -227,6 +232,26 @@ bool sendRawFrame(uint32_t frameId) {
   return true;
 }
 
+bool sendSenderStatus(uint32_t readySignalsSnapshot) {
+  if (WiFi.status() != WL_CONNECTED) {
+    return false;
+  }
+  uint8_t* packet = thermalUdpDatagram;
+  memcpy(packet, THERMAL_UDP_MAGIC, 4);
+  packet[4] = THERMAL_UDP_VERSION;
+  packet[5] = THERMAL_UDP_MESSAGE_TYPE_SENDER_STATUS;
+  putU16(packet + 6, THERMAL_UDP_SENDER_STATUS_BYTES);
+  putU32(packet + 8, millis());
+  putU32(packet + 12, readySignalsSnapshot);
+  putU32(packet + 16, droppedReadySignals);
+  putU32(packet + 20, transportFramesAttempted);
+  putU32(packet + 24, sentFrames);
+  putU32(packet + 28, sendFailures);
+  return udp.beginPacket(receiverIp, THERMAL_RECEIVER_PORT) &&
+         udp.write(packet, THERMAL_UDP_SENDER_STATUS_BYTES) == THERMAL_UDP_SENDER_STATUS_BYTES &&
+         udp.endPacket() == 1;
+}
+
 void setup() {
   Serial.begin(115200);
   delay(250);
@@ -293,20 +318,29 @@ void loop() {
     return;
   }
 
-  const uint16_t frameCounter = frameWords[0];
+  const uint16_t headerWord0Observed = frameWords[0];
   const uint32_t currentTransportFrameId = transportFrameId++;
+  transportFramesAttempted++;
   if (sendRawFrame(currentTransportFrameId)) {
     sentFrames++;
   } else {
     sendFailures++;
   }
 
-  if ((sentFrames + sendFailures) % 30 == 0) {
-    Serial.printf("[Stats] transport_frame_id=%lu frame_counter=%u sent=%lu send_failures=%lu ready_drops=%lu wifi=%s\n",
-                  static_cast<unsigned long>(currentTransportFrameId), frameCounter,
+  if (transportFramesAttempted % 30 == 0) {
+    uint32_t readySignalsSnapshot = 0;
+    noInterrupts();
+    readySignalsSnapshot = readySignalsGenerated;
+    interrupts();
+    const bool statusSent = sendSenderStatus(readySignalsSnapshot);
+    Serial.printf("[Stats] transport_frame_id=%lu header_word0_observed=%u header_word0_semantics=UNVERIFIED attempted=%lu emitted=%lu send_failures=%lu ready_generated=%lu ready_drops=%lu status_sent=%s wifi=%s\n",
+                  static_cast<unsigned long>(currentTransportFrameId), headerWord0Observed,
+                  static_cast<unsigned long>(transportFramesAttempted),
                   static_cast<unsigned long>(sentFrames),
                   static_cast<unsigned long>(sendFailures),
+                  static_cast<unsigned long>(readySignalsSnapshot),
                   static_cast<unsigned long>(droppedReadySignals),
+                  statusSent ? "yes" : "no",
                   WiFi.status() == WL_CONNECTED ? "connected" : "disconnected");
   }
 }

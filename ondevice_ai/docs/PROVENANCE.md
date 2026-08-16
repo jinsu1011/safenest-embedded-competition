@@ -12,12 +12,25 @@ against the complete dedicated repository state below on 2026-08-16 (KST):
   `71c6d08d8a443f6a50d860d27380ff40a87a860e`
 - PR: `https://github.com/yuname121/safenest-thermal-ai/pull/1`
 
+The exact synchronization source is the `yuname121` repository and SHA above.
+It must not be replaced in provenance text by an earlier owner or upstream SHA.
+
 This is a full Thermal-subsystem synchronization, not a copy of only the PR #1
 diff. Files already identical to the dedicated source remain in place; newer
 validators, collection tooling, tests, documents, and the XIAO capture firmware
 are updated or added at the team repository's established component paths.
 
-## Upstream lineage retained by the dedicated source
+## Original upstream and earlier lineage
+
+The synchronization source is forked from the original/upstream repository:
+
+- Upstream repository: `https://github.com/rla1729/safenest-thermal-ai`
+- Upstream `main` observed during synchronization:
+  `294531a0c57c28fe1be88f95755f06851217ac80`
+
+That upstream relationship is distinct from both the exact `yuname121` sync
+commit and the destination team repository. The dedicated source also retains
+older imported lineage records:
 
 The dedicated repository records its earlier curated lineage as:
 
@@ -27,6 +40,9 @@ The dedicated repository records its earlier curated lineage as:
   `3d86bf2a7a4e527d7aba2dfabcb087201ffeb46e` as an architecture reference
 
 ## Integration boundaries
+
+- Work classification: `TEAM-THERMAL-INTEGRATION / PRE-T-C DEVICE-CAPTURE PREPARATION`.
+- `T_C_EXECUTED = NO`; `T_C_DEVICE_CONTRACT_VERIFIED = NO`.
 
 - Thermal dataset contracts, T-A0 through T-B5 scripts/tests/manifests, and
   associated reports live under `ondevice_ai/`.

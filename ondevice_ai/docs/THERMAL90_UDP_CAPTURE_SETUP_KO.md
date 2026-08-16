@@ -2,6 +2,8 @@
 
 이 문서는 `Thermal_Test`의 10,080-byte 논리 raw frame을 보존하면서, XIAO-ESP32C6와 Raspberry Pi로 **DEVICE_CONTRACT_PILOT**을 수집하는 방법이다. 모델 추론·재학습·낙상 판정은 수행하지 않는다.
 
+작업 분류는 `TEAM-THERMAL-INTEGRATION / PRE-T-C DEVICE-CAPTURE PREPARATION`이다. `T_C_EXECUTED = NO`, `T_C_DEVICE_CONTRACT_VERIFIED = NO`이며 이 절차를 준비했다는 사실만으로 T-C가 시작되거나 완료되지 않는다.
+
 ## 1. 프로토콜 고정
 
 XIAO는 논리 프레임 하나를 MTU-safe UDP V2 chunk 9개로 전송한다. 각 chunk는 frame/chunk 식별자와 전체 frame CRC32를 가지므로, 손실된 chunk가 다음 frame과 섞이지 않는다.
@@ -19,9 +21,9 @@ XIAO는 논리 프레임 하나를 MTU-safe UDP V2 chunk 9개로 전송한다. �
 | word 수 | `5040`개의 little-endian `uint16` |
 | header | word `0..79` |
 | pixel | word `80..5039`, `80×62` |
-| header 관찰값 | word `0`: frame counter, `2`: die temp 추정 필드, `5/6`: max/min 추정 필드 |
+| header 관찰값 | word `0`: `SENSOR_HEADER_WORD0_OBSERVED / SEMANTICS_UNVERIFIED`; word `2`, `5/6`도 물리 의미 미검증 |
 
-payload 형식은 기존 `Thermal_Test` 구현과 동일하다. `--reassemble-udp-chunks`는 SNTR V2 header로 frame별 조립하고 CRC32를 확인한다. 구형 1320/1460-byte 조각을 단순 연결하는 방식은 패킷 손실 후 frame 경계를 증명할 수 없으므로 새 수집에 사용하지 않는다. header 의미, 물리 온도 단위, orientation, 실제 FPS는 이번 pilot에서 **확인 대상**이며 확정값이 아니다.
+payload 형식은 기존 `Thermal_Test` 구현과 동일하다. `--reassemble-udp-chunks`는 SNTR V2 header로 frame별 조립하고 CRC32를 확인한다. 구형 1320/1460-byte 조각을 단순 연결하는 방식은 패킷 손실 후 frame 경계를 증명할 수 없으므로 새 수집에 사용하지 않는다. `transport_frame_id`는 SNTR 논리 프레임 재조립 식별자일 뿐 물리 센서 acquisition counter가 아니다. header word 0은 관찰값으로만 남기며, 중복·역전·gap만으로 missing sensor frame을 생성하거나 capture를 무효화하지 않는다. header 의미, 물리 온도 단위, orientation, 실제 FPS는 **T-C 확인 대상**이며 확정값이 아니다.
 
 ## 2. XIAO-ESP32C6 준비
 
@@ -114,13 +116,16 @@ python3 ~/safenest-thermal-capture/thermal_udp_capture.py \
     ├── raw/*.udp.bin                 # CRC 통과 후 재조립된 원본 10,080-byte 논리 frame
     ├── raw_chunks/*.bin              # 수신한 32-byte header 포함 UDP datagram
     ├── decoded_native/*_pixels_u16le.bin
+    ├── sender_telemetry.jsonl        # 수신된 SNTR sender status; 없으면 명시적 관측성 제한
     ├── frames.jsonl
     ├── annotations.jsonl
     ├── session.json
     └── checksums.sha256
 ```
 
-`raw/`에는 resize, crop, rotation, normalization, calibration, colour-map이 전혀 적용되지 않는다. `decoded_native/`도 원본 pixel word를 little-endian `uint16`으로만 분리한 파일이다.
+`raw/`에는 resize, crop, rotation, normalization, calibration, colour-map이 전혀 적용되지 않는다. `decoded_native/`도 원본 pixel word를 little-endian `uint16`으로만 분리한 파일이다. `checksums.sha256`은 `raw_chunks/` 실제 파일과 양방향 exact inventory가 일치해야 하며 누락, 변조, registry 누락, 미등록 추가 파일을 모두 실패로 처리한다.
+
+펌웨어는 주기적으로 `dropped_ready_signals`, `send_failures`, transport frame attempted/emitted, sender uptime과 D_READY 관찰 수를 SNTR V2 status packet으로 보낸다. Pi가 이를 받으면 `sender_telemetry.jsonl`에 보존한다. status가 없으면 `SENDER_SIDE_ACQUISITION_LOSS_NOT_FULLY_OBSERVABLE_FROM_PI_CAPTURE` 제한이 남는다. 낮은 FPS는 센서 생성률, ESP32 acquisition/SPI 지연, ready drop, UDP send 실패, Wi-Fi/Pi receive 손실, disk backlog 중 어느 하나로 증거 없이 단정하지 않는다.
 
 ## 5. Pi에서 즉시 검사
 

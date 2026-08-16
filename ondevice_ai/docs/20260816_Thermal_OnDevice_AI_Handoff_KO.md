@@ -1,7 +1,7 @@
 # SafeNest 열화상 온디바이스 AI 인수인계서
 
 작성일: 2026-08-16 (KST)
-저장소: `rla1729/safenest-thermal-ai`
+저장소: `jinsu1011/safenest-embedded-competition` (PR #22)
 범위: Thermal-90 열화상 데이터 수집 계약, 모델 검증, 재학습 준비
 범위 밖: TCP/UDP 제품 통신 설계, ESP32 애플리케이션 기능, 위험도 융합, 경보 정책
 
@@ -16,7 +16,7 @@
 
 ## 현재 하고 있는 것
 
-현재 단계는 **T-C 전 단계의 DEVICE_CONTRACT_PILOT 수집기 준비**다. 아직 실제 Thermal-90 센서에서 수집한 결과로 모델 성능을 판정하거나 재학습하는 단계가 아니다.
+현재 단계는 **`TEAM-THERMAL-INTEGRATION / PRE-T-C DEVICE-CAPTURE PREPARATION`**이다. `T_C_EXECUTED = NO`, `T_C_DEVICE_CONTRACT_VERIFIED = NO`이며 실제 Thermal-90 센서 결과로 모델 성능을 판정하거나 재학습하는 단계가 아니다.
 
 현재 하드웨어 경로:
 
@@ -38,7 +38,7 @@ Thermal-90 → XIAO-ESP32C6 → UDP raw datagram → Raspberry Pi 수집기
 - 5,040 little-endian `uint16` word
 - word `0..79`: 센서 header
 - word `80..5039`: `80×62` pixel payload
-- header word `0`: 수신 frame counter로 기록
+- header word `0`: `SENSOR_HEADER_WORD0_OBSERVED / SEMANTICS_UNVERIFIED`로만 기록. 센서 acquisition counter로 사용하지 않음
 - 물리 온도 단위, orientation, 실제 FPS는 아직 검증하지 않음
 
 수집기는 다음을 저장한다.
@@ -50,6 +50,7 @@ Thermal-90 → XIAO-ESP32C6 → UDP raw datagram → Raspberry Pi 수집기
     ├── raw/*.udp.bin
     ├── raw_chunks/*.bin               # 조각 재조립 모드에서만 생성
     ├── decoded_native/*_pixels_u16le.bin
+    ├── sender_telemetry.jsonl        # 수신된 machine-readable sender status
     ├── frames.jsonl
     ├── annotations.jsonl
     ├── session.json
@@ -79,7 +80,10 @@ Thermal-90 → XIAO-ESP32C6 → UDP raw datagram → Raspberry Pi 수집기
   - exact-size V1 진단 모드와 `--reassemble-udp-chunks` framed UDP V2 모드를 지원한다.
   - V2 재조립은 frame ID/chunk index/count/offset/length를 검증하고 전체 frame CRC32가 맞을 때만 10,080-byte 논리 프레임을 `raw/`와 `decoded_native/`에 기록한다.
   - 손실·중복 충돌·timeout·CRC 실패는 다음 frame bytes로 보충하지 않고 fail-closed metric으로 남긴다.
-  - unexpected datagram, header counter gap/duplicate를 기록한다.
+  - unexpected datagram과 header word 0의 counter-like pattern을 관찰값으로 기록하되 센서 loss로 판정하지 않는다.
+  - header word 0 gap으로 `MISSING` sensor frame을 만들지 않는다.
+  - `raw_chunks/`와 checksum registry의 exact inventory를 양방향 검증한다.
+  - sender status packet을 `sender_telemetry.jsonl`로 보존하고, 없으면 sender-side loss observability 제한을 명시한다.
   - Pi host monotonic timestamp와 wall-clock을 기록한다.
   - 모델 입력을 만들거나 예측하지 않는다.
 - `ondevice_ai/scripts/validate_thermal_real_capture.py`
@@ -91,7 +95,7 @@ Thermal-90 → XIAO-ESP32C6 → UDP raw datagram → Raspberry Pi 수집기
 실제 센서 연결 전 localhost UDP 시뮬레이션으로 다음을 확인했다.
 
 - 10,080-byte frame 3개 수신
-- 의도적인 header counter gap 1개를 missing marker로 보존
+- 의도적인 header word 0 gap은 `SEMANTICS_UNVERIFIED` 관찰로만 보존하며 missing sensor frame을 생성하지 않음
 - raw/native/JSONL/session/checksum 생성
 - validator 결과 `CAPTURE_STRUCTURE_VALID_WITH_LIMITATIONS`
 - checksum `PASS`
@@ -108,7 +112,7 @@ Thermal-90 → XIAO-ESP32C6 → UDP raw datagram → Raspberry Pi 수집기
 - 논리 프레임: `VALID` 129개, 마지막 `PARTIAL` 1개
 - `decoded_native/`: 129개
 - `annotations.jsonl`: 129개, 모두 `EMPTY`
-- sensor counter gap / packet loss: 0
+- 당시 해석은 header word 0을 sensor counter로 간주해 gap 0으로 기록했으나, 현재는 `PREVIOUS_SENSOR_COUNTER_INTERPRETATION_REQUIRES_RECLASSIFICATION`
 - raw evidence: `FULL_FRAME_RAW`
 - 측정 effective FPS: 약 4.3173 FPS (설정값 7 FPS와 차이)
 - physical unit/orientation: 아직 `NOT_VERIFIED`
@@ -120,7 +124,7 @@ Thermal-90 → XIAO-ESP32C6 → UDP raw datagram → Raspberry Pi 수집기
 
 ### 정적 자세 수집 결과: `session_S000_011`~`014`
 
-PC 바탕화면 `sessions/` 아래의 네 세션을 PC validator로 재검증했다. 모든 세션의 checksum은 `PASS`였지만, 조각 재조립 후 header frame-counter 무결성이 세션별로 달랐다.
+PC 바탕화면 `sessions/` 아래의 네 세션에 대한 아래 표는 당시 validator 결과를 보존한 역사 기록이다. 당시에는 header word 0을 authoritative frame counter로 취급했으나, PR #22 교정 후 의미는 `SEMANTICS_UNVERIFIED`다. 따라서 word 0 중복·역전·gap만으로 내린 invalid 원인은 재분류가 필요하며 새 PASS를 소급 부여하지 않는다.
 
 | 세션 | 라벨 | validator | 유효/무효 | 주요 결과 |
 |---|---|---|---:|---|
@@ -131,8 +135,8 @@ PC 바탕화면 `sessions/` 아래의 네 세션을 PC validator로 재검증했
 
 해석:
 
-- `S000_013`만 현재 pilot 구조 검토 후보로 보관한다.
-- `S000_011`, `012`, `014`는 UDP 조각 손실 또는 재조립 stream desynchronization 증거가 있어 학습·정적 라벨 검증에 사용하지 않는다.
+- `S000_013`만 유효하다는 기존 순위는 header word 0 가정에 의존했으므로 현재 확정 근거로 사용하지 않는다.
+- `S000_011`, `012`, `014`의 기존 invalid는 `PREVIOUS_SENSOR_COUNTER_INTERPRETATION_REQUIRES_RECLASSIFICATION`이다. 원본 SNTR 이전 transport 증거를 교정 validator로 재평가하기 전까지 학습·정적 라벨 검증에 사용하지 않는다.
 - invalid 세션을 파일 편집으로 복구하거나 유효 프레임만 골라 새 세션으로 만들지 않는다. 원본은 오류 증거로 보존한다.
 - validator JSON은 PC 바탕화면 `sessions/validation_session_S000_011.json`~`014.json`에 생성했다.
 
@@ -188,7 +192,7 @@ Serial Monitor는 `115200` baud로 열고 다음을 확인한다.
 - receiver IP/port가 예상값
 - `send_failures`가 증가하지 않음
 
-실제 센서가 발견되지 않거나 frame counter가 증가하지 않으면 수집을 진행하지 말고 배선·전원·I2C 주소를 확인한다.
+실제 센서가 발견되지 않으면 수집을 진행하지 말고 배선·전원·I2C 주소를 확인한다. header word 0이 반복되거나 감소하는 현상은 기록하되 의미가 검증되기 전에는 센서 정지·loss의 단독 판정 근거로 사용하지 않는다.
 
 ### 3. Raspberry Pi에 수집기 복사
 
@@ -309,7 +313,7 @@ python scripts\validate_thermal_real_capture.py `
   --json-out "$env:USERPROFILE\Documents\rpi_backup\20260816\validator_result_pc.json"
 ```
 
-팀에 전달할 것은 collection 전체, Pi/PC validator 결과, 센서·firmware·collector 버전, 실제 FPS, packet loss·decode 오류, UNKNOWN/NOT_VERIFIED 목록이다.
+팀에 전달할 것은 collection 전체, Pi/PC validator 결과, 센서·firmware·collector 버전, 실제 FPS, 계층별 transport 오류와 sender telemetry, decode 오류, UNKNOWN/NOT_VERIFIED 목록이다. 원인 계층을 모르면 일반적인 `FRAME_LOSS`로 합치지 않는다.
 
 ### 9. T-C 종료 판단
 
@@ -331,9 +335,9 @@ python scripts\validate_thermal_real_capture.py `
 
 - SNTR UDP V2 송신기와 Pi reassembler는 로컬 Python 회귀 테스트를 통과했고, XIAO ESP32-C6 스케치는 `esp32:esp32 3.3.11` / `esp32:esp32:XIAO_ESP32C6` 대상으로 컴파일을 통과했다(Flash 1,000,948 bytes, RAM 55,952 bytes). 실제 보드 업로드와 Pi 수신은 T-C 통합 시점까지 수행하지 않았다. Git 파일과 실제 보드 binary의 일치 여부는 그때 Arduino IDE 업로드 기록으로 별도 확인해야 한다.
 - 실제 Thermal-90 native unit, byte order의 물리적 의미, orientation은 아직 검증하지 않았다.
-- `session_S000_004`에서 effective FPS 약 4.3173, sensor counter gap/packet loss 0을 측정했지만, 2초 timing gap 4회 원인은 아직 확인하지 않았다.
-- `session_S000_013`은 effective FPS 약 5.7792, frame-counter 오류 0인 유일한 정적 자세 pilot 후보이다.
-- `session_S000_011`, `012`, `014`는 재조립 후 frame-counter 오류로 invalid 판정되었다.
+- `session_S000_004`의 effective FPS 약 4.3173과 2초 timing gap 4회는 역사 관찰이다. 당시 header word 0 기반 sensor loss 0 해석은 authoritative하지 않다.
+- `session_S000_013`을 유일한 정적 자세 pilot 후보로 본 과거 판단은 header word 0 가정에 의존해 재분류가 필요하다.
+- `session_S000_011`, `012`, `014`의 과거 frame-counter invalid 판정은 `PREVIOUS_SENSOR_COUNTER_INTERPRETATION_REQUIRES_RECLASSIFICATION`이며 새 PASS를 의미하지 않는다.
 - Pi의 실제 WLAN IP와 Wi-Fi 비밀값은 작업자가 입력해야 한다.
 - 기존 `Desktop\Thermal_Test\udp_receiver_rpi.py`는 화면 표시·보정 중심의 prototype이며 계약형 수집기로 사용하지 않는다.
 - 공개 저장소에는 `wifi_secrets.h`, raw capture, `.tflite` binary를 추가하지 않는다.

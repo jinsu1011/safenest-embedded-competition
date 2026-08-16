@@ -6,7 +6,7 @@
 
 ## 요약
 
-모든 세션은 checksum `PASS`였지만, `session_S000_013`만 `CAPTURE_STRUCTURE_VALID_WITH_LIMITATIONS`이고 나머지는 `CAPTURE_INVALID`였다. 조각 재조립 후 frame-counter 중복·역전·누락이 발생한 세션은 학습 데이터로 사용하지 않는다.
+아래는 당시 validator가 header word 0을 authoritative frame counter로 처리해 만든 역사 결과다. PR #22 교정 후 word 0 의미는 `SEMANTICS_UNVERIFIED`이며 중복·역전·gap만으로 sensor acquisition loss나 capture invalid를 확정할 수 없다. 원본 증거를 교정 validator로 다시 평가하기 전까지 학습에는 사용하지 않으며, 새 PASS도 소급 부여하지 않는다.
 
 | 세션 | source label | valid | invalid | validator | 오류 요약 |
 |---|---|---:|---:|---|---|
@@ -17,12 +17,13 @@
 
 ## 해석 및 조치
 
-- `S000_013`은 구조 검토용 후보로 보관한다.
-- `S000_011`, `012`, `014`는 삭제하지 않고 오류 증거로 보존한다.
+- `PREVIOUS_SENSOR_COUNTER_INTERPRETATION_REQUIRES_RECLASSIFICATION`을 네 세션 모두에 적용한다.
+- `S000_013`을 유일한 구조 검토 후보로 보던 기존 순위는 확정 근거로 사용하지 않는다.
+- `S000_011`, `012`, `014`는 삭제하지 않고 당시 관찰과 transport 진단 증거로 보존한다.
 - invalid 세션에서 유효 프레임만 추출해 새 학습 세션을 만들지 않는다.
 - 재수집 대상은 `S000_015 EMPTY`, `S000_016 STANDING`, `S000_017 LYING`이다.
 - 재수집 시 Pi 수집기를 먼저 시작하고 ESP32를 재시작한다.
-- `send_failures` 증가와 frame-counter 오류가 반복되면 대량 수집을 중단하고 UDP chunk sequence를 포함하는 프로토콜 개선을 검토한다.
+- `send_failures` 증가 또는 SNTR transport integrity 오류가 반복되면 대량 수집을 중단한다. header word 0 pattern만으로 중단 사유를 센서 loss로 단정하지 않는다.
 
 ## 공통 제한
 

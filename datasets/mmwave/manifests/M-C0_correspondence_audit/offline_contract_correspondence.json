@@ -7,6 +7,14 @@
     "raw_files_copied": false,
     "repository_root": "."
   },
+  "authorization_evaluation": {
+    "authorized_for_exploratory_inference": false,
+    "decision_stands": true,
+    "exact_preprocessing_correspondence_gate": "BLOCKED_NOT_ESTABLISHED",
+    "reason": "PR18 pilot temporal correspondence now holds, but semantic correspondence and exact frozen preprocessing correspondence remain unestablished; temporal sufficiency alone does not authorize model invocation.",
+    "semantic_gate": "BLOCKED_UNDETERMINED",
+    "temporal_gate_for_pr18_pilots": "PASS"
+  },
   "blocking_reason": "SIGNAL_CORRESPONDENCE_NOT_ESTABLISHED",
   "correspondence_disproven": false,
   "correspondence_evaluated": true,
@@ -3556,7 +3564,11 @@
   },
   "schema_version": "M-C0_OFFLINE_CONTRACT_CORRESPONDENCE_V2",
   "semantic_correspondence": "UNDETERMINED",
-  "temporal_correspondence": "MEASURED_INSUFFICIENT",
+  "temporal_correspondence": "MEASURED_SUFFICIENT_FOR_PR18_PILOT_CAPTURE_ONLY",
+  "temporal_correspondence_by_evidence_group": {
+    "PR18_PILOT_CAPTURE": "MEASURED_SUFFICIENT",
+    "PRE_PR18_LEGACY_LOGS": "MIXED_LONG_JSONL_SUFFICIENT_LEGACY_CSV_UNPROVABLE"
+  },
   "training_reference": null,
   "valid_300_fresh_windows": {
     "PR18_PILOT_CAPTURE": 9,

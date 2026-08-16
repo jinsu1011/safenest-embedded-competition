@@ -2,14 +2,14 @@
 
 - Repository: `jinsu1011/safenest-embedded-competition`
 - Branch: `codex/mmwave-m-c0-correspondence`
-- Head at audit: `404fb4707ac363420f101c78e876e4be06259038`
+- Head at audit: `f4a9a91e3f55ef9a8d32f93089873e5930dc5570`
 - Evidence-root used: `devices/mmwave/firmware`
 - Decision: **`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`**
 - Blocking reason: **`SIGNAL_CORRESPONDENCE_NOT_ESTABLISHED`**
 - Correspondence evaluated: `true`
 - Correspondence disproven: `false`
 - Semantic correspondence: `UNDETERMINED`
-- Temporal correspondence: `MEASURED_INSUFFICIENT`
+- Temporal correspondence: `MEASURED_SUFFICIENT_FOR_PR18_PILOT_CAPTURE_ONLY`
 - Valid 300-fresh windows, PRE_PR18_LEGACY_LOGS: `27`
 - Valid 300-fresh windows, PR18_PILOT_CAPTURE: `9`
 - Cross-group aggregate: **not reported**
@@ -178,7 +178,7 @@ The historical 620/620 all-APNEA result demonstrates that the evaluated inputs c
 
 ## Decision
 
-**`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`** with `semantic_correspondence=UNDETERMINED`, `temporal_correspondence=MEASURED_INSUFFICIENT`, separately reported valid windows `PRE_PR18_LEGACY_LOGS=27` and `PR18_PILOT_CAPTURE=9`, `correspondence_evaluated=true`, and `correspondence_disproven=false`. Pilot temporal eligibility has moved, but semantic correspondence and exact preprocessing correspondence remain unestablished. Exploratory inference is not authorized by this audit.
+**`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`** with `semantic_correspondence=UNDETERMINED`, `temporal_correspondence=MEASURED_SUFFICIENT_FOR_PR18_PILOT_CAPTURE_ONLY`, separately reported valid windows `PRE_PR18_LEGACY_LOGS=27` and `PR18_PILOT_CAPTURE=9`, `correspondence_evaluated=true`, and `correspondence_disproven=false`. Temporal correspondence now holds for the PR18 pilots, but semantic correspondence remains `UNDETERMINED` and exact frozen BPF/z-score preprocessing correspondence remains `NOT_ESTABLISHED`. The decision therefore stands: temporal sufficiency alone does not authorize exploratory inference or any model invocation.
 
 ## What remains unknown
 

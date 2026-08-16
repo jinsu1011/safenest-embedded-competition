@@ -1688,7 +1688,7 @@ def render_report(
         "",
         "## Decision",
         "",
-        f"**`{summary['decision']}`** with `semantic_correspondence={summary['semantic_correspondence']}`, `temporal_correspondence={summary['temporal_correspondence']}`, separately reported valid windows `PRE_PR18_LEGACY_LOGS={summary['valid_300_fresh_windows']['PRE_PR18_LEGACY_LOGS']}` and `PR18_PILOT_CAPTURE={summary['valid_300_fresh_windows']['PR18_PILOT_CAPTURE']}`, `correspondence_evaluated=true`, and `correspondence_disproven=false`. Pilot temporal eligibility has moved, but semantic correspondence and exact preprocessing correspondence remain unestablished. Exploratory inference is not authorized by this audit.",
+        f"**`{summary['decision']}`** with `semantic_correspondence={summary['semantic_correspondence']}`, `temporal_correspondence={summary['temporal_correspondence']}`, separately reported valid windows `PRE_PR18_LEGACY_LOGS={summary['valid_300_fresh_windows']['PRE_PR18_LEGACY_LOGS']}` and `PR18_PILOT_CAPTURE={summary['valid_300_fresh_windows']['PR18_PILOT_CAPTURE']}`, `correspondence_evaluated=true`, and `correspondence_disproven=false`. Temporal correspondence now holds for the PR18 pilots, but semantic correspondence remains `UNDETERMINED` and exact frozen BPF/z-score preprocessing correspondence remains `NOT_ESTABLISHED`. The decision therefore stands: temporal sufficiency alone does not authorize exploratory inference or any model invocation.",
         "",
         "## What remains unknown",
         "",
@@ -1817,7 +1817,11 @@ def run(
         "correspondence_evaluated": True,
         "correspondence_disproven": False,
         "semantic_correspondence": "UNDETERMINED",
-        "temporal_correspondence": "MEASURED_INSUFFICIENT",
+        "temporal_correspondence": "MEASURED_SUFFICIENT_FOR_PR18_PILOT_CAPTURE_ONLY",
+        "temporal_correspondence_by_evidence_group": {
+            "PRE_PR18_LEGACY_LOGS": "MIXED_LONG_JSONL_SUFFICIENT_LEGACY_CSV_UNPROVABLE",
+            "PR18_PILOT_CAPTURE": "MEASURED_SUFFICIENT",
+        },
         "valid_300_fresh_windows": {
             group: result["valid_300_fresh_windows"]
             for group, result in window_results_by_group.items()
@@ -1836,6 +1840,14 @@ def run(
             "raw_files_copied": False,
         },
         "decision_is_successful_blocked_outcome": True,
+        "authorization_evaluation": {
+            "authorized_for_exploratory_inference": False,
+            "temporal_gate_for_pr18_pilots": "PASS",
+            "semantic_gate": "BLOCKED_UNDETERMINED",
+            "exact_preprocessing_correspondence_gate": "BLOCKED_NOT_ESTABLISHED",
+            "decision_stands": True,
+            "reason": "PR18 pilot temporal correspondence now holds, but semantic correspondence and exact frozen preprocessing correspondence remain unestablished; temporal sufficiency alone does not authorize model invocation.",
+        },
         "expected_input_file_count": len(expected),
         "expected_input_present_count": present_count,
         "known_but_not_provided_count": missing_count,
@@ -1930,7 +1942,11 @@ def run(
         "correspondence_disproven": False,
         "semantic_correspondence": summary["semantic_correspondence"],
         "temporal_correspondence": summary["temporal_correspondence"],
+        "temporal_correspondence_by_evidence_group": summary[
+            "temporal_correspondence_by_evidence_group"
+        ],
         "valid_300_fresh_windows": summary["valid_300_fresh_windows"],
+        "authorization_evaluation": summary["authorization_evaluation"],
         "audit_scope": {
             "repository_root": ".",
             "evidence_root": repo_rel(root, evidence_root),

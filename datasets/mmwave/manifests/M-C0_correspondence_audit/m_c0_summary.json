@@ -1,4 +1,12 @@
 {
+  "authorization_evaluation": {
+    "authorized_for_exploratory_inference": false,
+    "decision_stands": true,
+    "exact_preprocessing_correspondence_gate": "BLOCKED_NOT_ESTABLISHED",
+    "reason": "PR18 pilot temporal correspondence now holds, but semantic correspondence and exact frozen preprocessing correspondence remain unestablished; temporal sufficiency alone does not authorize model invocation.",
+    "semantic_gate": "BLOCKED_UNDETERMINED",
+    "temporal_gate_for_pr18_pilots": "PASS"
+  },
   "blocking_reason": "SIGNAL_CORRESPONDENCE_NOT_ESTABLISHED",
   "branch": "codex/mmwave-m-c0-correspondence",
   "correspondence_disproven": false,
@@ -20,7 +28,7 @@
   "expected_input_file_count": 12,
   "expected_input_files_hashed_count": 12,
   "expected_input_present_count": 12,
-  "head_at_run": "404fb4707ac363420f101c78e876e4be06259038",
+  "head_at_run": "f4a9a91e3f55ef9a8d32f93089873e5930dc5570",
   "known_but_not_provided_count": 0,
   "phase": "M-C0",
   "pilot_evidence_root": "devices/mmwave/device_measurements",
@@ -668,7 +676,11 @@
       "windows_with_300_genuinely_fresh_samples": 5
     }
   ],
-  "temporal_correspondence": "MEASURED_INSUFFICIENT",
+  "temporal_correspondence": "MEASURED_SUFFICIENT_FOR_PR18_PILOT_CAPTURE_ONLY",
+  "temporal_correspondence_by_evidence_group": {
+    "PR18_PILOT_CAPTURE": "MEASURED_SUFFICIENT",
+    "PRE_PR18_LEGACY_LOGS": "MIXED_LONG_JSONL_SUFFICIENT_LEGACY_CSV_UNPROVABLE"
+  },
   "valid_300_fresh_windows": {
     "PR18_PILOT_CAPTURE": 9,
     "PRE_PR18_LEGACY_LOGS": 27

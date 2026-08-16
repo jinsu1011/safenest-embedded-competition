@@ -37,12 +37,15 @@
   },
   "questions": {
     "10_620_of_620_apnea_collapse_stage": {
-      "reason": "No stage-labeled replay artifact was present in the expected evidence set; inference is prohibited before the C0A gate.",
-      "stage": null,
-      "status": "NOT_DETERMINED"
+      "forensics_artifact": "datasets/mmwave/manifests/M-C0_correspondence_audit/620_window_input_forensics.json",
+      "per_window_fractions": "recorded in the derived forensics artifact; fresh_fraction remains UNKNOWN because CSV freshness fields are absent",
+      "reason": "The 620 windows are reproducibly generated from legacy resp_phase rows and nominal interpolation, but the generator has no phase_age_ms/0x0A13 freshness gate. Therefore correspondence to the Phase-B genuinely-fresh-sample contract is lost or unproven before BPF_ZSCORE.",
+      "reconstructed_historical_window_count": 620,
+      "stage": "LEGACY_CSV_WINDOW_GENERATION_FRESHNESS_PROVENANCE",
+      "status": "MEASURED_INPUT_CONTRACT_DIVERGENCE"
     },
     "1_signal_semantic_correspondence": {
-      "assessment": "PHASE_LIKE_SIGNAL_OBSERVED_BUT_PHASE_B_EQUIVALENCE_NOT_ESTABLISHED",
+      "assessment": "UNDETERMINED",
       "correspondence_disproven": false,
       "per_session": [
         {
@@ -2747,6 +2750,8 @@
     ]
   },
   "schema_version": "M-C0_OFFLINE_CONTRACT_CORRESPONDENCE_V2",
+  "semantic_correspondence": "UNDETERMINED",
+  "temporal_correspondence": "MEASURED_INSUFFICIENT",
   "training_reference": {
     "bytes": 1272128,
     "naive_affine": {
@@ -2777,5 +2782,6 @@
     "source_path": "safenest-mmwave-standalone/datasets/mmwave/processed/mmwave_canonical_real_v1.npy",
     "source_tracked_in_target_repo": false,
     "status": "AVAILABLE_LOCAL_ONLY_AUXILIARY_REFERENCE_NOT_TRACKED"
-  }
+  },
+  "valid_300_fresh_windows": 0
 }

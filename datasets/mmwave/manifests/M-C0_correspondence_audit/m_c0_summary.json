@@ -20,7 +20,7 @@
   "expected_input_file_count": 12,
   "expected_input_files_hashed_count": 10,
   "expected_input_present_count": 10,
-  "head_at_run": "98e1cdec5634c3da804b038506a88ce8a29ecccf",
+  "head_at_run": "c1bbce1605672e0751abdc237aab670c12e6d87a",
   "known_but_not_provided_count": 2,
   "phase": "M-C0",
   "pipeline_breath_rate_raw_used_as_waveform": false,
@@ -33,6 +33,7 @@
   },
   "raw_expected_files_analyzed_count": 10,
   "schema_version": "M-C0_SUMMARY_V2",
+  "semantic_correspondence": "UNDETERMINED",
   "session_results": [
     {
       "distance_or_range": {
@@ -53,6 +54,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
@@ -86,6 +88,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
@@ -119,6 +122,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
@@ -152,6 +156,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
@@ -185,6 +190,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
@@ -218,6 +224,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
@@ -251,6 +258,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
@@ -284,6 +292,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
@@ -317,6 +326,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
@@ -350,6 +360,7 @@
         },
         "unit": "cm"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": 4.30467137,
       "phase_age_ms": {
         "fraction_over_30000_ms": 0.139173038,
@@ -365,6 +376,8 @@
       "windows_with_300_genuinely_fresh_samples": 0
     }
   ],
+  "temporal_correspondence": "MEASURED_INSUFFICIENT",
+  "valid_300_fresh_windows": 0,
   "what_remains_unknown": [
     "Exact physical/numeric semantic mapping from MR60 breath_phase to the frozen Phase-B input.",
     "Official phase-age failure threshold and direct 0x0A13 packet identity/update cadence.",
@@ -372,6 +385,7 @@
     "Formal pre-BPF/post-BPF training-distribution comparison for MR60.",
     "Stage responsible for the historical all-APNEA collapse.",
     "Independent M-C1 reference hardware, sample size, and paced-rpm-to-label mapping.",
-    "Official measurement distances."
+    "Official measurement distances.",
+    "Whether the historical 620 windows contained genuinely fresh 0x0A13 samples; legacy CSV freshness metadata is absent."
   ]
 }

@@ -121,6 +121,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d06_v1_360s__S001_NORMAL_D06.csv",
       "fresh_windows": {
         "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
@@ -399,6 +400,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d09_v1_360s__S001_NORMAL_D09.csv",
       "fresh_windows": {
         "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
@@ -677,6 +679,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d12_v1_360s__S001_NORMAL_D12.csv",
       "fresh_windows": {
         "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
@@ -955,6 +958,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d15_v1_360s__S001_NORMAL_D15.csv",
       "fresh_windows": {
         "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
@@ -1233,6 +1237,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_breath_paced_12rpm__S001_BREATH_PACED_12_01.csv",
       "fresh_windows": {
         "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
@@ -1511,6 +1516,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-28_breath_paced_12rpm_explicit_v2_attempt03__S001_BREATH_PACED_12_02.csv",
       "fresh_windows": {
         "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
@@ -1789,6 +1795,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-26_breath_paced_15rpm__S001_BREATH_PACED_15_03.csv",
       "fresh_windows": {
         "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
@@ -2067,6 +2074,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-26_breath_paced_20rpm__S001_BREATH_PACED_20_04.csv",
       "fresh_windows": {
         "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
@@ -2345,6 +2353,7 @@
         },
         "unit": "m"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-26_breath_paced_20rpm_deep__S001_BREATH_PACED_20_05.csv",
       "fresh_windows": {
         "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
@@ -2623,6 +2632,7 @@
         },
         "unit": "cm"
       },
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl",
       "fresh_windows": {
         "computation": "count reset-proxy events per fixed non-overlapping 30 s bin; count bins >= 300",
@@ -2802,6 +2812,7 @@
   "expected_evidence_set": [
     {
       "bytes": 318036,
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "expected_filename_suffix": "__S001_NORMAL_D06.csv",
       "kind": "legacy_csv",
       "malformed_record_count": 0,
@@ -2814,6 +2825,7 @@
     },
     {
       "bytes": 316304,
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "expected_filename_suffix": "__S001_NORMAL_D09.csv",
       "kind": "legacy_csv",
       "malformed_record_count": 0,
@@ -2826,6 +2838,7 @@
     },
     {
       "bytes": 311721,
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "expected_filename_suffix": "__S001_NORMAL_D12.csv",
       "kind": "legacy_csv",
       "malformed_record_count": 0,
@@ -2838,6 +2851,7 @@
     },
     {
       "bytes": 317745,
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "expected_filename_suffix": "__S001_NORMAL_D15.csv",
       "kind": "legacy_csv",
       "malformed_record_count": 0,
@@ -2850,6 +2864,7 @@
     },
     {
       "bytes": 244027,
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "expected_filename_suffix": "__S001_BREATH_PACED_12_01.csv",
       "kind": "legacy_csv",
       "malformed_record_count": 0,
@@ -2862,6 +2877,7 @@
     },
     {
       "bytes": 210963,
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "expected_filename_suffix": "__S001_BREATH_PACED_12_02.csv",
       "kind": "legacy_csv",
       "malformed_record_count": 0,
@@ -2874,6 +2890,7 @@
     },
     {
       "bytes": 211491,
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "expected_filename_suffix": "__S001_BREATH_PACED_15_03.csv",
       "kind": "legacy_csv",
       "malformed_record_count": 0,
@@ -2886,6 +2903,7 @@
     },
     {
       "bytes": 209848,
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "expected_filename_suffix": "__S001_BREATH_PACED_20_04.csv",
       "kind": "legacy_csv",
       "malformed_record_count": 0,
@@ -2898,6 +2916,7 @@
     },
     {
       "bytes": 212217,
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "expected_filename_suffix": "__S001_BREATH_PACED_20_05.csv",
       "kind": "legacy_csv",
       "malformed_record_count": 0,
@@ -2910,6 +2929,7 @@
     },
     {
       "bytes": 18956494,
+      "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "expected_filename": "2026-08-01_occupied_d09_v120_31min_attempt02.jsonl",
       "expected_sha256": "7f9e9ac65377c6dc217af92f9dee2401b6162540e2245fce97acf2ed49368a34",
       "kind": "long_jsonl",
@@ -2926,8 +2946,10 @@
         "devices/mmwave/firmware/device_measurements/M-C0-PILOT-DESKWORK-001.jsonl",
         "devices/mmwave/firmware/device_measurements/M-C0-PILOT-DESKWORK-001/records.jsonl"
       ],
+      "evidence_group": "PR18_PILOT_CAPTURE",
       "expected_record_count": 1799,
       "kind": "pr18_pilot",
+      "search_scope": "recursive filename match under the supplied evidence-root",
       "session_id": "M-C0-PILOT-DESKWORK-001",
       "status": "KNOWN_BUT_NOT_PROVIDED"
     },
@@ -2936,8 +2958,10 @@
         "devices/mmwave/firmware/device_measurements/M-C0-PILOT-STATIONARY-001.jsonl",
         "devices/mmwave/firmware/device_measurements/M-C0-PILOT-STATIONARY-001/records.jsonl"
       ],
+      "evidence_group": "PR18_PILOT_CAPTURE",
       "expected_record_count": 1799,
       "kind": "pr18_pilot",
+      "search_scope": "recursive filename match under the supplied evidence-root",
       "session_id": "M-C0-PILOT-STATIONARY-001",
       "status": "KNOWN_BUT_NOT_PROVIDED"
     }
@@ -3005,5 +3029,10 @@
     }
   ],
   "raw_files_copied": false,
-  "schema_version": "M-C0_EXISTING_MEASUREMENT_INVENTORY_V2"
+  "schema_version": "M-C0_EXISTING_MEASUREMENT_INVENTORY_V2",
+  "window_input_forensics": {
+    "artifact_path": "datasets/mmwave/manifests/M-C0_correspondence_audit/620_window_input_forensics.json",
+    "freshness_status": "UNKNOWN_FOR_ALL_WINDOWS",
+    "reconstructed_window_count": 620
+  }
 }

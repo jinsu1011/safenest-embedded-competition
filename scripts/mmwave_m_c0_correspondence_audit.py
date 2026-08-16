@@ -522,8 +522,14 @@ def freshness_summary(records: list[dict[str, Any]]) -> tuple[dict[str, Any], li
     selected_count = len(reconstructed_update_advance_indices)
     cadence = selected_count / span if span > 0 else None
 
-    def method(count: int, computation: str, role: str) -> dict[str, Any]:
+    def method(
+        count: int,
+        computation: str,
+        role: str,
+        status: str = "CURRENT_DIAGNOSTIC",
+    ) -> dict[str, Any]:
         return {
+            "status": status,
             "transition_count": count,
             "cadence_hz": round_value(count / span if span > 0 else None),
             "computation": computation,
@@ -547,7 +553,8 @@ def freshness_summary(records: list[dict[str, Any]]) -> tuple[dict[str, Any], li
                 "old_phase_age_decrease_proxy": method(
                     len(old_reset_indices),
                     "count phase_age_ms[i] < phase_age_ms[i-1]; divide by timestamp span",
-                    "SUPERSEDED: systematically undercounts always-low pilot age values",
+                    "systematically undercounts always-low pilot age values",
+                    "RETRACTED_FAULTY_ESTIMATOR",
                 ),
                 "phase_value_change_or_age_decrease": method(
                     len(phase_or_age_indices),
@@ -568,6 +575,7 @@ def freshness_summary(records: list[dict[str, Any]]) -> tuple[dict[str, Any], li
             "superseded_fresh_0x0A13_cadence_hz": round_value(
                 len(old_reset_indices) / span if span > 0 else None
             ),
+            "superseded_fresh_cadence_status": "RETRACTED_FAULTY_ESTIMATOR",
             "superseded_estimator": "phase_age_ms decrease count / timestamp span",
             "computation": "fresh update instant = round(timestamp_s*1000)-phase_age_ms; cadence = advancing update-instant count / timestamp span",
             "failure_threshold_status": "UNDEFINED; 30000 ms is only the requested reporting partition",
@@ -980,6 +988,9 @@ def analyze_session(root: Path, evidence_root: Path, item: dict[str, Any], all_h
             "superseded_fresh_0x0A13_cadence_hz": freshness.get(
                 "superseded_fresh_0x0A13_cadence_hz"
             ),
+            "superseded_fresh_cadence_status": freshness.get(
+                "superseded_fresh_cadence_status"
+            ),
             "superseded_estimator": freshness.get("superseded_estimator"),
             "estimator_methods": freshness.get("estimator_methods"),
             "computation": {
@@ -1007,6 +1018,7 @@ def classify_pilot_fresh_cadence(sessions: list[dict[str, Any]]) -> dict[str, An
             "fresh_0x0A13_cadence_hz": session["row_cadence_and_fresh_cadence"]["fresh_0x0A13_cadence_hz"],
             "telemetry_row_cadence_hz": session["row_cadence_and_fresh_cadence"]["telemetry_row_cadence_hz"],
             "superseded_fresh_0x0A13_cadence_hz": session["row_cadence_and_fresh_cadence"]["superseded_fresh_0x0A13_cadence_hz"],
+            "superseded_fresh_cadence_status": session["row_cadence_and_fresh_cadence"]["superseded_fresh_cadence_status"],
             "phase_age_ms": session["phase_age_ms"],
         }
         for session in sessions
@@ -1052,6 +1064,7 @@ def classify_pilot_fresh_cadence(sessions: list[dict[str, Any]]) -> dict[str, An
                 if legacy is not None
                 else None
             ),
+            "legacy_superseded_fresh_cadence_status": "RETRACTED_FAULTY_ESTIMATOR",
             "legacy_phase_age_p95_ms": legacy_p95,
             "pilot_phase_age_p95_ms": pilot_p95_values,
             "computation": "for each pilot, compare corrected cadence with its telemetry row cadence and superseded age-decrease cadence; explicitly require pilot phase-age p95 below legacy p95",
@@ -1503,7 +1516,7 @@ def render_report(
         "cadence = len(reset_times) / span if span > 0 else None",
         "```",
         "",
-        "| Session | Age decrease (old) | Phase change or age decrease | Age < prior row interval | Reconstructed update advances | Selected |",
+        "| Session | Age decrease (`RETRACTED_FAULTY_ESTIMATOR`) | Phase change or age decrease | Age < prior row interval | Reconstructed update advances | Selected |",
         "|---|---:|---:|---:|---:|---|",
     ]
     for session in sessions:
@@ -1864,6 +1877,7 @@ def run(
                 "telemetry_row_cadence_hz": session["row_cadence_and_fresh_cadence"]["telemetry_row_cadence_hz"],
                 "fresh_0x0A13_cadence_hz": session["row_cadence_and_fresh_cadence"]["fresh_0x0A13_cadence_hz"],
                 "superseded_fresh_0x0A13_cadence_hz": session["row_cadence_and_fresh_cadence"].get("superseded_fresh_0x0A13_cadence_hz"),
+                "superseded_fresh_cadence_status": session["row_cadence_and_fresh_cadence"].get("superseded_fresh_cadence_status"),
                 "freshness_estimator_methods": session["row_cadence_and_fresh_cadence"].get("estimator_methods"),
                 "phase_age_ms": session["phase_age_ms"],
                 "windows_with_300_genuinely_fresh_samples": session["fresh_windows"]["windows_with_300_genuinely_fresh_samples"],

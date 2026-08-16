@@ -2,7 +2,7 @@
 
 - Repository: `jinsu1011/safenest-embedded-competition`
 - Branch: `codex/mmwave-m-c0-correspondence`
-- Head at audit: `f4a9a91e3f55ef9a8d32f93089873e5930dc5570`
+- Head at audit: `441796cd8cd864bfab9078b0ec22c84b656e4bf3`
 - Evidence-root used: `devices/mmwave/firmware`
 - Decision: **`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`**
 - Blocking reason: **`SIGNAL_CORRESPONDENCE_NOT_ESTABLISHED`**
@@ -105,7 +105,7 @@ span = age_pairs[-1][1] - age_pairs[0][1]
 cadence = len(reset_times) / span if span > 0 else None
 ```
 
-| Session | Age decrease (old) | Phase change or age decrease | Age < prior row interval | Reconstructed update advances | Selected |
+| Session | Age decrease (`RETRACTED_FAULTY_ESTIMATOR`) | Phase change or age decrease | Age < prior row interval | Reconstructed update advances | Selected |
 |---|---:|---:|---:|---:|---|
 | `2026-08-01_occupied_d09_v120_31min_attempt02` | 8006 / 4.30467137 Hz | 14250 / 7.661949415 Hz | 15658 / 8.419003785 Hz | 15658 / 8.419003785 Hz | `reconstructed_update_instant_advances` |
 | `M-C0-PILOT-DESKWORK-001` | 662 / 3.679658492 Hz | 1642 / 9.126887076 Hz | 1797 / 9.988438535 Hz | 1797 / 9.988438535 Hz | `reconstructed_update_instant_advances` |

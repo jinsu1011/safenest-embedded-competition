@@ -12,8 +12,10 @@ The M-C0 audit of the long MR60 log
 `devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl`
 measured telemetry row cadence separately from reconstructed fresh updates:
 `9.986342911 Hz` versus corrected `8.419003785 Hz`. The earlier
-`4.30467137 Hz` value is retained only as a superseded result from the faulty
-`phase_age_ms`-decrease estimator. The corrected computation reconstructs each
+`4.30467137 Hz` value is retained only as `RETRACTED_FAULTY_ESTIMATOR`; its
+replacement is `8.419003785 Hz` from the reconstructed-update-instant method.
+The faulty `phase_age_ms`-decrease estimator undercounted fresh updates. The
+corrected computation reconstructs each
 update instant as `round(timestamp_s*1000)-phase_age_ms`, counts advancing
 instants, and divides by the timestamp span.
 
@@ -32,9 +34,10 @@ not exhibit the extreme phase-age tail in the legacy long log.
 `M-C0-PILOT-DESKWORK-001` measures corrected fresh cadence `9.988438535 Hz`
 with `phase_age_ms` p95 `15 ms`; `M-C0-PILOT-STATIONARY-001` measures
 `9.993330369 Hz` with p95 `15 ms`. The legacy p95 is `195627 ms`. The earlier
-pilot values `3.679658492 Hz` and `3.518230325 Hz`, and the resulting (a)
-verdict, are retracted because the age-decrease estimator undercounted
-always-low age values.
+pilot values `3.679658492 Hz` and `3.518230325 Hz` are
+`RETRACTED_FAULTY_ESTIMATOR`; their replacements are `9.988438535 Hz` and
+`9.993330369 Hz`. The resulting (a) verdict is retracted because the
+age-decrease estimator undercounted always-low age values.
 
 Direct corrected window reconstruction found `4/6` valid 300-fresh windows in
 DESKWORK and `5/6` in STATIONARY. These pilot results are recorded only under

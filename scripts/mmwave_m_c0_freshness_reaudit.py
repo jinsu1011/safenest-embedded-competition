@@ -61,8 +61,15 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
         return [json.loads(line) for line in handle if line.strip()]
 
 
-def method_result(indices: list[int], span_s: float, definition: str, role: str) -> dict[str, Any]:
+def method_result(
+    indices: list[int],
+    span_s: float,
+    definition: str,
+    role: str,
+    status: str = "CURRENT_DIAGNOSTIC",
+) -> dict[str, Any]:
     return {
+        "status": status,
         "transition_count": len(indices),
         "cadence_hz": round_value(len(indices) / span_s if span_s > 0 else None),
         "definition": definition,
@@ -107,7 +114,8 @@ def analyze_session(session_id: str, public_path: Path, local_path: Path) -> dic
             old_age_decrease,
             span_s,
             "count rows where phase_age_ms[i] < phase_age_ms[i-1]; divide by timestamp span",
-            "rejected as a complete fresh-update estimator because always-low age can increase slightly after every genuinely new update",
+            "systematically undercounts always-low age after genuinely new updates",
+            "RETRACTED_FAULTY_ESTIMATOR",
         ),
         "phase_value_change_or_age_decrease": method_result(
             phase_or_age_transition,
@@ -177,6 +185,7 @@ def main() -> int:
     payload = {
         "schema_version": "M-C0_FRESHNESS_ESTIMATOR_REAUDIT_V1",
         "old_estimator_source": "scripts/mmwave_m_c0_correspondence_audit.py::freshness_summary",
+        "old_estimator_status": "RETRACTED_FAULTY_ESTIMATOR",
         "old_estimator_implementation": OLD_ESTIMATOR_IMPLEMENTATION,
         "sessions": sessions,
         "method_disagreement": {

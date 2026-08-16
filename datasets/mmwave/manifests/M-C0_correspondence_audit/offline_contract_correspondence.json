@@ -129,6 +129,7 @@
         "legacy_corrected_fresh_cadence_hz": 8.419003785,
         "legacy_phase_age_p95_ms": 195627.0,
         "legacy_superseded_fresh_cadence_hz": 4.30467137,
+        "legacy_superseded_fresh_cadence_status": "RETRACTED_FAULTY_ESTIMATOR",
         "pilot_phase_age_p95_ms": [
           15.0,
           15.0
@@ -146,6 +147,7 @@
           },
           "session_id": "M-C0-PILOT-DESKWORK-001",
           "superseded_fresh_0x0A13_cadence_hz": 3.679658492,
+          "superseded_fresh_cadence_status": "RETRACTED_FAULTY_ESTIMATOR",
           "telemetry_row_cadence_hz": 9.993996932
         },
         {
@@ -159,6 +161,7 @@
           },
           "session_id": "M-C0-PILOT-STATIONARY-001",
           "superseded_fresh_0x0A13_cadence_hz": 3.518230325,
+          "superseded_fresh_cadence_status": "RETRACTED_FAULTY_ESTIMATOR",
           "telemetry_row_cadence_hz": 9.993330369
         }
       ],
@@ -745,6 +748,7 @@
         "selected_method": null,
         "superseded_estimator": null,
         "superseded_fresh_0x0A13_cadence_hz": null,
+        "superseded_fresh_cadence_status": null,
         "telemetry_row_cadence_hz": 9.994964166
       },
       {
@@ -759,6 +763,7 @@
         "selected_method": null,
         "superseded_estimator": null,
         "superseded_fresh_0x0A13_cadence_hz": null,
+        "superseded_fresh_cadence_status": null,
         "telemetry_row_cadence_hz": 9.99613096
       },
       {
@@ -773,6 +778,7 @@
         "selected_method": null,
         "superseded_estimator": null,
         "superseded_fresh_0x0A13_cadence_hz": null,
+        "superseded_fresh_cadence_status": null,
         "telemetry_row_cadence_hz": 9.995797563
       },
       {
@@ -787,6 +793,7 @@
         "selected_method": null,
         "superseded_estimator": null,
         "superseded_fresh_0x0A13_cadence_hz": null,
+        "superseded_fresh_cadence_status": null,
         "telemetry_row_cadence_hz": 9.998365844
       },
       {
@@ -801,6 +808,7 @@
         "selected_method": null,
         "superseded_estimator": null,
         "superseded_fresh_0x0A13_cadence_hz": null,
+        "superseded_fresh_cadence_status": null,
         "telemetry_row_cadence_hz": 9.995304219
       },
       {
@@ -815,6 +823,7 @@
         "selected_method": null,
         "superseded_estimator": null,
         "superseded_fresh_0x0A13_cadence_hz": null,
+        "superseded_fresh_cadence_status": null,
         "telemetry_row_cadence_hz": 9.995433558
       },
       {
@@ -829,6 +838,7 @@
         "selected_method": null,
         "superseded_estimator": null,
         "superseded_fresh_0x0A13_cadence_hz": null,
+        "superseded_fresh_cadence_status": null,
         "telemetry_row_cadence_hz": 9.994097974
       },
       {
@@ -843,6 +853,7 @@
         "selected_method": null,
         "superseded_estimator": null,
         "superseded_fresh_0x0A13_cadence_hz": null,
+        "superseded_fresh_cadence_status": null,
         "telemetry_row_cadence_hz": 9.994226554
       },
       {
@@ -857,6 +868,7 @@
         "selected_method": null,
         "superseded_estimator": null,
         "superseded_fresh_0x0A13_cadence_hz": null,
+        "superseded_fresh_cadence_status": null,
         "telemetry_row_cadence_hz": 9.992994255
       },
       {
@@ -868,25 +880,29 @@
           "old_phase_age_decrease_proxy": {
             "cadence_hz": 4.30467137,
             "computation": "count phase_age_ms[i] < phase_age_ms[i-1]; divide by timestamp span",
-            "role": "SUPERSEDED: systematically undercounts always-low pilot age values",
+            "role": "systematically undercounts always-low pilot age values",
+            "status": "RETRACTED_FAULTY_ESTIMATOR",
             "transition_count": 8006
           },
           "phase_age_less_than_previous_row_interval": {
             "cadence_hz": 8.419003785,
             "computation": "count phase_age_ms[i] < telemetry interval[i]; divide by timestamp span",
             "role": "independent confirmation that an update is newer than the previous emission",
+            "status": "CURRENT_DIAGNOSTIC",
             "transition_count": 15658
           },
           "phase_value_change_or_age_decrease": {
             "cadence_hz": 7.661949415,
             "computation": "count breath_phase changes or phase_age_ms decreases; divide by timestamp span",
             "role": "independent lower bound because quantized phase values can repeat",
+            "status": "CURRENT_DIAGNOSTIC",
             "transition_count": 14250
           },
           "reconstructed_update_instant_advances": {
             "cadence_hz": 8.419003785,
             "computation": "update_ms=round(timestamp_s*1000)-phase_age_ms; count update_ms[i] > update_ms[i-1]; divide by timestamp span",
             "role": "selected because it directly tests whether the recorded source-update instant advances",
+            "status": "CURRENT_DIAGNOSTIC",
             "transition_count": 15658
           }
         },
@@ -896,6 +912,7 @@
         "selected_method": "reconstructed_update_instant_advances",
         "superseded_estimator": "phase_age_ms decrease count / timestamp span",
         "superseded_fresh_0x0A13_cadence_hz": 4.30467137,
+        "superseded_fresh_cadence_status": "RETRACTED_FAULTY_ESTIMATOR",
         "telemetry_row_cadence_hz": 9.986342911
       },
       {
@@ -907,25 +924,29 @@
           "old_phase_age_decrease_proxy": {
             "cadence_hz": 3.679658492,
             "computation": "count phase_age_ms[i] < phase_age_ms[i-1]; divide by timestamp span",
-            "role": "SUPERSEDED: systematically undercounts always-low pilot age values",
+            "role": "systematically undercounts always-low pilot age values",
+            "status": "RETRACTED_FAULTY_ESTIMATOR",
             "transition_count": 662
           },
           "phase_age_less_than_previous_row_interval": {
             "cadence_hz": 9.988438535,
             "computation": "count phase_age_ms[i] < telemetry interval[i]; divide by timestamp span",
             "role": "independent confirmation that an update is newer than the previous emission",
+            "status": "CURRENT_DIAGNOSTIC",
             "transition_count": 1797
           },
           "phase_value_change_or_age_decrease": {
             "cadence_hz": 9.126887076,
             "computation": "count breath_phase changes or phase_age_ms decreases; divide by timestamp span",
             "role": "independent lower bound because quantized phase values can repeat",
+            "status": "CURRENT_DIAGNOSTIC",
             "transition_count": 1642
           },
           "reconstructed_update_instant_advances": {
             "cadence_hz": 9.988438535,
             "computation": "update_ms=round(timestamp_s*1000)-phase_age_ms; count update_ms[i] > update_ms[i-1]; divide by timestamp span",
             "role": "selected because it directly tests whether the recorded source-update instant advances",
+            "status": "CURRENT_DIAGNOSTIC",
             "transition_count": 1797
           }
         },
@@ -935,6 +956,7 @@
         "selected_method": "reconstructed_update_instant_advances",
         "superseded_estimator": "phase_age_ms decrease count / timestamp span",
         "superseded_fresh_0x0A13_cadence_hz": 3.679658492,
+        "superseded_fresh_cadence_status": "RETRACTED_FAULTY_ESTIMATOR",
         "telemetry_row_cadence_hz": 9.993996932
       },
       {
@@ -946,25 +968,29 @@
           "old_phase_age_decrease_proxy": {
             "cadence_hz": 3.518230325,
             "computation": "count phase_age_ms[i] < phase_age_ms[i-1]; divide by timestamp span",
-            "role": "SUPERSEDED: systematically undercounts always-low pilot age values",
+            "role": "systematically undercounts always-low pilot age values",
+            "status": "RETRACTED_FAULTY_ESTIMATOR",
             "transition_count": 633
           },
           "phase_age_less_than_previous_row_interval": {
             "cadence_hz": 9.993330369,
             "computation": "count phase_age_ms[i] < telemetry interval[i]; divide by timestamp span",
             "role": "independent confirmation that an update is newer than the previous emission",
+            "status": "CURRENT_DIAGNOSTIC",
             "transition_count": 1798
           },
           "phase_value_change_or_age_decrease": {
             "cadence_hz": 9.131836372,
             "computation": "count breath_phase changes or phase_age_ms decreases; divide by timestamp span",
             "role": "independent lower bound because quantized phase values can repeat",
+            "status": "CURRENT_DIAGNOSTIC",
             "transition_count": 1643
           },
           "reconstructed_update_instant_advances": {
             "cadence_hz": 9.993330369,
             "computation": "update_ms=round(timestamp_s*1000)-phase_age_ms; count update_ms[i] > update_ms[i-1]; divide by timestamp span",
             "role": "selected because it directly tests whether the recorded source-update instant advances",
+            "status": "CURRENT_DIAGNOSTIC",
             "transition_count": 1798
           }
         },
@@ -974,6 +1000,7 @@
         "selected_method": "reconstructed_update_instant_advances",
         "superseded_estimator": "phase_age_ms decrease count / timestamp span",
         "superseded_fresh_0x0A13_cadence_hz": 3.518230325,
+        "superseded_fresh_cadence_status": "RETRACTED_FAULTY_ESTIMATOR",
         "telemetry_row_cadence_hz": 9.993330369
       }
     ],

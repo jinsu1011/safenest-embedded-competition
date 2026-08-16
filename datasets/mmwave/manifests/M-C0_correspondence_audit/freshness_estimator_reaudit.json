@@ -13,6 +13,7 @@
   },
   "old_estimator_implementation": "for previous, current in zip(age_pairs, age_pairs[1:]):\n    if current[2] < previous[2]:\n        reset_indices.append(current[0])\n        reset_times.append(current[1])\nspan = age_pairs[-1][1] - age_pairs[0][1]\ncadence = len(reset_times) / span if span > 0 else None",
   "old_estimator_source": "scripts/mmwave_m_c0_correspondence_audit.py::freshness_summary",
+  "old_estimator_status": "RETRACTED_FAULTY_ESTIMATOR",
   "schema_version": "M-C0_FRESHNESS_ESTIMATOR_REAUDIT_V1",
   "sessions": [
     {
@@ -20,25 +21,29 @@
         "old_phase_age_decrease_proxy": {
           "cadence_hz": 4.30467137,
           "definition": "count rows where phase_age_ms[i] < phase_age_ms[i-1]; divide by timestamp span",
-          "role": "rejected as a complete fresh-update estimator because always-low age can increase slightly after every genuinely new update",
+          "role": "systematically undercounts always-low age after genuinely new updates",
+          "status": "RETRACTED_FAULTY_ESTIMATOR",
           "transition_count": 8006
         },
         "phase_age_less_than_previous_row_interval": {
           "cadence_hz": 8.419003785,
           "definition": "count rows where phase_age_ms[i] < ts[i]-ts[i-1]; divide by timestamp span",
           "role": "independent confirmation that the stored phase update is newer than the previous telemetry emission",
+          "status": "CURRENT_DIAGNOSTIC",
           "transition_count": 15658
         },
         "phase_value_change_or_age_decrease": {
           "cadence_hz": 7.661949415,
           "definition": "count rows where breath_phase changes or phase_age_ms decreases; divide by timestamp span",
           "role": "independent evidence lower bound; repeated quantized phase values can hide genuine updates",
+          "status": "CURRENT_DIAGNOSTIC",
           "transition_count": 14250
         },
         "reconstructed_update_instant_advances": {
           "cadence_hz": 8.419003785,
           "definition": "reconstruct update_ms[i]=ts_monotonic_ms[i]-phase_age_ms[i]; count rows where update_ms[i] > update_ms[i-1]; divide by timestamp span",
           "role": "selected estimator because it directly tests whether the stored source-update instant advances and does not depend on phase-value changes or age decreases",
+          "status": "CURRENT_DIAGNOSTIC",
           "transition_count": 15658
         }
       },
@@ -61,25 +66,29 @@
         "old_phase_age_decrease_proxy": {
           "cadence_hz": 3.679658492,
           "definition": "count rows where phase_age_ms[i] < phase_age_ms[i-1]; divide by timestamp span",
-          "role": "rejected as a complete fresh-update estimator because always-low age can increase slightly after every genuinely new update",
+          "role": "systematically undercounts always-low age after genuinely new updates",
+          "status": "RETRACTED_FAULTY_ESTIMATOR",
           "transition_count": 662
         },
         "phase_age_less_than_previous_row_interval": {
           "cadence_hz": 9.988438535,
           "definition": "count rows where phase_age_ms[i] < ts[i]-ts[i-1]; divide by timestamp span",
           "role": "independent confirmation that the stored phase update is newer than the previous telemetry emission",
+          "status": "CURRENT_DIAGNOSTIC",
           "transition_count": 1797
         },
         "phase_value_change_or_age_decrease": {
           "cadence_hz": 9.126887076,
           "definition": "count rows where breath_phase changes or phase_age_ms decreases; divide by timestamp span",
           "role": "independent evidence lower bound; repeated quantized phase values can hide genuine updates",
+          "status": "CURRENT_DIAGNOSTIC",
           "transition_count": 1642
         },
         "reconstructed_update_instant_advances": {
           "cadence_hz": 9.988438535,
           "definition": "reconstruct update_ms[i]=ts_monotonic_ms[i]-phase_age_ms[i]; count rows where update_ms[i] > update_ms[i-1]; divide by timestamp span",
           "role": "selected estimator because it directly tests whether the stored source-update instant advances and does not depend on phase-value changes or age decreases",
+          "status": "CURRENT_DIAGNOSTIC",
           "transition_count": 1797
         }
       },
@@ -102,25 +111,29 @@
         "old_phase_age_decrease_proxy": {
           "cadence_hz": 3.518230325,
           "definition": "count rows where phase_age_ms[i] < phase_age_ms[i-1]; divide by timestamp span",
-          "role": "rejected as a complete fresh-update estimator because always-low age can increase slightly after every genuinely new update",
+          "role": "systematically undercounts always-low age after genuinely new updates",
+          "status": "RETRACTED_FAULTY_ESTIMATOR",
           "transition_count": 633
         },
         "phase_age_less_than_previous_row_interval": {
           "cadence_hz": 9.993330369,
           "definition": "count rows where phase_age_ms[i] < ts[i]-ts[i-1]; divide by timestamp span",
           "role": "independent confirmation that the stored phase update is newer than the previous telemetry emission",
+          "status": "CURRENT_DIAGNOSTIC",
           "transition_count": 1798
         },
         "phase_value_change_or_age_decrease": {
           "cadence_hz": 9.131836372,
           "definition": "count rows where breath_phase changes or phase_age_ms decreases; divide by timestamp span",
           "role": "independent evidence lower bound; repeated quantized phase values can hide genuine updates",
+          "status": "CURRENT_DIAGNOSTIC",
           "transition_count": 1643
         },
         "reconstructed_update_instant_advances": {
           "cadence_hz": 9.993330369,
           "definition": "reconstruct update_ms[i]=ts_monotonic_ms[i]-phase_age_ms[i]; count rows where update_ms[i] > update_ms[i-1]; divide by timestamp span",
           "role": "selected estimator because it directly tests whether the stored source-update instant advances and does not depend on phase-value changes or age decreases",
+          "status": "CURRENT_DIAGNOSTIC",
           "transition_count": 1798
         }
       },

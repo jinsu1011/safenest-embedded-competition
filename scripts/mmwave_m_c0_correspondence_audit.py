@@ -500,17 +500,39 @@ def freshness_summary(records: list[dict[str, Any]]) -> tuple[dict[str, Any], li
             [],
         )
     ages = [item[2] for item in age_pairs]
-    reset_indices: list[int] = []
-    reset_times: list[float] = []
+    old_reset_indices: list[int] = []
+    phase_or_age_indices: list[int] = []
+    age_newer_than_previous_emission_indices: list[int] = []
+    reconstructed_update_advance_indices: list[int] = []
     for previous, current in zip(age_pairs, age_pairs[1:]):
         if current[2] < previous[2]:
-            reset_indices.append(current[0])
-            reset_times.append(current[1])
+            old_reset_indices.append(current[0])
+        previous_phase = records[previous[0]]["phase"]
+        current_phase = records[current[0]]["phase"]
+        if current_phase != previous_phase or current[2] < previous[2]:
+            phase_or_age_indices.append(current[0])
+        row_interval_ms = (current[1] - previous[1]) * 1000.0
+        if current[2] < row_interval_ms:
+            age_newer_than_previous_emission_indices.append(current[0])
+        previous_update_ms = round(previous[1] * 1000.0) - previous[2]
+        current_update_ms = round(current[1] * 1000.0) - current[2]
+        if current_update_ms > previous_update_ms:
+            reconstructed_update_advance_indices.append(current[0])
     span = age_pairs[-1][1] - age_pairs[0][1]
-    cadence = len(reset_times) / span if span > 0 else None
+    selected_count = len(reconstructed_update_advance_indices)
+    cadence = selected_count / span if span > 0 else None
+
+    def method(count: int, computation: str, role: str) -> dict[str, Any]:
+        return {
+            "transition_count": count,
+            "cadence_hz": round_value(count / span if span > 0 else None),
+            "computation": computation,
+            "role": role,
+        }
+
     return (
         {
-            "status": "INFERRED_FROM_PHASE_AGE_RESETS",
+            "status": "RECONSTRUCTED_UPDATE_INSTANT_ADVANCES",
             "fresh_0x0A13_cadence_hz": round_value(cadence),
             "phase_age_ms": {
                 "min": round_value(min(ages)),
@@ -519,11 +541,38 @@ def freshness_summary(records: list[dict[str, Any]]) -> tuple[dict[str, Any], li
                 "max": round_value(max(ages)),
                 "fraction_over_30000_ms": round_value(sum(1 for age in ages if age > 30000.0) / len(ages)),
             },
-            "phase_age_reset_count": len(reset_times),
-            "computation": "fresh event proxy = phase_age_ms[i] < phase_age_ms[i-1]; cadence = reset_count / timestamp span",
+            "selected_fresh_update_count": selected_count,
+            "selected_method": "reconstructed_update_instant_advances",
+            "estimator_methods": {
+                "old_phase_age_decrease_proxy": method(
+                    len(old_reset_indices),
+                    "count phase_age_ms[i] < phase_age_ms[i-1]; divide by timestamp span",
+                    "SUPERSEDED: systematically undercounts always-low pilot age values",
+                ),
+                "phase_value_change_or_age_decrease": method(
+                    len(phase_or_age_indices),
+                    "count breath_phase changes or phase_age_ms decreases; divide by timestamp span",
+                    "independent lower bound because quantized phase values can repeat",
+                ),
+                "phase_age_less_than_previous_row_interval": method(
+                    len(age_newer_than_previous_emission_indices),
+                    "count phase_age_ms[i] < telemetry interval[i]; divide by timestamp span",
+                    "independent confirmation that an update is newer than the previous emission",
+                ),
+                "reconstructed_update_instant_advances": method(
+                    selected_count,
+                    "update_ms=round(timestamp_s*1000)-phase_age_ms; count update_ms[i] > update_ms[i-1]; divide by timestamp span",
+                    "selected because it directly tests whether the recorded source-update instant advances",
+                ),
+            },
+            "superseded_fresh_0x0A13_cadence_hz": round_value(
+                len(old_reset_indices) / span if span > 0 else None
+            ),
+            "superseded_estimator": "phase_age_ms decrease count / timestamp span",
+            "computation": "fresh update instant = round(timestamp_s*1000)-phase_age_ms; cadence = advancing update-instant count / timestamp span",
             "failure_threshold_status": "UNDEFINED; 30000 ms is only the requested reporting partition",
         },
-        reset_indices,
+        reconstructed_update_advance_indices,
     )
 
 
@@ -891,6 +940,13 @@ def analyze_session(root: Path, evidence_root: Path, item: dict[str, Any], all_h
             "telemetry_row_cadence_hz": integrity["row_cadence_hz"],
             "fresh_0x0A13_cadence_hz": freshness["fresh_0x0A13_cadence_hz"],
             "fresh_cadence_status": freshness["status"],
+            "selected_fresh_update_count": freshness.get("selected_fresh_update_count"),
+            "selected_method": freshness.get("selected_method"),
+            "superseded_fresh_0x0A13_cadence_hz": freshness.get(
+                "superseded_fresh_0x0A13_cadence_hz"
+            ),
+            "superseded_estimator": freshness.get("superseded_estimator"),
+            "estimator_methods": freshness.get("estimator_methods"),
             "computation": {
                 "row": integrity["computation"]["row_cadence_hz"],
                 "fresh": freshness["computation"],
@@ -907,14 +963,16 @@ def analyze_session(root: Path, evidence_root: Path, item: dict[str, Any], all_h
 
 
 def classify_pilot_fresh_cadence(sessions: list[dict[str, Any]]) -> dict[str, Any]:
-    """Compare pilot freshness with the measured legacy and nominal row cadences."""
+    """Re-decide the PR18 alternative using corrected reconstructed updates."""
 
-    legacy_fresh_cadence_hz = 4.30467137
-    nominal_row_cadence_hz = 10.0
+    legacy = next((session for session in sessions if session.get("kind") == "long_jsonl"), None)
     pilots = [
         {
             "session_id": session["session_id"],
             "fresh_0x0A13_cadence_hz": session["row_cadence_and_fresh_cadence"]["fresh_0x0A13_cadence_hz"],
+            "telemetry_row_cadence_hz": session["row_cadence_and_fresh_cadence"]["telemetry_row_cadence_hz"],
+            "superseded_fresh_0x0A13_cadence_hz": session["row_cadence_and_fresh_cadence"]["superseded_fresh_0x0A13_cadence_hz"],
+            "phase_age_ms": session["phase_age_ms"],
         }
         for session in sessions
         if session.get("evidence_group") == "PR18_PILOT_CAPTURE"
@@ -925,38 +983,43 @@ def classify_pilot_fresh_cadence(sessions: list[dict[str, Any]]) -> dict[str, An
             "verdict": "CANNOT_DISTINGUISH",
             "basis": "Both PR18 pilot fresh-cadence measurements are required; no inference is made from incomplete evidence.",
             "pilot_measurements": pilots,
-            "comparison": {
-                "legacy_fresh_cadence_proxy_hz": legacy_fresh_cadence_hz,
-                "nominal_telemetry_row_cadence_hz": nominal_row_cadence_hz,
-            },
+            "previous_verdict": "A_STRUCTURAL_MR60_ESP_TELEMETRY_PATH_LIMITATION_SUPPORTED",
         }
-    closer_to_legacy = all(
-        abs(item["fresh_0x0A13_cadence_hz"] - legacy_fresh_cadence_hz)
-        < abs(item["fresh_0x0A13_cadence_hz"] - nominal_row_cadence_hz)
+    closer_to_row_than_superseded = all(
+        abs(item["fresh_0x0A13_cadence_hz"] - item["telemetry_row_cadence_hz"])
+        < abs(item["fresh_0x0A13_cadence_hz"] - item["superseded_fresh_0x0A13_cadence_hz"])
         for item in finite
     )
-    closer_to_row = all(
-        abs(item["fresh_0x0A13_cadence_hz"] - nominal_row_cadence_hz)
-        < abs(item["fresh_0x0A13_cadence_hz"] - legacy_fresh_cadence_hz)
-        for item in finite
-    )
-    if closer_to_legacy:
-        verdict = "A_STRUCTURAL_MR60_ESP_TELEMETRY_PATH_LIMITATION_SUPPORTED"
-        basis = "Both pilot reset-proxy cadences are closer to the measured 4.30467137 Hz legacy fresh cadence than to the nominal 10 Hz telemetry row cadence."
-    elif closer_to_row:
+    pilot_p95_values = [item["phase_age_ms"]["p95"] for item in finite]
+    legacy_p95 = legacy["phase_age_ms"]["p95"] if legacy is not None else None
+    if closer_to_row_than_superseded and legacy_p95 is not None and all(
+        value is not None and value < legacy_p95 for value in pilot_p95_values
+    ):
         verdict = "B_2026_07_26_LEGACY_CAPTURE_METHOD_LIMITATION_SUPPORTED"
-        basis = "Both pilot reset-proxy cadences are closer to the nominal 10 Hz telemetry row cadence than to the measured 4.30467137 Hz legacy fresh cadence."
+        basis = "Both corrected pilot cadences approach their telemetry row cadences, and pilot phase_age_ms p95 is 15 ms versus 195627 ms in the legacy long log. The earlier (a) verdict was based on a faulty phase-age-decrease estimator that undercounted always-low pilot age values."
     else:
         verdict = "CANNOT_DISTINGUISH"
-        basis = "The two pilot reset-proxy cadences do not consistently support the same alternative."
+        basis = "The corrected cadence and phase-age evidence do not consistently support the same alternative."
     return {
         "verdict": verdict,
         "basis": basis,
         "pilot_measurements": finite,
+        "previous_verdict": "A_STRUCTURAL_MR60_ESP_TELEMETRY_PATH_LIMITATION_SUPPORTED",
+        "previous_verdict_status": "RETRACTED_FAULTY_ESTIMATOR",
         "comparison": {
-            "legacy_fresh_cadence_proxy_hz": legacy_fresh_cadence_hz,
-            "nominal_telemetry_row_cadence_hz": nominal_row_cadence_hz,
-            "computation": "for each pilot, compare absolute cadence distance to 4.30467137 Hz and 10 Hz; both must favor the same reference",
+            "legacy_corrected_fresh_cadence_hz": (
+                legacy["row_cadence_and_fresh_cadence"]["fresh_0x0A13_cadence_hz"]
+                if legacy is not None
+                else None
+            ),
+            "legacy_superseded_fresh_cadence_hz": (
+                legacy["row_cadence_and_fresh_cadence"]["superseded_fresh_0x0A13_cadence_hz"]
+                if legacy is not None
+                else None
+            ),
+            "legacy_phase_age_p95_ms": legacy_p95,
+            "pilot_phase_age_p95_ms": pilot_p95_values,
+            "computation": "for each pilot, compare corrected cadence with its telemetry row cadence and superseded age-decrease cadence; explicitly require pilot phase-age p95 below legacy p95",
         },
     }
 
@@ -1337,7 +1400,8 @@ def render_report(
         "",
         "Numeric conventions:",
         "- telemetry row cadence = `(timestamp_count - 1) / (last_timestamp - first_timestamp)`",
-        "- fresh 0x0A13 cadence = count of `phase_age_ms` decreases divided by timestamp span; this is an inferred reset proxy, not a direct packet counter",
+        "- corrected fresh cadence = count of advancing reconstructed update instants, where `update_ms = round(timestamp_s*1000) - phase_age_ms`, divided by timestamp span",
+        "- superseded fresh cadence = count of `phase_age_ms` decreases divided by timestamp span; retained only to document the faulty earlier estimator",
         "- phase-age p95 uses linear percentile interpolation; `>30,000 ms` is a reporting partition, not an official failure threshold",
         "- 30-second fresh-window count uses fixed non-overlapping 30-second bins and counts bins with at least 300 reset-proxy events",
         "- phase rpm = 60 divided by the median interval between positive crossings of the session-mean-centered phase; it is a signal diagnostic, not a paced-cue-to-label mapping",
@@ -1389,10 +1453,44 @@ def render_report(
         )
     lines += [
         "",
+        "### Freshness estimator re-audit",
+        "",
+        "The previous implementation counted only age decreases:",
+        "",
+        "```python",
+        "for previous, current in zip(age_pairs, age_pairs[1:]):",
+        "    if current[2] < previous[2]:",
+        "        reset_indices.append(current[0])",
+        "        reset_times.append(current[1])",
+        "span = age_pairs[-1][1] - age_pairs[0][1]",
+        "cadence = len(reset_times) / span if span > 0 else None",
+        "```",
+        "",
+        "| Session | Age decrease (old) | Phase change or age decrease | Age < prior row interval | Reconstructed update advances | Selected |",
+        "|---|---:|---:|---:|---:|---|",
+    ]
+    for session in sessions:
+        methods = session["row_cadence_and_fresh_cadence"].get("estimator_methods")
+        if not methods:
+            continue
+        lines.append(
+            f"| `{session['session_id']}` | "
+            f"{methods['old_phase_age_decrease_proxy']['transition_count']} / {methods['old_phase_age_decrease_proxy']['cadence_hz']} Hz | "
+            f"{methods['phase_value_change_or_age_decrease']['transition_count']} / {methods['phase_value_change_or_age_decrease']['cadence_hz']} Hz | "
+            f"{methods['phase_age_less_than_previous_row_interval']['transition_count']} / {methods['phase_age_less_than_previous_row_interval']['cadence_hz']} Hz | "
+            f"{methods['reconstructed_update_instant_advances']['transition_count']} / {methods['reconstructed_update_instant_advances']['cadence_hz']} Hz | "
+            "`reconstructed_update_instant_advances` |"
+        )
+    lines += [
+        "",
+        "The methods materially disagree. Phase-value transitions are only a lower bound because a genuinely new quantized phase may repeat the previous value. The age-versus-row-interval method and reconstructed-update method independently agree for both pilots. The reconstructed method is selected because it directly tests whether the source update instant advances; no methods are averaged. Full definitions, source SHA-256 values, and computations are in `datasets/mmwave/manifests/M-C0_correspondence_audit/freshness_estimator_reaudit.json`.",
+    ]
+    lines += [
+        "",
         "### PR18 pilot cadence finding",
         "",
         f"Verdict: **`{pilot_finding['verdict']}`**. {pilot_finding['basis']}",
-        "The comparison uses each pilot's `phase_age_ms` decrease count divided by its timestamp span and never merges pilot statistics with `PRE_PR18_LEGACY_LOGS`.",
+        "The corrected comparison uses advancing `timestamp-phase_age_ms` update instants and never merges pilot statistics with `PRE_PR18_LEGACY_LOGS`. Legacy `phase_age_ms` p95 is `195627 ms`, while both pilot p95 values are `15 ms`; the four-order-of-magnitude freshness-age difference is consistent with the corrected (b) verdict and incompatible with the retracted ~3.5 Hz interpretation.",
     ]
     d15 = next((session for session in sessions if session["session_id"] == "S001_NORMAL_D15"), None)
     paced = {
@@ -1500,7 +1598,7 @@ def render_report(
         "",
         "### Question 3 — row cadence vs fresh cadence",
         "",
-        "The table reports the two cadences separately and by evidence group. Legacy CSV has no `phase_age_ms`/0x0A13 freshness field, so its fresh cadence is `N/A`, not assumed to be the row cadence. The long log reports an inferred cadence from phase-age resets and labels it as a proxy; PR18 pilot cadence, if present, is reported only within `PR18_PILOT_CAPTURE`.",
+        "The table reports telemetry and corrected fresh cadence separately and by evidence group. Legacy CSV has no `phase_age_ms`/0x0A13 freshness field, so its fresh cadence is `N/A`, not assumed to be the row cadence. For JSONL sessions, fresh cadence is reconstructed from advancing `timestamp-phase_age_ms` update instants. The old age-decrease proxy is retained only as a superseded value; PR18 pilot statistics remain within `PR18_PILOT_CAPTURE`.",
         "",
         "### Question 4 — timestamp integrity",
         "",
@@ -1666,6 +1764,8 @@ def run(
                 "record_count": session["record_count"],
                 "telemetry_row_cadence_hz": session["row_cadence_and_fresh_cadence"]["telemetry_row_cadence_hz"],
                 "fresh_0x0A13_cadence_hz": session["row_cadence_and_fresh_cadence"]["fresh_0x0A13_cadence_hz"],
+                "superseded_fresh_0x0A13_cadence_hz": session["row_cadence_and_fresh_cadence"].get("superseded_fresh_0x0A13_cadence_hz"),
+                "freshness_estimator_methods": session["row_cadence_and_fresh_cadence"].get("estimator_methods"),
                 "phase_age_ms": session["phase_age_ms"],
                 "windows_with_300_genuinely_fresh_samples": session["fresh_windows"]["windows_with_300_genuinely_fresh_samples"],
                 "phase_rpm": session["phase_semantic_correspondence"]["numeric"]["dominant_phase_rpm"],

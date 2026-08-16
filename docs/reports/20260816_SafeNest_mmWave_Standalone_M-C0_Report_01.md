@@ -2,7 +2,7 @@
 
 - Repository: `jinsu1011/safenest-embedded-competition`
 - Branch: `codex/mmwave-m-c0-correspondence`
-- Head at audit: `9280779d8f8d11e293ed9a26d1909681ce34b3f7`
+- Head at audit: `263c8722fa6e7b2b7cb5889ed642e5913630d07a`
 - Evidence-root used: `devices/mmwave/firmware`
 - Decision: **`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`**
 - Blocking reason: **`SIGNAL_CORRESPONDENCE_NOT_ESTABLISHED`**
@@ -10,7 +10,7 @@
 - Correspondence disproven: `false`
 - Semantic correspondence: `UNDETERMINED`
 - Temporal correspondence: `MEASURED_INSUFFICIENT`
-- Valid 300-fresh windows: `0`
+- Valid 300-fresh windows: `35`
 - Model scoring/inference: **not executed**
 - Raw modification/copy: **none**
 
@@ -22,7 +22,8 @@ The script opened `259` regular files across the legacy and PR18 evidence roots 
 
 Numeric conventions:
 - telemetry row cadence = `(timestamp_count - 1) / (last_timestamp - first_timestamp)`
-- fresh 0x0A13 cadence = count of `phase_age_ms` decreases divided by timestamp span; this is an inferred reset proxy, not a direct packet counter
+- corrected fresh cadence = count of advancing reconstructed update instants, where `update_ms = round(timestamp_s*1000) - phase_age_ms`, divided by timestamp span
+- superseded fresh cadence = count of `phase_age_ms` decreases divided by timestamp span; retained only to document the faulty earlier estimator
 - phase-age p95 uses linear percentile interpolation; `>30,000 ms` is a reporting partition, not an official failure threshold
 - 30-second fresh-window count uses fixed non-overlapping 30-second bins and counts bins with at least 300 reset-proxy events
 - phase rpm = 60 divided by the median interval between positive crossings of the session-mean-centered phase; it is a signal diagnostic, not a paced-cue-to-label mapping
@@ -85,14 +86,35 @@ Evidence groups are kept separate: `PRE_PR18_LEGACY_LOGS` contains the nine lega
 | `PRE_PR18_LEGACY_LOGS` | `S001_BREATH_PACED_15_03` | 1779 | 9.994097974 | N/A | 14.928893032 | None / None / None / None | None | 0 | N/A |
 | `PRE_PR18_LEGACY_LOGS` | `S001_BREATH_PACED_20_04` | 1784 | 9.994226554 | N/A | 20.170279064 | None / None / None / None | None | 0 | N/A |
 | `PRE_PR18_LEGACY_LOGS` | `S001_BREATH_PACED_20_05` | 1784 | 9.992994255 | N/A | 20.030636268 | None / None / None / None | None | 0 | N/A |
-| `PRE_PR18_LEGACY_LOGS` | `2026-08-01_occupied_d09_v120_31min_attempt02` | 18574 | 9.986342911 | 4.30467137 | 19.264097775 | 0.0 / 12.0 / 195627.0 / 288530.0 | 0.139173038 | 0 | 0.008928878 |
-| `PR18_PILOT_CAPTURE` | `M-C0-PILOT-DESKWORK-001` | 1799 | 9.993996932 | 3.679658492 | 20.347847528 | 0.0 / 12.0 / 15.0 / 111.0 | 0.0 | 0 | 0.017641003 |
-| `PR18_PILOT_CAPTURE` | `M-C0-PILOT-STATIONARY-001` | 1799 | 9.993330369 | 3.518230325 | 22.329196977 | 0.0 / 12.0 / 15.0 / 17.0 | 0.0 | 0 | 0.013461468 |
+| `PRE_PR18_LEGACY_LOGS` | `2026-08-01_occupied_d09_v120_31min_attempt02` | 18574 | 9.986342911 | 8.419003785 | 19.264097775 | 0.0 / 12.0 / 195627.0 / 288530.0 | 0.139173038 | 27 | 0.0 |
+| `PR18_PILOT_CAPTURE` | `M-C0-PILOT-DESKWORK-001` | 1799 | 9.993996932 | 9.988438535 | 20.347847528 | 0.0 / 12.0 / 15.0 / 111.0 | 0.0 | 4 | 0.000589747 |
+| `PR18_PILOT_CAPTURE` | `M-C0-PILOT-STATIONARY-001` | 1799 | 9.993330369 | 9.993330369 | 22.329196977 | 0.0 / 12.0 / 15.0 / 17.0 | 0.0 | 4 | 0.0 |
+
+### Freshness estimator re-audit
+
+The previous implementation counted only age decreases:
+
+```python
+for previous, current in zip(age_pairs, age_pairs[1:]):
+    if current[2] < previous[2]:
+        reset_indices.append(current[0])
+        reset_times.append(current[1])
+span = age_pairs[-1][1] - age_pairs[0][1]
+cadence = len(reset_times) / span if span > 0 else None
+```
+
+| Session | Age decrease (old) | Phase change or age decrease | Age < prior row interval | Reconstructed update advances | Selected |
+|---|---:|---:|---:|---:|---|
+| `2026-08-01_occupied_d09_v120_31min_attempt02` | 8006 / 4.30467137 Hz | 14250 / 7.661949415 Hz | 15658 / 8.419003785 Hz | 15658 / 8.419003785 Hz | `reconstructed_update_instant_advances` |
+| `M-C0-PILOT-DESKWORK-001` | 662 / 3.679658492 Hz | 1642 / 9.126887076 Hz | 1797 / 9.988438535 Hz | 1797 / 9.988438535 Hz | `reconstructed_update_instant_advances` |
+| `M-C0-PILOT-STATIONARY-001` | 633 / 3.518230325 Hz | 1643 / 9.131836372 Hz | 1798 / 9.993330369 Hz | 1798 / 9.993330369 Hz | `reconstructed_update_instant_advances` |
+
+The methods materially disagree. Phase-value transitions are only a lower bound because a genuinely new quantized phase may repeat the previous value. The age-versus-row-interval method and reconstructed-update method independently agree for both pilots. The reconstructed method is selected because it directly tests whether the source update instant advances; no methods are averaged. Full definitions, source SHA-256 values, and computations are in `datasets/mmwave/manifests/M-C0_correspondence_audit/freshness_estimator_reaudit.json`.
 
 ### PR18 pilot cadence finding
 
-Verdict: **`A_STRUCTURAL_MR60_ESP_TELEMETRY_PATH_LIMITATION_SUPPORTED`**. Both pilot reset-proxy cadences are closer to the measured 4.30467137 Hz legacy fresh cadence than to the nominal 10 Hz telemetry row cadence.
-The comparison uses each pilot's `phase_age_ms` decrease count divided by its timestamp span and never merges pilot statistics with `PRE_PR18_LEGACY_LOGS`.
+Verdict: **`B_2026_07_26_LEGACY_CAPTURE_METHOD_LIMITATION_SUPPORTED`**. Both corrected pilot cadences approach their telemetry row cadences, and pilot phase_age_ms p95 is 15 ms versus 195627 ms in the legacy long log. The earlier (a) verdict was based on a faulty phase-age-decrease estimator that undercounted always-low pilot age values.
+The corrected comparison uses advancing `timestamp-phase_age_ms` update instants and never merges pilot statistics with `PRE_PR18_LEGACY_LOGS`. Legacy `phase_age_ms` p95 is `195627 ms`, while both pilot p95 values are `15 ms`; the four-order-of-magnitude freshness-age difference is consistent with the corrected (b) verdict and incompatible with the retracted ~3.5 Hz interpretation.
 
 ## Preserved measurement corrections
 
@@ -111,7 +133,7 @@ The measured answer is **no**. The static pipeline scan found waveform input pat
 
 ### Question 3 — row cadence vs fresh cadence
 
-The table reports the two cadences separately and by evidence group. Legacy CSV has no `phase_age_ms`/0x0A13 freshness field, so its fresh cadence is `N/A`, not assumed to be the row cadence. The long log reports an inferred cadence from phase-age resets and labels it as a proxy; PR18 pilot cadence, if present, is reported only within `PR18_PILOT_CAPTURE`.
+The table reports telemetry and corrected fresh cadence separately and by evidence group. Legacy CSV has no `phase_age_ms`/0x0A13 freshness field, so its fresh cadence is `N/A`, not assumed to be the row cadence. For JSONL sessions, fresh cadence is reconstructed from advancing `timestamp-phase_age_ms` update instants. The old age-decrease proxy is retained only as a superseded value; PR18 pilot statistics remain within `PR18_PILOT_CAPTURE`.
 
 ### Question 4 — timestamp integrity
 
@@ -123,11 +145,11 @@ The long JSONL's min/median/p95/max and fraction over 30 seconds are measured in
 
 ### Question 6 — 300 genuinely fresh samples
 
-The measured aggregate is `valid_300_fresh_windows=0`. A value of `0` means no fixed 30-second bin contained 300 reset-proxy events. CSV sessions are additionally marked not provable because freshness metadata is absent; this temporal result is `MEASURED_INSUFFICIENT`.
+The measured aggregate is `valid_300_fresh_windows=35`. A value of `0` means no fixed 30-second bin contained 300 reset-proxy events. CSV sessions are additionally marked not provable because freshness metadata is absent; this temporal result is `MEASURED_INSUFFICIENT`.
 
 ### Question 7 — interpolation
 
-Interpolation was **not applied** to any audit input. Where phase-age reset proxies existed, linear interpolation was simulated only to quantify distortion; its RMSE/MAE/max-absolute error are reported per session. For `devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl`, simulated linear interpolation was not applied; the proxy distortion is `RMSE=0.008928878`, `MAE=0.004631681`, and `max_abs=0.084` over `15688` samples. The method remains unresolved.
+Interpolation was **not applied** to any audit input. Where phase-age reset proxies existed, linear interpolation was simulated only to quantify distortion; its RMSE/MAE/max-absolute error are reported per session. For `devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl`, simulated linear interpolation was not applied; the proxy distortion is `RMSE=0.0`, `MAE=0.0`, and `max_abs=0.0` over `15688` samples. The method remains unresolved.
 
 ### Question 8 — BPF + z-score identity
 
@@ -144,7 +166,7 @@ The historical 620/620 all-APNEA result demonstrates that the evaluated inputs c
 
 ## Decision
 
-**`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`** with `semantic_correspondence=UNDETERMINED`, `temporal_correspondence=MEASURED_INSUFFICIENT`, `valid_300_fresh_windows=0`, `correspondence_evaluated=true`, and `correspondence_disproven=false`. The result is measured and successful as a block: phase-like telemetry is present, but the frozen Phase-B semantic, fresh 300-sample window, and exact preprocessing/INT8 distribution correspondence are not established. Exploratory inference is not authorized.
+**`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`** with `semantic_correspondence=UNDETERMINED`, `temporal_correspondence=MEASURED_INSUFFICIENT`, `valid_300_fresh_windows=35`, `correspondence_evaluated=true`, and `correspondence_disproven=false`. The result is measured and successful as a block: phase-like telemetry is present, but the frozen Phase-B semantic, fresh 300-sample window, and exact preprocessing/INT8 distribution correspondence are not established. Exploratory inference is not authorized.
 
 ## What remains unknown
 

@@ -20,7 +20,7 @@
   "expected_input_file_count": 12,
   "expected_input_files_hashed_count": 12,
   "expected_input_present_count": 12,
-  "head_at_run": "9280779d8f8d11e293ed9a26d1909681ce34b3f7",
+  "head_at_run": "263c8722fa6e7b2b7cb5889ed642e5913630d07a",
   "known_but_not_provided_count": 0,
   "phase": "M-C0",
   "pilot_evidence_root": "devices/mmwave/device_measurements",
@@ -105,23 +105,48 @@
       }
     ],
     "pilot_fresh_cadence_finding": {
-      "basis": "Both pilot reset-proxy cadences are closer to the measured 4.30467137 Hz legacy fresh cadence than to the nominal 10 Hz telemetry row cadence.",
+      "basis": "Both corrected pilot cadences approach their telemetry row cadences, and pilot phase_age_ms p95 is 15 ms versus 195627 ms in the legacy long log. The earlier (a) verdict was based on a faulty phase-age-decrease estimator that undercounted always-low pilot age values.",
       "comparison": {
-        "computation": "for each pilot, compare absolute cadence distance to 4.30467137 Hz and 10 Hz; both must favor the same reference",
-        "legacy_fresh_cadence_proxy_hz": 4.30467137,
-        "nominal_telemetry_row_cadence_hz": 10.0
+        "computation": "for each pilot, compare corrected cadence with its telemetry row cadence and superseded age-decrease cadence; explicitly require pilot phase-age p95 below legacy p95",
+        "legacy_corrected_fresh_cadence_hz": 8.419003785,
+        "legacy_phase_age_p95_ms": 195627.0,
+        "legacy_superseded_fresh_cadence_hz": 4.30467137,
+        "pilot_phase_age_p95_ms": [
+          15.0,
+          15.0
+        ]
       },
       "pilot_measurements": [
         {
-          "fresh_0x0A13_cadence_hz": 3.679658492,
-          "session_id": "M-C0-PILOT-DESKWORK-001"
+          "fresh_0x0A13_cadence_hz": 9.988438535,
+          "phase_age_ms": {
+            "fraction_over_30000_ms": 0.0,
+            "max": 111.0,
+            "median": 12.0,
+            "min": 0.0,
+            "p95": 15.0
+          },
+          "session_id": "M-C0-PILOT-DESKWORK-001",
+          "superseded_fresh_0x0A13_cadence_hz": 3.679658492,
+          "telemetry_row_cadence_hz": 9.993996932
         },
         {
-          "fresh_0x0A13_cadence_hz": 3.518230325,
-          "session_id": "M-C0-PILOT-STATIONARY-001"
+          "fresh_0x0A13_cadence_hz": 9.993330369,
+          "phase_age_ms": {
+            "fraction_over_30000_ms": 0.0,
+            "max": 17.0,
+            "median": 12.0,
+            "min": 0.0,
+            "p95": 15.0
+          },
+          "session_id": "M-C0-PILOT-STATIONARY-001",
+          "superseded_fresh_0x0A13_cadence_hz": 3.518230325,
+          "telemetry_row_cadence_hz": 9.993330369
         }
       ],
-      "verdict": "A_STRUCTURAL_MR60_ESP_TELEMETRY_PATH_LIMITATION_SUPPORTED"
+      "previous_verdict": "A_STRUCTURAL_MR60_ESP_TELEMETRY_PATH_LIMITATION_SUPPORTED",
+      "previous_verdict_status": "RETRACTED_FAULTY_ESTIMATOR",
+      "verdict": "B_2026_07_26_LEGACY_CAPTURE_METHOD_LIMITATION_SUPPORTED"
     }
   },
   "preflight_gate": "PASS_INHERITED_FROM_PREVIOUS_STANDALONE_RUN",
@@ -156,6 +181,7 @@
       },
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
+      "freshness_estimator_methods": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -166,6 +192,7 @@
       "phase_rpm": 20.04468266,
       "record_count": 2998,
       "session_id": "S001_NORMAL_D06",
+      "superseded_fresh_0x0A13_cadence_hz": null,
       "telemetry_row_cadence_hz": 9.994964166,
       "windows_with_300_genuinely_fresh_samples": 0
     },
@@ -190,6 +217,7 @@
       },
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
+      "freshness_estimator_methods": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -200,6 +228,7 @@
       "phase_rpm": 19.699214478,
       "record_count": 2998,
       "session_id": "S001_NORMAL_D09",
+      "superseded_fresh_0x0A13_cadence_hz": null,
       "telemetry_row_cadence_hz": 9.99613096,
       "windows_with_300_genuinely_fresh_samples": 0
     },
@@ -224,6 +253,7 @@
       },
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
+      "freshness_estimator_methods": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -234,6 +264,7 @@
       "phase_rpm": 20.266696872,
       "record_count": 2998,
       "session_id": "S001_NORMAL_D12",
+      "superseded_fresh_0x0A13_cadence_hz": null,
       "telemetry_row_cadence_hz": 9.995797563,
       "windows_with_300_genuinely_fresh_samples": 0
     },
@@ -258,6 +289,7 @@
       },
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
+      "freshness_estimator_methods": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -268,6 +300,7 @@
       "phase_rpm": null,
       "record_count": 2999,
       "session_id": "S001_NORMAL_D15",
+      "superseded_fresh_0x0A13_cadence_hz": null,
       "telemetry_row_cadence_hz": 9.998365844,
       "windows_with_300_genuinely_fresh_samples": 0
     },
@@ -292,6 +325,7 @@
       },
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
+      "freshness_estimator_methods": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -302,6 +336,7 @@
       "phase_rpm": 10.598330195,
       "record_count": 2087,
       "session_id": "S001_BREATH_PACED_12_01",
+      "superseded_fresh_0x0A13_cadence_hz": null,
       "telemetry_row_cadence_hz": 9.995304219,
       "windows_with_300_genuinely_fresh_samples": 0
     },
@@ -326,6 +361,7 @@
       },
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
+      "freshness_estimator_methods": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -336,6 +372,7 @@
       "phase_rpm": 12.18605948,
       "record_count": 1774,
       "session_id": "S001_BREATH_PACED_12_02",
+      "superseded_fresh_0x0A13_cadence_hz": null,
       "telemetry_row_cadence_hz": 9.995433558,
       "windows_with_300_genuinely_fresh_samples": 0
     },
@@ -360,6 +397,7 @@
       },
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
+      "freshness_estimator_methods": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -370,6 +408,7 @@
       "phase_rpm": 14.928893032,
       "record_count": 1779,
       "session_id": "S001_BREATH_PACED_15_03",
+      "superseded_fresh_0x0A13_cadence_hz": null,
       "telemetry_row_cadence_hz": 9.994097974,
       "windows_with_300_genuinely_fresh_samples": 0
     },
@@ -394,6 +433,7 @@
       },
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
+      "freshness_estimator_methods": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -404,6 +444,7 @@
       "phase_rpm": 20.170279064,
       "record_count": 1784,
       "session_id": "S001_BREATH_PACED_20_04",
+      "superseded_fresh_0x0A13_cadence_hz": null,
       "telemetry_row_cadence_hz": 9.994226554,
       "windows_with_300_genuinely_fresh_samples": 0
     },
@@ -428,6 +469,7 @@
       },
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
+      "freshness_estimator_methods": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -438,6 +480,7 @@
       "phase_rpm": 20.030636268,
       "record_count": 1784,
       "session_id": "S001_BREATH_PACED_20_05",
+      "superseded_fresh_0x0A13_cadence_hz": null,
       "telemetry_row_cadence_hz": 9.992994255,
       "windows_with_300_genuinely_fresh_samples": 0
     },
@@ -461,7 +504,33 @@
         "unit": "cm"
       },
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
-      "fresh_0x0A13_cadence_hz": 4.30467137,
+      "fresh_0x0A13_cadence_hz": 8.419003785,
+      "freshness_estimator_methods": {
+        "old_phase_age_decrease_proxy": {
+          "cadence_hz": 4.30467137,
+          "computation": "count phase_age_ms[i] < phase_age_ms[i-1]; divide by timestamp span",
+          "role": "SUPERSEDED: systematically undercounts always-low pilot age values",
+          "transition_count": 8006
+        },
+        "phase_age_less_than_previous_row_interval": {
+          "cadence_hz": 8.419003785,
+          "computation": "count phase_age_ms[i] < telemetry interval[i]; divide by timestamp span",
+          "role": "independent confirmation that an update is newer than the previous emission",
+          "transition_count": 15658
+        },
+        "phase_value_change_or_age_decrease": {
+          "cadence_hz": 7.661949415,
+          "computation": "count breath_phase changes or phase_age_ms decreases; divide by timestamp span",
+          "role": "independent lower bound because quantized phase values can repeat",
+          "transition_count": 14250
+        },
+        "reconstructed_update_instant_advances": {
+          "cadence_hz": 8.419003785,
+          "computation": "update_ms=round(timestamp_s*1000)-phase_age_ms; count update_ms[i] > update_ms[i-1]; divide by timestamp span",
+          "role": "selected because it directly tests whether the recorded source-update instant advances",
+          "transition_count": 15658
+        }
+      },
       "phase_age_ms": {
         "fraction_over_30000_ms": 0.139173038,
         "max": 288530.0,
@@ -472,8 +541,9 @@
       "phase_rpm": 19.264097775,
       "record_count": 18574,
       "session_id": "2026-08-01_occupied_d09_v120_31min_attempt02",
+      "superseded_fresh_0x0A13_cadence_hz": 4.30467137,
       "telemetry_row_cadence_hz": 9.986342911,
-      "windows_with_300_genuinely_fresh_samples": 0
+      "windows_with_300_genuinely_fresh_samples": 27
     },
     {
       "distance_or_range": {
@@ -495,7 +565,33 @@
         "unit": "cm"
       },
       "evidence_group": "PR18_PILOT_CAPTURE",
-      "fresh_0x0A13_cadence_hz": 3.679658492,
+      "fresh_0x0A13_cadence_hz": 9.988438535,
+      "freshness_estimator_methods": {
+        "old_phase_age_decrease_proxy": {
+          "cadence_hz": 3.679658492,
+          "computation": "count phase_age_ms[i] < phase_age_ms[i-1]; divide by timestamp span",
+          "role": "SUPERSEDED: systematically undercounts always-low pilot age values",
+          "transition_count": 662
+        },
+        "phase_age_less_than_previous_row_interval": {
+          "cadence_hz": 9.988438535,
+          "computation": "count phase_age_ms[i] < telemetry interval[i]; divide by timestamp span",
+          "role": "independent confirmation that an update is newer than the previous emission",
+          "transition_count": 1797
+        },
+        "phase_value_change_or_age_decrease": {
+          "cadence_hz": 9.126887076,
+          "computation": "count breath_phase changes or phase_age_ms decreases; divide by timestamp span",
+          "role": "independent lower bound because quantized phase values can repeat",
+          "transition_count": 1642
+        },
+        "reconstructed_update_instant_advances": {
+          "cadence_hz": 9.988438535,
+          "computation": "update_ms=round(timestamp_s*1000)-phase_age_ms; count update_ms[i] > update_ms[i-1]; divide by timestamp span",
+          "role": "selected because it directly tests whether the recorded source-update instant advances",
+          "transition_count": 1797
+        }
+      },
       "phase_age_ms": {
         "fraction_over_30000_ms": 0.0,
         "max": 111.0,
@@ -506,8 +602,9 @@
       "phase_rpm": 20.347847528,
       "record_count": 1799,
       "session_id": "M-C0-PILOT-DESKWORK-001",
+      "superseded_fresh_0x0A13_cadence_hz": 3.679658492,
       "telemetry_row_cadence_hz": 9.993996932,
-      "windows_with_300_genuinely_fresh_samples": 0
+      "windows_with_300_genuinely_fresh_samples": 4
     },
     {
       "distance_or_range": {
@@ -529,7 +626,33 @@
         "unit": "cm"
       },
       "evidence_group": "PR18_PILOT_CAPTURE",
-      "fresh_0x0A13_cadence_hz": 3.518230325,
+      "fresh_0x0A13_cadence_hz": 9.993330369,
+      "freshness_estimator_methods": {
+        "old_phase_age_decrease_proxy": {
+          "cadence_hz": 3.518230325,
+          "computation": "count phase_age_ms[i] < phase_age_ms[i-1]; divide by timestamp span",
+          "role": "SUPERSEDED: systematically undercounts always-low pilot age values",
+          "transition_count": 633
+        },
+        "phase_age_less_than_previous_row_interval": {
+          "cadence_hz": 9.993330369,
+          "computation": "count phase_age_ms[i] < telemetry interval[i]; divide by timestamp span",
+          "role": "independent confirmation that an update is newer than the previous emission",
+          "transition_count": 1798
+        },
+        "phase_value_change_or_age_decrease": {
+          "cadence_hz": 9.131836372,
+          "computation": "count breath_phase changes or phase_age_ms decreases; divide by timestamp span",
+          "role": "independent lower bound because quantized phase values can repeat",
+          "transition_count": 1643
+        },
+        "reconstructed_update_instant_advances": {
+          "cadence_hz": 9.993330369,
+          "computation": "update_ms=round(timestamp_s*1000)-phase_age_ms; count update_ms[i] > update_ms[i-1]; divide by timestamp span",
+          "role": "selected because it directly tests whether the recorded source-update instant advances",
+          "transition_count": 1798
+        }
+      },
       "phase_age_ms": {
         "fraction_over_30000_ms": 0.0,
         "max": 17.0,
@@ -540,12 +663,13 @@
       "phase_rpm": 22.329196977,
       "record_count": 1799,
       "session_id": "M-C0-PILOT-STATIONARY-001",
+      "superseded_fresh_0x0A13_cadence_hz": 3.518230325,
       "telemetry_row_cadence_hz": 9.993330369,
-      "windows_with_300_genuinely_fresh_samples": 0
+      "windows_with_300_genuinely_fresh_samples": 4
     }
   ],
   "temporal_correspondence": "MEASURED_INSUFFICIENT",
-  "valid_300_fresh_windows": 0,
+  "valid_300_fresh_windows": 35,
   "what_remains_unknown": [
     "Exact physical/numeric semantic mapping from MR60 breath_phase to the frozen Phase-B input.",
     "Official phase-age failure threshold and direct 0x0A13 packet identity/update cadence.",

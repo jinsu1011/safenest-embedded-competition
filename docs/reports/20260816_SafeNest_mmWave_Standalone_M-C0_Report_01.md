@@ -2,7 +2,7 @@
 
 - Repository: `jinsu1011/safenest-embedded-competition`
 - Branch: `codex/mmwave-m-c0-correspondence`
-- Head at audit: `263c8722fa6e7b2b7cb5889ed642e5913630d07a`
+- Head at audit: `404fb4707ac363420f101c78e876e4be06259038`
 - Evidence-root used: `devices/mmwave/firmware`
 - Decision: **`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`**
 - Blocking reason: **`SIGNAL_CORRESPONDENCE_NOT_ESTABLISHED`**
@@ -10,7 +10,9 @@
 - Correspondence disproven: `false`
 - Semantic correspondence: `UNDETERMINED`
 - Temporal correspondence: `MEASURED_INSUFFICIENT`
-- Valid 300-fresh windows: `35`
+- Valid 300-fresh windows, PRE_PR18_LEGACY_LOGS: `27`
+- Valid 300-fresh windows, PR18_PILOT_CAPTURE: `9`
+- Cross-group aggregate: **not reported**
 - Model scoring/inference: **not executed**
 - Raw modification/copy: **none**
 
@@ -86,9 +88,9 @@ Evidence groups are kept separate: `PRE_PR18_LEGACY_LOGS` contains the nine lega
 | `PRE_PR18_LEGACY_LOGS` | `S001_BREATH_PACED_15_03` | 1779 | 9.994097974 | N/A | 14.928893032 | None / None / None / None | None | 0 | N/A |
 | `PRE_PR18_LEGACY_LOGS` | `S001_BREATH_PACED_20_04` | 1784 | 9.994226554 | N/A | 20.170279064 | None / None / None / None | None | 0 | N/A |
 | `PRE_PR18_LEGACY_LOGS` | `S001_BREATH_PACED_20_05` | 1784 | 9.992994255 | N/A | 20.030636268 | None / None / None / None | None | 0 | N/A |
-| `PRE_PR18_LEGACY_LOGS` | `2026-08-01_occupied_d09_v120_31min_attempt02` | 18574 | 9.986342911 | 8.419003785 | 19.264097775 | 0.0 / 12.0 / 195627.0 / 288530.0 | 0.139173038 | 27 | 0.0 |
-| `PR18_PILOT_CAPTURE` | `M-C0-PILOT-DESKWORK-001` | 1799 | 9.993996932 | 9.988438535 | 20.347847528 | 0.0 / 12.0 / 15.0 / 111.0 | 0.0 | 4 | 0.000589747 |
-| `PR18_PILOT_CAPTURE` | `M-C0-PILOT-STATIONARY-001` | 1799 | 9.993330369 | 9.993330369 | 22.329196977 | 0.0 / 12.0 / 15.0 / 17.0 | 0.0 | 4 | 0.0 |
+| `PRE_PR18_LEGACY_LOGS` | `2026-08-01_occupied_d09_v120_31min_attempt02` | 18574 | 9.986342911 | 8.419003785 | 19.264097775 | 0.0 / 12.0 / 195627.0 / 288530.0 | 0.139173038 | 27 | 0.008928878 |
+| `PR18_PILOT_CAPTURE` | `M-C0-PILOT-DESKWORK-001` | 1799 | 9.993996932 | 9.988438535 | 20.347847528 | 0.0 / 12.0 / 15.0 / 111.0 | 0.0 | 4 | 0.017641003 |
+| `PR18_PILOT_CAPTURE` | `M-C0-PILOT-STATIONARY-001` | 1799 | 9.993330369 | 9.993330369 | 22.329196977 | 0.0 / 12.0 / 15.0 / 17.0 | 0.0 | 5 | 0.013461468 |
 
 ### Freshness estimator re-audit
 
@@ -115,6 +117,16 @@ The methods materially disagree. Phase-value transitions are only a lower bound 
 
 Verdict: **`B_2026_07_26_LEGACY_CAPTURE_METHOD_LIMITATION_SUPPORTED`**. Both corrected pilot cadences approach their telemetry row cadences, and pilot phase_age_ms p95 is 15 ms versus 195627 ms in the legacy long log. The earlier (a) verdict was based on a faulty phase-age-decrease estimator that undercounted always-low pilot age values.
 The corrected comparison uses advancing `timestamp-phase_age_ms` update instants and never merges pilot statistics with `PRE_PR18_LEGACY_LOGS`. Legacy `phase_age_ms` p95 is `195627 ms`, while both pilot p95 values are `15 ms`; the four-order-of-magnitude freshness-age difference is consistent with the corrected (b) verdict and incompatible with the retracted ~3.5 Hz interpretation.
+
+### Corrected 300-fresh-sample window audit
+
+- `PRE_PR18_LEGACY_LOGS` valid windows: `27`; this value is reported separately and is never added to the other evidence group.
+  - `2026-08-01_occupied_d09_v120_31min_attempt02`: window counts `[300, 300, 299, 300, 299, 300, 299, 300, 300, 269, 300, 299, 300, 299, 299, 300, 299, 300, 299, 299, 300, 300, 299, 300, 299, 299, 300, 299, 300, 299, 300, 300, 299, 300, 299, 300, 299, 300, 299, 299, 300, 299, 300, 300, 299, 300, 299, 300, 299, 300, 300, 299, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0]`; valid `27` / evaluated `62`; maximum `300`. Computation: anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples
+- `PR18_PILOT_CAPTURE` valid windows: `9`; this value is reported separately and is never added to the other evidence group.
+  - `M-C0-PILOT-DESKWORK-001`: window counts `[300, 300, 300, 300, 299, 299]`; valid `4` / evaluated `6`; maximum `300`. Computation: anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples
+  - `M-C0-PILOT-STATIONARY-001`: window counts `[300, 300, 300, 300, 299, 300]`; valid `5` / evaluated `6`; maximum `300`. Computation: anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples
+
+The nine legacy CSV sessions remain `NOT_PROVABLE_NO_PHASE_AGE_FIELD`; their historical 620 adapter windows remain 0/620 contract-proven and are not converted into fresh windows by this JSONL reconstruction.
 
 ## Preserved measurement corrections
 
@@ -145,11 +157,11 @@ The long JSONL's min/median/p95/max and fraction over 30 seconds are measured in
 
 ### Question 6 — 300 genuinely fresh samples
 
-The measured aggregate is `valid_300_fresh_windows=35`. A value of `0` means no fixed 30-second bin contained 300 reset-proxy events. CSV sessions are additionally marked not provable because freshness metadata is absent; this temporal result is `MEASURED_INSUFFICIENT`.
+The corrected results are reported without a cross-group aggregate: `PRE_PR18_LEGACY_LOGS=27` and `PR18_PILOT_CAPTURE=9`. The counts use advancing reconstructed update instants in fixed 30-second bins anchored at each session's first telemetry timestamp. Legacy CSV sessions are separately not provable because freshness metadata is absent; their historical adapter result remains 0/620.
 
 ### Question 7 — interpolation
 
-Interpolation was **not applied** to any audit input. Where phase-age reset proxies existed, linear interpolation was simulated only to quantify distortion; its RMSE/MAE/max-absolute error are reported per session. For `devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl`, simulated linear interpolation was not applied; the proxy distortion is `RMSE=0.0`, `MAE=0.0`, and `max_abs=0.0` over `15688` samples. The method remains unresolved.
+Interpolation was **not applied** to any audit input. Where phase-age reset proxies existed, linear interpolation was simulated only to quantify distortion; its RMSE/MAE/max-absolute error are reported per session. For `devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl`, simulated linear interpolation was not applied; the proxy distortion is `RMSE=0.008928878`, `MAE=0.004631681`, and `max_abs=0.084` over `15688` samples. The method remains unresolved.
 
 ### Question 8 — BPF + z-score identity
 
@@ -166,7 +178,7 @@ The historical 620/620 all-APNEA result demonstrates that the evaluated inputs c
 
 ## Decision
 
-**`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`** with `semantic_correspondence=UNDETERMINED`, `temporal_correspondence=MEASURED_INSUFFICIENT`, `valid_300_fresh_windows=35`, `correspondence_evaluated=true`, and `correspondence_disproven=false`. The result is measured and successful as a block: phase-like telemetry is present, but the frozen Phase-B semantic, fresh 300-sample window, and exact preprocessing/INT8 distribution correspondence are not established. Exploratory inference is not authorized.
+**`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`** with `semantic_correspondence=UNDETERMINED`, `temporal_correspondence=MEASURED_INSUFFICIENT`, separately reported valid windows `PRE_PR18_LEGACY_LOGS=27` and `PR18_PILOT_CAPTURE=9`, `correspondence_evaluated=true`, and `correspondence_disproven=false`. Pilot temporal eligibility has moved, but semantic correspondence and exact preprocessing correspondence remain unestablished. Exploratory inference is not authorized by this audit.
 
 ## What remains unknown
 

@@ -112,9 +112,11 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d06_v1_360s__S001_NORMAL_D06.csv",
       "fresh_windows": {
-        "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
+        "computation": "no window count because phase_age_ms/update instant is absent",
+        "fresh_sample_counts_by_window": [],
         "max_fresh_samples_in_nonoverlapping_30s_window": 0,
         "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+        "window_count_evaluated": 0,
         "windows_with_300_genuinely_fresh_samples": 0
       },
       "int8_distribution": {
@@ -372,9 +374,11 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d09_v1_360s__S001_NORMAL_D09.csv",
       "fresh_windows": {
-        "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
+        "computation": "no window count because phase_age_ms/update instant is absent",
+        "fresh_sample_counts_by_window": [],
         "max_fresh_samples_in_nonoverlapping_30s_window": 0,
         "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+        "window_count_evaluated": 0,
         "windows_with_300_genuinely_fresh_samples": 0
       },
       "int8_distribution": {
@@ -632,9 +636,11 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d12_v1_360s__S001_NORMAL_D12.csv",
       "fresh_windows": {
-        "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
+        "computation": "no window count because phase_age_ms/update instant is absent",
+        "fresh_sample_counts_by_window": [],
         "max_fresh_samples_in_nonoverlapping_30s_window": 0,
         "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+        "window_count_evaluated": 0,
         "windows_with_300_genuinely_fresh_samples": 0
       },
       "int8_distribution": {
@@ -892,9 +898,11 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d15_v1_360s__S001_NORMAL_D15.csv",
       "fresh_windows": {
-        "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
+        "computation": "no window count because phase_age_ms/update instant is absent",
+        "fresh_sample_counts_by_window": [],
         "max_fresh_samples_in_nonoverlapping_30s_window": 0,
         "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+        "window_count_evaluated": 0,
         "windows_with_300_genuinely_fresh_samples": 0
       },
       "int8_distribution": {
@@ -1152,9 +1160,11 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_breath_paced_12rpm__S001_BREATH_PACED_12_01.csv",
       "fresh_windows": {
-        "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
+        "computation": "no window count because phase_age_ms/update instant is absent",
+        "fresh_sample_counts_by_window": [],
         "max_fresh_samples_in_nonoverlapping_30s_window": 0,
         "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+        "window_count_evaluated": 0,
         "windows_with_300_genuinely_fresh_samples": 0
       },
       "int8_distribution": {
@@ -1412,9 +1422,11 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-28_breath_paced_12rpm_explicit_v2_attempt03__S001_BREATH_PACED_12_02.csv",
       "fresh_windows": {
-        "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
+        "computation": "no window count because phase_age_ms/update instant is absent",
+        "fresh_sample_counts_by_window": [],
         "max_fresh_samples_in_nonoverlapping_30s_window": 0,
         "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+        "window_count_evaluated": 0,
         "windows_with_300_genuinely_fresh_samples": 0
       },
       "int8_distribution": {
@@ -1672,9 +1684,11 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-26_breath_paced_15rpm__S001_BREATH_PACED_15_03.csv",
       "fresh_windows": {
-        "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
+        "computation": "no window count because phase_age_ms/update instant is absent",
+        "fresh_sample_counts_by_window": [],
         "max_fresh_samples_in_nonoverlapping_30s_window": 0,
         "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+        "window_count_evaluated": 0,
         "windows_with_300_genuinely_fresh_samples": 0
       },
       "int8_distribution": {
@@ -1932,9 +1946,11 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-26_breath_paced_20rpm__S001_BREATH_PACED_20_04.csv",
       "fresh_windows": {
-        "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
+        "computation": "no window count because phase_age_ms/update instant is absent",
+        "fresh_sample_counts_by_window": [],
         "max_fresh_samples_in_nonoverlapping_30s_window": 0,
         "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+        "window_count_evaluated": 0,
         "windows_with_300_genuinely_fresh_samples": 0
       },
       "int8_distribution": {
@@ -2192,9 +2208,11 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-26_breath_paced_20rpm_deep__S001_BREATH_PACED_20_05.csv",
       "fresh_windows": {
-        "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
+        "computation": "no window count because phase_age_ms/update instant is absent",
+        "fresh_sample_counts_by_window": [],
         "max_fresh_samples_in_nonoverlapping_30s_window": 0,
         "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+        "window_count_evaluated": 0,
         "windows_with_300_genuinely_fresh_samples": 0
       },
       "int8_distribution": {
@@ -2452,9 +2470,75 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "evidence_path": "devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl",
       "fresh_windows": {
-        "computation": "count reset-proxy events per fixed non-overlapping 30 s bin; count bins >= 300",
+        "computation": "anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples",
+        "first_identifiable_sample_included": true,
+        "fresh_sample_counts_by_window": [
+          300,
+          300,
+          299,
+          300,
+          299,
+          300,
+          299,
+          300,
+          300,
+          269,
+          300,
+          299,
+          300,
+          299,
+          299,
+          300,
+          299,
+          300,
+          299,
+          299,
+          300,
+          300,
+          299,
+          300,
+          299,
+          299,
+          300,
+          299,
+          300,
+          299,
+          300,
+          300,
+          299,
+          300,
+          299,
+          300,
+          299,
+          300,
+          299,
+          299,
+          300,
+          299,
+          300,
+          300,
+          299,
+          300,
+          299,
+          300,
+          299,
+          300,
+          300,
+          299,
+          114,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "max_fresh_samples_in_nonoverlapping_30s_window": 300,
-        "status": "MEASURED_FROM_PHASE_AGE_RESET_PROXY",
+        "status": "MEASURED_FROM_RECONSTRUCTED_UPDATE_INSTANTS",
+        "window_count_evaluated": 62,
         "windows_with_300_genuinely_fresh_samples": 27
       },
       "int8_distribution": {
@@ -2507,11 +2591,11 @@
         "applied_to_audit": false,
         "computation": "linear interpolation between phase_age reset-proxy samples; compared with observed held/repeated telemetry at the original timestamps",
         "distortion": {
-          "interpolated_std": 0.175712071,
-          "mae": 0.0,
-          "max_abs": 0.0,
+          "interpolated_std": 0.172725491,
+          "mae": 0.004631681,
+          "max_abs": 0.084,
           "observed_std": 0.175712071,
-          "rmse": 0.0,
+          "rmse": 0.008928878,
           "sample_count": 15688
         },
         "required_status": "UNRESOLVED",
@@ -2745,9 +2829,19 @@
       "evidence_group": "PR18_PILOT_CAPTURE",
       "evidence_path": "devices/mmwave/device_measurements/pilot/M-C0-PILOT-DESKWORK-001.raw.jsonl",
       "fresh_windows": {
-        "computation": "count reset-proxy events per fixed non-overlapping 30 s bin; count bins >= 300",
+        "computation": "anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples",
+        "first_identifiable_sample_included": true,
+        "fresh_sample_counts_by_window": [
+          300,
+          300,
+          300,
+          300,
+          299,
+          299
+        ],
         "max_fresh_samples_in_nonoverlapping_30s_window": 300,
-        "status": "MEASURED_FROM_PHASE_AGE_RESET_PROXY",
+        "status": "MEASURED_FROM_RECONSTRUCTED_UPDATE_INSTANTS",
+        "window_count_evaluated": 6,
         "windows_with_300_genuinely_fresh_samples": 4
       },
       "int8_distribution": {
@@ -2800,11 +2894,11 @@
         "applied_to_audit": false,
         "computation": "linear interpolation between phase_age reset-proxy samples; compared with observed held/repeated telemetry at the original timestamps",
         "distortion": {
-          "interpolated_std": 0.226752694,
-          "mae": 1.3912e-05,
-          "max_abs": 0.025,
+          "interpolated_std": 0.217906037,
+          "mae": 0.010100385,
+          "max_abs": 0.09,
           "observed_std": 0.226751812,
-          "rmse": 0.000589747,
+          "rmse": 0.017641003,
           "sample_count": 1797
         },
         "required_status": "UNRESOLVED",
@@ -3038,10 +3132,20 @@
       "evidence_group": "PR18_PILOT_CAPTURE",
       "evidence_path": "devices/mmwave/device_measurements/pilot/M-C0-PILOT-STATIONARY-001.raw.jsonl",
       "fresh_windows": {
-        "computation": "count reset-proxy events per fixed non-overlapping 30 s bin; count bins >= 300",
+        "computation": "anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples",
+        "first_identifiable_sample_included": true,
+        "fresh_sample_counts_by_window": [
+          300,
+          300,
+          300,
+          300,
+          299,
+          300
+        ],
         "max_fresh_samples_in_nonoverlapping_30s_window": 300,
-        "status": "MEASURED_FROM_PHASE_AGE_RESET_PROXY",
-        "windows_with_300_genuinely_fresh_samples": 4
+        "status": "MEASURED_FROM_RECONSTRUCTED_UPDATE_INSTANTS",
+        "window_count_evaluated": 6,
+        "windows_with_300_genuinely_fresh_samples": 5
       },
       "int8_distribution": {
         "after_int8_dequantized": {
@@ -3093,12 +3197,12 @@
         "applied_to_audit": false,
         "computation": "linear interpolation between phase_age reset-proxy samples; compared with observed held/repeated telemetry at the original timestamps",
         "distortion": {
-          "interpolated_std": 0.169989464,
-          "mae": 0.0,
-          "max_abs": 0.0,
-          "observed_std": 0.169989464,
-          "rmse": 0.0,
-          "sample_count": 1797
+          "interpolated_std": 0.162939168,
+          "mae": 0.00829552,
+          "max_abs": 0.06,
+          "observed_std": 0.169863102,
+          "rmse": 0.013461468,
+          "sample_count": 1793
         },
         "required_status": "UNRESOLVED",
         "simulation_status": "SIMULATED_LINEAR_INTERPOLATION_FROM_PHASE_AGE_RESET_PROXY"

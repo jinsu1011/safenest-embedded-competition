@@ -576,26 +576,54 @@ def freshness_summary(records: list[dict[str, Any]]) -> tuple[dict[str, Any], li
     )
 
 
-def fixed_window_freshness(records: list[dict[str, Any]], reset_indices: list[int]) -> dict[str, Any]:
-    event_times = [records[index]["timestamp_s"] for index in reset_indices if records[index]["timestamp_s"] is not None]
-    if not event_times:
+def fixed_window_freshness(records: list[dict[str, Any]], fresh_update_indices: list[int]) -> dict[str, Any]:
+    first_identifiable_index = next(
+        (
+            index
+            for index, record in enumerate(records)
+            if record["timestamp_s"] is not None and record["phase_age_ms"] is not None
+        ),
+        None,
+    )
+    if first_identifiable_index is None:
         return {
             "windows_with_300_genuinely_fresh_samples": 0,
             "max_fresh_samples_in_nonoverlapping_30s_window": 0,
-            "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD" if not reset_indices else "NO_RESET_EVENTS",
-            "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
+            "fresh_sample_counts_by_window": [],
+            "window_count_evaluated": 0,
+            "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+            "computation": "no window count because phase_age_ms/update instant is absent",
         }
-    start = event_times[0]
+    event_indices = [first_identifiable_index] + [
+        index for index in fresh_update_indices if index != first_identifiable_index
+    ]
+    event_times = [
+        records[index]["timestamp_s"]
+        for index in event_indices
+        if records[index]["timestamp_s"] is not None
+    ]
+    telemetry_times = [
+        record["timestamp_s"] for record in records if record["timestamp_s"] is not None
+    ]
+    start = telemetry_times[0]
+    last = telemetry_times[-1]
+    window_count = int((last - start) // FROZEN["window_seconds"]) + 1
     bins: dict[int, int] = {}
     for timestamp in event_times:
         bucket = int((timestamp - start) // FROZEN["window_seconds"])
         bins[bucket] = bins.get(bucket, 0) + 1
-    maximum = max(bins.values()) if bins else 0
+    counts = [bins.get(index, 0) for index in range(window_count)]
+    maximum = max(counts) if counts else 0
     return {
-        "windows_with_300_genuinely_fresh_samples": sum(1 for count in bins.values() if count >= FROZEN["window_samples"]),
+        "windows_with_300_genuinely_fresh_samples": sum(
+            1 for count in counts if count >= FROZEN["window_samples"]
+        ),
         "max_fresh_samples_in_nonoverlapping_30s_window": maximum,
-        "status": "MEASURED_FROM_PHASE_AGE_RESET_PROXY",
-        "computation": "count reset-proxy events per fixed non-overlapping 30 s bin; count bins >= 300",
+        "fresh_sample_counts_by_window": counts,
+        "window_count_evaluated": window_count,
+        "first_identifiable_sample_included": True,
+        "status": "MEASURED_FROM_RECONSTRUCTED_UPDATE_INSTANTS",
+        "computation": "anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples",
     }
 
 
@@ -891,9 +919,16 @@ def analyze_session(root: Path, evidence_root: Path, item: dict[str, Any], all_h
         phase["field"] = "resp_phase"
     else:
         phase["field"] = "breath_phase"
-    freshness, reset_indices = freshness_summary(records)
-    fresh_windows = fixed_window_freshness(records, reset_indices)
-    interpolation = interpolation_diagnostic(records, reset_indices)
+    freshness, corrected_fresh_update_indices = freshness_summary(records)
+    fresh_windows = fixed_window_freshness(records, corrected_fresh_update_indices)
+    superseded_age_decrease_indices = [
+        index
+        for index in range(1, len(records))
+        if records[index]["phase_age_ms"] is not None
+        and records[index - 1]["phase_age_ms"] is not None
+        and records[index]["phase_age_ms"] < records[index - 1]["phase_age_ms"]
+    ]
+    interpolation = interpolation_diagnostic(records, superseded_age_decrease_indices)
     distance = distance_summary(rows, kind)
     finite_phase = [record["phase"] for record in records if record["phase"] is not None]
     bpf_comparison = {
@@ -1388,7 +1423,9 @@ def render_report(
         f"- Correspondence disproven: `{str(summary['correspondence_disproven']).lower()}`",
         f"- Semantic correspondence: `{summary['semantic_correspondence']}`",
         f"- Temporal correspondence: `{summary['temporal_correspondence']}`",
-        f"- Valid 300-fresh windows: `{summary['valid_300_fresh_windows']}`",
+        f"- Valid 300-fresh windows, PRE_PR18_LEGACY_LOGS: `{summary['valid_300_fresh_windows']['PRE_PR18_LEGACY_LOGS']}`",
+        f"- Valid 300-fresh windows, PR18_PILOT_CAPTURE: `{summary['valid_300_fresh_windows']['PR18_PILOT_CAPTURE']}`",
+        "- Cross-group aggregate: **not reported**",
         "- Model scoring/inference: **not executed**",
         "- Raw modification/copy: **none**",
         "",
@@ -1491,6 +1528,26 @@ def render_report(
         "",
         f"Verdict: **`{pilot_finding['verdict']}`**. {pilot_finding['basis']}",
         "The corrected comparison uses advancing `timestamp-phase_age_ms` update instants and never merges pilot statistics with `PRE_PR18_LEGACY_LOGS`. Legacy `phase_age_ms` p95 is `195627 ms`, while both pilot p95 values are `15 ms`; the four-order-of-magnitude freshness-age difference is consistent with the corrected (b) verdict and incompatible with the retracted ~3.5 Hz interpretation.",
+        "",
+        "### Corrected 300-fresh-sample window audit",
+        "",
+    ]
+    for group in ("PRE_PR18_LEGACY_LOGS", "PR18_PILOT_CAPTURE"):
+        result = summary["window_results_by_evidence_group"][group]
+        lines.append(
+            f"- `{group}` valid windows: `{result['valid_300_fresh_windows']}`; this value is reported separately and is never added to the other evidence group."
+        )
+        for session in result["sessions"]:
+            if session["status"] == "NOT_PROVABLE_NO_PHASE_AGE_FIELD":
+                continue
+            lines.append(
+                f"  - `{session['session_id']}`: window counts `{session['fresh_sample_counts_by_window']}`; "
+                f"valid `{session['valid_300_fresh_windows']}` / evaluated `{session['window_count_evaluated']}`; "
+                f"maximum `{session['maximum_fresh_samples_in_window']}`. Computation: {session['computation']}"
+            )
+    lines += [
+        "",
+        "The nine legacy CSV sessions remain `NOT_PROVABLE_NO_PHASE_AGE_FIELD`; their historical 620 adapter windows remain 0/620 contract-proven and are not converted into fresh windows by this JSONL reconstruction.",
     ]
     d15 = next((session for session in sessions if session["session_id"] == "S001_NORMAL_D15"), None)
     paced = {
@@ -1610,7 +1667,7 @@ def render_report(
         "",
         "### Question 6 — 300 genuinely fresh samples",
         "",
-        f"The measured aggregate is `valid_300_fresh_windows={summary['valid_300_fresh_windows']}`. A value of `0` means no fixed 30-second bin contained 300 reset-proxy events. CSV sessions are additionally marked not provable because freshness metadata is absent; this temporal result is `MEASURED_INSUFFICIENT`.",
+        f"The corrected results are reported without a cross-group aggregate: `PRE_PR18_LEGACY_LOGS={summary['valid_300_fresh_windows']['PRE_PR18_LEGACY_LOGS']}` and `PR18_PILOT_CAPTURE={summary['valid_300_fresh_windows']['PR18_PILOT_CAPTURE']}`. The counts use advancing reconstructed update instants in fixed 30-second bins anchored at each session's first telemetry timestamp. Legacy CSV sessions are separately not provable because freshness metadata is absent; their historical adapter result remains 0/620.",
         "",
         "### Question 7 — interpolation",
         "",
@@ -1631,7 +1688,7 @@ def render_report(
         "",
         "## Decision",
         "",
-        f"**`{summary['decision']}`** with `semantic_correspondence={summary['semantic_correspondence']}`, `temporal_correspondence={summary['temporal_correspondence']}`, `valid_300_fresh_windows={summary['valid_300_fresh_windows']}`, `correspondence_evaluated=true`, and `correspondence_disproven=false`. The result is measured and successful as a block: phase-like telemetry is present, but the frozen Phase-B semantic, fresh 300-sample window, and exact preprocessing/INT8 distribution correspondence are not established. Exploratory inference is not authorized.",
+        f"**`{summary['decision']}`** with `semantic_correspondence={summary['semantic_correspondence']}`, `temporal_correspondence={summary['temporal_correspondence']}`, separately reported valid windows `PRE_PR18_LEGACY_LOGS={summary['valid_300_fresh_windows']['PRE_PR18_LEGACY_LOGS']}` and `PR18_PILOT_CAPTURE={summary['valid_300_fresh_windows']['PR18_PILOT_CAPTURE']}`, `correspondence_evaluated=true`, and `correspondence_disproven=false`. Pilot temporal eligibility has moved, but semantic correspondence and exact preprocessing correspondence remain unestablished. Exploratory inference is not authorized by this audit.",
         "",
         "## What remains unknown",
         "",
@@ -1713,6 +1770,33 @@ def run(
         if result:
             sessions.append(result)
     pilot_finding = classify_pilot_fresh_cadence(sessions)
+    window_results_by_group: dict[str, dict[str, Any]] = {}
+    for group in ("PRE_PR18_LEGACY_LOGS", "PR18_PILOT_CAPTURE"):
+        group_sessions = [session for session in sessions if session.get("evidence_group") == group]
+        window_results_by_group[group] = {
+            "valid_300_fresh_windows": sum(
+                session["fresh_windows"]["windows_with_300_genuinely_fresh_samples"]
+                for session in group_sessions
+            ),
+            "sessions": [
+                {
+                    "session_id": session["session_id"],
+                    "window_count_evaluated": session["fresh_windows"].get("window_count_evaluated", 0),
+                    "fresh_sample_counts_by_window": session["fresh_windows"].get(
+                        "fresh_sample_counts_by_window", []
+                    ),
+                    "valid_300_fresh_windows": session["fresh_windows"][
+                        "windows_with_300_genuinely_fresh_samples"
+                    ],
+                    "maximum_fresh_samples_in_window": session["fresh_windows"][
+                        "max_fresh_samples_in_nonoverlapping_30s_window"
+                    ],
+                    "status": session["fresh_windows"]["status"],
+                    "computation": session["fresh_windows"]["computation"],
+                }
+                for session in group_sessions
+            ],
+        }
     try:
         branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=root, text=True).strip()
         head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
@@ -1734,9 +1818,12 @@ def run(
         "correspondence_disproven": False,
         "semantic_correspondence": "UNDETERMINED",
         "temporal_correspondence": "MEASURED_INSUFFICIENT",
-        "valid_300_fresh_windows": sum(
-            session["fresh_windows"]["windows_with_300_genuinely_fresh_samples"] for session in sessions
-        ),
+        "valid_300_fresh_windows": {
+            group: result["valid_300_fresh_windows"]
+            for group, result in window_results_by_group.items()
+        },
+        "valid_300_fresh_windows_aggregate_reported": False,
+        "window_results_by_evidence_group": window_results_by_group,
         "preflight_gate": "PASS_INHERITED_FROM_PREVIOUS_STANDALONE_RUN",
         "execution": {
             "m_c0_executed": True,
@@ -1874,10 +1961,18 @@ def run(
                 {"session_id": session["session_id"], "phase_age_ms": session["phase_age_ms"]}
                 for session in sessions
             ],
-            "6_300_fresh_sample_windows": [
-                {"session_id": session["session_id"], "fresh_windows": session["fresh_windows"]}
-                for session in sessions
-            ],
+            "6_300_fresh_sample_windows": {
+                "cross_group_aggregate_reported": False,
+                "by_evidence_group": window_results_by_group,
+                "per_session": [
+                    {
+                        "session_id": session["session_id"],
+                        "evidence_group": session.get("evidence_group"),
+                        "fresh_windows": session["fresh_windows"],
+                    }
+                    for session in sessions
+                ],
+            },
             "7_interpolation_requirement_and_simulated_distortion": [
                 {"session_id": session["session_id"], "interpolation": session["interpolation"]}
                 for session in sessions

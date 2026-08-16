@@ -1501,116 +1501,432 @@
         "session_id": "M-C0-PILOT-STATIONARY-001"
       }
     ],
-    "6_300_fresh_sample_windows": [
-      {
-        "fresh_windows": {
-          "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
-          "max_fresh_samples_in_nonoverlapping_30s_window": 0,
-          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
-          "windows_with_300_genuinely_fresh_samples": 0
+    "6_300_fresh_sample_windows": {
+      "by_evidence_group": {
+        "PR18_PILOT_CAPTURE": {
+          "sessions": [
+            {
+              "computation": "anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples",
+              "fresh_sample_counts_by_window": [
+                300,
+                300,
+                300,
+                300,
+                299,
+                299
+              ],
+              "maximum_fresh_samples_in_window": 300,
+              "session_id": "M-C0-PILOT-DESKWORK-001",
+              "status": "MEASURED_FROM_RECONSTRUCTED_UPDATE_INSTANTS",
+              "valid_300_fresh_windows": 4,
+              "window_count_evaluated": 6
+            },
+            {
+              "computation": "anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples",
+              "fresh_sample_counts_by_window": [
+                300,
+                300,
+                300,
+                300,
+                299,
+                300
+              ],
+              "maximum_fresh_samples_in_window": 300,
+              "session_id": "M-C0-PILOT-STATIONARY-001",
+              "status": "MEASURED_FROM_RECONSTRUCTED_UPDATE_INSTANTS",
+              "valid_300_fresh_windows": 5,
+              "window_count_evaluated": 6
+            }
+          ],
+          "valid_300_fresh_windows": 9
         },
-        "session_id": "S001_NORMAL_D06"
+        "PRE_PR18_LEGACY_LOGS": {
+          "sessions": [
+            {
+              "computation": "no window count because phase_age_ms/update instant is absent",
+              "fresh_sample_counts_by_window": [],
+              "maximum_fresh_samples_in_window": 0,
+              "session_id": "S001_NORMAL_D06",
+              "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+              "valid_300_fresh_windows": 0,
+              "window_count_evaluated": 0
+            },
+            {
+              "computation": "no window count because phase_age_ms/update instant is absent",
+              "fresh_sample_counts_by_window": [],
+              "maximum_fresh_samples_in_window": 0,
+              "session_id": "S001_NORMAL_D09",
+              "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+              "valid_300_fresh_windows": 0,
+              "window_count_evaluated": 0
+            },
+            {
+              "computation": "no window count because phase_age_ms/update instant is absent",
+              "fresh_sample_counts_by_window": [],
+              "maximum_fresh_samples_in_window": 0,
+              "session_id": "S001_NORMAL_D12",
+              "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+              "valid_300_fresh_windows": 0,
+              "window_count_evaluated": 0
+            },
+            {
+              "computation": "no window count because phase_age_ms/update instant is absent",
+              "fresh_sample_counts_by_window": [],
+              "maximum_fresh_samples_in_window": 0,
+              "session_id": "S001_NORMAL_D15",
+              "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+              "valid_300_fresh_windows": 0,
+              "window_count_evaluated": 0
+            },
+            {
+              "computation": "no window count because phase_age_ms/update instant is absent",
+              "fresh_sample_counts_by_window": [],
+              "maximum_fresh_samples_in_window": 0,
+              "session_id": "S001_BREATH_PACED_12_01",
+              "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+              "valid_300_fresh_windows": 0,
+              "window_count_evaluated": 0
+            },
+            {
+              "computation": "no window count because phase_age_ms/update instant is absent",
+              "fresh_sample_counts_by_window": [],
+              "maximum_fresh_samples_in_window": 0,
+              "session_id": "S001_BREATH_PACED_12_02",
+              "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+              "valid_300_fresh_windows": 0,
+              "window_count_evaluated": 0
+            },
+            {
+              "computation": "no window count because phase_age_ms/update instant is absent",
+              "fresh_sample_counts_by_window": [],
+              "maximum_fresh_samples_in_window": 0,
+              "session_id": "S001_BREATH_PACED_15_03",
+              "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+              "valid_300_fresh_windows": 0,
+              "window_count_evaluated": 0
+            },
+            {
+              "computation": "no window count because phase_age_ms/update instant is absent",
+              "fresh_sample_counts_by_window": [],
+              "maximum_fresh_samples_in_window": 0,
+              "session_id": "S001_BREATH_PACED_20_04",
+              "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+              "valid_300_fresh_windows": 0,
+              "window_count_evaluated": 0
+            },
+            {
+              "computation": "no window count because phase_age_ms/update instant is absent",
+              "fresh_sample_counts_by_window": [],
+              "maximum_fresh_samples_in_window": 0,
+              "session_id": "S001_BREATH_PACED_20_05",
+              "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+              "valid_300_fresh_windows": 0,
+              "window_count_evaluated": 0
+            },
+            {
+              "computation": "anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples",
+              "fresh_sample_counts_by_window": [
+                300,
+                300,
+                299,
+                300,
+                299,
+                300,
+                299,
+                300,
+                300,
+                269,
+                300,
+                299,
+                300,
+                299,
+                299,
+                300,
+                299,
+                300,
+                299,
+                299,
+                300,
+                300,
+                299,
+                300,
+                299,
+                299,
+                300,
+                299,
+                300,
+                299,
+                300,
+                300,
+                299,
+                300,
+                299,
+                300,
+                299,
+                300,
+                299,
+                299,
+                300,
+                299,
+                300,
+                300,
+                299,
+                300,
+                299,
+                300,
+                299,
+                300,
+                300,
+                299,
+                114,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "maximum_fresh_samples_in_window": 300,
+              "session_id": "2026-08-01_occupied_d09_v120_31min_attempt02",
+              "status": "MEASURED_FROM_RECONSTRUCTED_UPDATE_INSTANTS",
+              "valid_300_fresh_windows": 27,
+              "window_count_evaluated": 62
+            }
+          ],
+          "valid_300_fresh_windows": 27
+        }
       },
-      {
-        "fresh_windows": {
-          "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
-          "max_fresh_samples_in_nonoverlapping_30s_window": 0,
-          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
-          "windows_with_300_genuinely_fresh_samples": 0
+      "cross_group_aggregate_reported": false,
+      "per_session": [
+        {
+          "evidence_group": "PRE_PR18_LEGACY_LOGS",
+          "fresh_windows": {
+            "computation": "no window count because phase_age_ms/update instant is absent",
+            "fresh_sample_counts_by_window": [],
+            "max_fresh_samples_in_nonoverlapping_30s_window": 0,
+            "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+            "window_count_evaluated": 0,
+            "windows_with_300_genuinely_fresh_samples": 0
+          },
+          "session_id": "S001_NORMAL_D06"
         },
-        "session_id": "S001_NORMAL_D09"
-      },
-      {
-        "fresh_windows": {
-          "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
-          "max_fresh_samples_in_nonoverlapping_30s_window": 0,
-          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
-          "windows_with_300_genuinely_fresh_samples": 0
+        {
+          "evidence_group": "PRE_PR18_LEGACY_LOGS",
+          "fresh_windows": {
+            "computation": "no window count because phase_age_ms/update instant is absent",
+            "fresh_sample_counts_by_window": [],
+            "max_fresh_samples_in_nonoverlapping_30s_window": 0,
+            "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+            "window_count_evaluated": 0,
+            "windows_with_300_genuinely_fresh_samples": 0
+          },
+          "session_id": "S001_NORMAL_D09"
         },
-        "session_id": "S001_NORMAL_D12"
-      },
-      {
-        "fresh_windows": {
-          "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
-          "max_fresh_samples_in_nonoverlapping_30s_window": 0,
-          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
-          "windows_with_300_genuinely_fresh_samples": 0
+        {
+          "evidence_group": "PRE_PR18_LEGACY_LOGS",
+          "fresh_windows": {
+            "computation": "no window count because phase_age_ms/update instant is absent",
+            "fresh_sample_counts_by_window": [],
+            "max_fresh_samples_in_nonoverlapping_30s_window": 0,
+            "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+            "window_count_evaluated": 0,
+            "windows_with_300_genuinely_fresh_samples": 0
+          },
+          "session_id": "S001_NORMAL_D12"
         },
-        "session_id": "S001_NORMAL_D15"
-      },
-      {
-        "fresh_windows": {
-          "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
-          "max_fresh_samples_in_nonoverlapping_30s_window": 0,
-          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
-          "windows_with_300_genuinely_fresh_samples": 0
+        {
+          "evidence_group": "PRE_PR18_LEGACY_LOGS",
+          "fresh_windows": {
+            "computation": "no window count because phase_age_ms/update instant is absent",
+            "fresh_sample_counts_by_window": [],
+            "max_fresh_samples_in_nonoverlapping_30s_window": 0,
+            "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+            "window_count_evaluated": 0,
+            "windows_with_300_genuinely_fresh_samples": 0
+          },
+          "session_id": "S001_NORMAL_D15"
         },
-        "session_id": "S001_BREATH_PACED_12_01"
-      },
-      {
-        "fresh_windows": {
-          "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
-          "max_fresh_samples_in_nonoverlapping_30s_window": 0,
-          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
-          "windows_with_300_genuinely_fresh_samples": 0
+        {
+          "evidence_group": "PRE_PR18_LEGACY_LOGS",
+          "fresh_windows": {
+            "computation": "no window count because phase_age_ms/update instant is absent",
+            "fresh_sample_counts_by_window": [],
+            "max_fresh_samples_in_nonoverlapping_30s_window": 0,
+            "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+            "window_count_evaluated": 0,
+            "windows_with_300_genuinely_fresh_samples": 0
+          },
+          "session_id": "S001_BREATH_PACED_12_01"
         },
-        "session_id": "S001_BREATH_PACED_12_02"
-      },
-      {
-        "fresh_windows": {
-          "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
-          "max_fresh_samples_in_nonoverlapping_30s_window": 0,
-          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
-          "windows_with_300_genuinely_fresh_samples": 0
+        {
+          "evidence_group": "PRE_PR18_LEGACY_LOGS",
+          "fresh_windows": {
+            "computation": "no window count because phase_age_ms/update instant is absent",
+            "fresh_sample_counts_by_window": [],
+            "max_fresh_samples_in_nonoverlapping_30s_window": 0,
+            "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+            "window_count_evaluated": 0,
+            "windows_with_300_genuinely_fresh_samples": 0
+          },
+          "session_id": "S001_BREATH_PACED_12_02"
         },
-        "session_id": "S001_BREATH_PACED_15_03"
-      },
-      {
-        "fresh_windows": {
-          "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
-          "max_fresh_samples_in_nonoverlapping_30s_window": 0,
-          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
-          "windows_with_300_genuinely_fresh_samples": 0
+        {
+          "evidence_group": "PRE_PR18_LEGACY_LOGS",
+          "fresh_windows": {
+            "computation": "no window count because phase_age_ms/update instant is absent",
+            "fresh_sample_counts_by_window": [],
+            "max_fresh_samples_in_nonoverlapping_30s_window": 0,
+            "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+            "window_count_evaluated": 0,
+            "windows_with_300_genuinely_fresh_samples": 0
+          },
+          "session_id": "S001_BREATH_PACED_15_03"
         },
-        "session_id": "S001_BREATH_PACED_20_04"
-      },
-      {
-        "fresh_windows": {
-          "computation": "fixed non-overlapping 30 s bins from the first telemetry timestamp",
-          "max_fresh_samples_in_nonoverlapping_30s_window": 0,
-          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
-          "windows_with_300_genuinely_fresh_samples": 0
+        {
+          "evidence_group": "PRE_PR18_LEGACY_LOGS",
+          "fresh_windows": {
+            "computation": "no window count because phase_age_ms/update instant is absent",
+            "fresh_sample_counts_by_window": [],
+            "max_fresh_samples_in_nonoverlapping_30s_window": 0,
+            "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+            "window_count_evaluated": 0,
+            "windows_with_300_genuinely_fresh_samples": 0
+          },
+          "session_id": "S001_BREATH_PACED_20_04"
         },
-        "session_id": "S001_BREATH_PACED_20_05"
-      },
-      {
-        "fresh_windows": {
-          "computation": "count reset-proxy events per fixed non-overlapping 30 s bin; count bins >= 300",
-          "max_fresh_samples_in_nonoverlapping_30s_window": 300,
-          "status": "MEASURED_FROM_PHASE_AGE_RESET_PROXY",
-          "windows_with_300_genuinely_fresh_samples": 27
+        {
+          "evidence_group": "PRE_PR18_LEGACY_LOGS",
+          "fresh_windows": {
+            "computation": "no window count because phase_age_ms/update instant is absent",
+            "fresh_sample_counts_by_window": [],
+            "max_fresh_samples_in_nonoverlapping_30s_window": 0,
+            "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+            "window_count_evaluated": 0,
+            "windows_with_300_genuinely_fresh_samples": 0
+          },
+          "session_id": "S001_BREATH_PACED_20_05"
         },
-        "session_id": "2026-08-01_occupied_d09_v120_31min_attempt02"
-      },
-      {
-        "fresh_windows": {
-          "computation": "count reset-proxy events per fixed non-overlapping 30 s bin; count bins >= 300",
-          "max_fresh_samples_in_nonoverlapping_30s_window": 300,
-          "status": "MEASURED_FROM_PHASE_AGE_RESET_PROXY",
-          "windows_with_300_genuinely_fresh_samples": 4
+        {
+          "evidence_group": "PRE_PR18_LEGACY_LOGS",
+          "fresh_windows": {
+            "computation": "anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples",
+            "first_identifiable_sample_included": true,
+            "fresh_sample_counts_by_window": [
+              300,
+              300,
+              299,
+              300,
+              299,
+              300,
+              299,
+              300,
+              300,
+              269,
+              300,
+              299,
+              300,
+              299,
+              299,
+              300,
+              299,
+              300,
+              299,
+              299,
+              300,
+              300,
+              299,
+              300,
+              299,
+              299,
+              300,
+              299,
+              300,
+              299,
+              300,
+              300,
+              299,
+              300,
+              299,
+              300,
+              299,
+              300,
+              299,
+              299,
+              300,
+              299,
+              300,
+              300,
+              299,
+              300,
+              299,
+              300,
+              299,
+              300,
+              300,
+              299,
+              114,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "max_fresh_samples_in_nonoverlapping_30s_window": 300,
+            "status": "MEASURED_FROM_RECONSTRUCTED_UPDATE_INSTANTS",
+            "window_count_evaluated": 62,
+            "windows_with_300_genuinely_fresh_samples": 27
+          },
+          "session_id": "2026-08-01_occupied_d09_v120_31min_attempt02"
         },
-        "session_id": "M-C0-PILOT-DESKWORK-001"
-      },
-      {
-        "fresh_windows": {
-          "computation": "count reset-proxy events per fixed non-overlapping 30 s bin; count bins >= 300",
-          "max_fresh_samples_in_nonoverlapping_30s_window": 300,
-          "status": "MEASURED_FROM_PHASE_AGE_RESET_PROXY",
-          "windows_with_300_genuinely_fresh_samples": 4
+        {
+          "evidence_group": "PR18_PILOT_CAPTURE",
+          "fresh_windows": {
+            "computation": "anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples",
+            "first_identifiable_sample_included": true,
+            "fresh_sample_counts_by_window": [
+              300,
+              300,
+              300,
+              300,
+              299,
+              299
+            ],
+            "max_fresh_samples_in_nonoverlapping_30s_window": 300,
+            "status": "MEASURED_FROM_RECONSTRUCTED_UPDATE_INSTANTS",
+            "window_count_evaluated": 6,
+            "windows_with_300_genuinely_fresh_samples": 4
+          },
+          "session_id": "M-C0-PILOT-DESKWORK-001"
         },
-        "session_id": "M-C0-PILOT-STATIONARY-001"
-      }
-    ],
+        {
+          "evidence_group": "PR18_PILOT_CAPTURE",
+          "fresh_windows": {
+            "computation": "anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples",
+            "first_identifiable_sample_included": true,
+            "fresh_sample_counts_by_window": [
+              300,
+              300,
+              300,
+              300,
+              299,
+              300
+            ],
+            "max_fresh_samples_in_nonoverlapping_30s_window": 300,
+            "status": "MEASURED_FROM_RECONSTRUCTED_UPDATE_INSTANTS",
+            "window_count_evaluated": 6,
+            "windows_with_300_genuinely_fresh_samples": 5
+          },
+          "session_id": "M-C0-PILOT-STATIONARY-001"
+        }
+      ]
+    },
     "7_interpolation_requirement_and_simulated_distortion": [
       {
         "interpolation": {
@@ -1698,11 +2014,11 @@
           "applied_to_audit": false,
           "computation": "linear interpolation between phase_age reset-proxy samples; compared with observed held/repeated telemetry at the original timestamps",
           "distortion": {
-            "interpolated_std": 0.175712071,
-            "mae": 0.0,
-            "max_abs": 0.0,
+            "interpolated_std": 0.172725491,
+            "mae": 0.004631681,
+            "max_abs": 0.084,
             "observed_std": 0.175712071,
-            "rmse": 0.0,
+            "rmse": 0.008928878,
             "sample_count": 15688
           },
           "required_status": "UNRESOLVED",
@@ -1715,11 +2031,11 @@
           "applied_to_audit": false,
           "computation": "linear interpolation between phase_age reset-proxy samples; compared with observed held/repeated telemetry at the original timestamps",
           "distortion": {
-            "interpolated_std": 0.226752694,
-            "mae": 1.3912e-05,
-            "max_abs": 0.025,
+            "interpolated_std": 0.217906037,
+            "mae": 0.010100385,
+            "max_abs": 0.09,
             "observed_std": 0.226751812,
-            "rmse": 0.000589747,
+            "rmse": 0.017641003,
             "sample_count": 1797
           },
           "required_status": "UNRESOLVED",
@@ -1732,12 +2048,12 @@
           "applied_to_audit": false,
           "computation": "linear interpolation between phase_age reset-proxy samples; compared with observed held/repeated telemetry at the original timestamps",
           "distortion": {
-            "interpolated_std": 0.169989464,
-            "mae": 0.0,
-            "max_abs": 0.0,
-            "observed_std": 0.169989464,
-            "rmse": 0.0,
-            "sample_count": 1797
+            "interpolated_std": 0.162939168,
+            "mae": 0.00829552,
+            "max_abs": 0.06,
+            "observed_std": 0.169863102,
+            "rmse": 0.013461468,
+            "sample_count": 1793
           },
           "required_status": "UNRESOLVED",
           "simulation_status": "SIMULATED_LINEAR_INTERPOLATION_FROM_PHASE_AGE_RESET_PROXY"
@@ -3242,5 +3558,8 @@
   "semantic_correspondence": "UNDETERMINED",
   "temporal_correspondence": "MEASURED_INSUFFICIENT",
   "training_reference": null,
-  "valid_300_fresh_windows": 35
+  "valid_300_fresh_windows": {
+    "PR18_PILOT_CAPTURE": 9,
+    "PRE_PR18_LEGACY_LOGS": 27
+  }
 }

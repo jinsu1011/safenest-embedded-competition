@@ -20,7 +20,7 @@
   "expected_input_file_count": 12,
   "expected_input_files_hashed_count": 12,
   "expected_input_present_count": 12,
-  "head_at_run": "263c8722fa6e7b2b7cb5889ed642e5913630d07a",
+  "head_at_run": "404fb4707ac363420f101c78e876e4be06259038",
   "known_but_not_provided_count": 0,
   "phase": "M-C0",
   "pilot_evidence_root": "devices/mmwave/device_measurements",
@@ -665,11 +665,15 @@
       "session_id": "M-C0-PILOT-STATIONARY-001",
       "superseded_fresh_0x0A13_cadence_hz": 3.518230325,
       "telemetry_row_cadence_hz": 9.993330369,
-      "windows_with_300_genuinely_fresh_samples": 4
+      "windows_with_300_genuinely_fresh_samples": 5
     }
   ],
   "temporal_correspondence": "MEASURED_INSUFFICIENT",
-  "valid_300_fresh_windows": 35,
+  "valid_300_fresh_windows": {
+    "PR18_PILOT_CAPTURE": 9,
+    "PRE_PR18_LEGACY_LOGS": 27
+  },
+  "valid_300_fresh_windows_aggregate_reported": false,
   "what_remains_unknown": [
     "Exact physical/numeric semantic mapping from MR60 breath_phase to the frozen Phase-B input.",
     "Official phase-age failure threshold and direct 0x0A13 packet identity/update cadence.",
@@ -679,5 +683,202 @@
     "Independent M-C1 reference hardware, sample size, and paced-rpm-to-label mapping.",
     "Official measurement distances.",
     "Whether the historical 620 windows contained genuinely fresh 0x0A13 samples; legacy CSV freshness metadata is absent."
-  ]
+  ],
+  "window_results_by_evidence_group": {
+    "PR18_PILOT_CAPTURE": {
+      "sessions": [
+        {
+          "computation": "anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples",
+          "fresh_sample_counts_by_window": [
+            300,
+            300,
+            300,
+            300,
+            299,
+            299
+          ],
+          "maximum_fresh_samples_in_window": 300,
+          "session_id": "M-C0-PILOT-DESKWORK-001",
+          "status": "MEASURED_FROM_RECONSTRUCTED_UPDATE_INSTANTS",
+          "valid_300_fresh_windows": 4,
+          "window_count_evaluated": 6
+        },
+        {
+          "computation": "anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples",
+          "fresh_sample_counts_by_window": [
+            300,
+            300,
+            300,
+            300,
+            299,
+            300
+          ],
+          "maximum_fresh_samples_in_window": 300,
+          "session_id": "M-C0-PILOT-STATIONARY-001",
+          "status": "MEASURED_FROM_RECONSTRUCTED_UPDATE_INSTANTS",
+          "valid_300_fresh_windows": 5,
+          "window_count_evaluated": 6
+        }
+      ],
+      "valid_300_fresh_windows": 9
+    },
+    "PRE_PR18_LEGACY_LOGS": {
+      "sessions": [
+        {
+          "computation": "no window count because phase_age_ms/update instant is absent",
+          "fresh_sample_counts_by_window": [],
+          "maximum_fresh_samples_in_window": 0,
+          "session_id": "S001_NORMAL_D06",
+          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+          "valid_300_fresh_windows": 0,
+          "window_count_evaluated": 0
+        },
+        {
+          "computation": "no window count because phase_age_ms/update instant is absent",
+          "fresh_sample_counts_by_window": [],
+          "maximum_fresh_samples_in_window": 0,
+          "session_id": "S001_NORMAL_D09",
+          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+          "valid_300_fresh_windows": 0,
+          "window_count_evaluated": 0
+        },
+        {
+          "computation": "no window count because phase_age_ms/update instant is absent",
+          "fresh_sample_counts_by_window": [],
+          "maximum_fresh_samples_in_window": 0,
+          "session_id": "S001_NORMAL_D12",
+          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+          "valid_300_fresh_windows": 0,
+          "window_count_evaluated": 0
+        },
+        {
+          "computation": "no window count because phase_age_ms/update instant is absent",
+          "fresh_sample_counts_by_window": [],
+          "maximum_fresh_samples_in_window": 0,
+          "session_id": "S001_NORMAL_D15",
+          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+          "valid_300_fresh_windows": 0,
+          "window_count_evaluated": 0
+        },
+        {
+          "computation": "no window count because phase_age_ms/update instant is absent",
+          "fresh_sample_counts_by_window": [],
+          "maximum_fresh_samples_in_window": 0,
+          "session_id": "S001_BREATH_PACED_12_01",
+          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+          "valid_300_fresh_windows": 0,
+          "window_count_evaluated": 0
+        },
+        {
+          "computation": "no window count because phase_age_ms/update instant is absent",
+          "fresh_sample_counts_by_window": [],
+          "maximum_fresh_samples_in_window": 0,
+          "session_id": "S001_BREATH_PACED_12_02",
+          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+          "valid_300_fresh_windows": 0,
+          "window_count_evaluated": 0
+        },
+        {
+          "computation": "no window count because phase_age_ms/update instant is absent",
+          "fresh_sample_counts_by_window": [],
+          "maximum_fresh_samples_in_window": 0,
+          "session_id": "S001_BREATH_PACED_15_03",
+          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+          "valid_300_fresh_windows": 0,
+          "window_count_evaluated": 0
+        },
+        {
+          "computation": "no window count because phase_age_ms/update instant is absent",
+          "fresh_sample_counts_by_window": [],
+          "maximum_fresh_samples_in_window": 0,
+          "session_id": "S001_BREATH_PACED_20_04",
+          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+          "valid_300_fresh_windows": 0,
+          "window_count_evaluated": 0
+        },
+        {
+          "computation": "no window count because phase_age_ms/update instant is absent",
+          "fresh_sample_counts_by_window": [],
+          "maximum_fresh_samples_in_window": 0,
+          "session_id": "S001_BREATH_PACED_20_05",
+          "status": "NOT_PROVABLE_NO_PHASE_AGE_FIELD",
+          "valid_300_fresh_windows": 0,
+          "window_count_evaluated": 0
+        },
+        {
+          "computation": "anchor fixed non-overlapping 30 s bins at the first telemetry timestamp; include the first identifiable timestamp-age update, then each advancing reconstructed update instant; count bins with >=300 fresh samples",
+          "fresh_sample_counts_by_window": [
+            300,
+            300,
+            299,
+            300,
+            299,
+            300,
+            299,
+            300,
+            300,
+            269,
+            300,
+            299,
+            300,
+            299,
+            299,
+            300,
+            299,
+            300,
+            299,
+            299,
+            300,
+            300,
+            299,
+            300,
+            299,
+            299,
+            300,
+            299,
+            300,
+            299,
+            300,
+            300,
+            299,
+            300,
+            299,
+            300,
+            299,
+            300,
+            299,
+            299,
+            300,
+            299,
+            300,
+            300,
+            299,
+            300,
+            299,
+            300,
+            299,
+            300,
+            300,
+            299,
+            114,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "maximum_fresh_samples_in_window": 300,
+          "session_id": "2026-08-01_occupied_d09_v120_31min_attempt02",
+          "status": "MEASURED_FROM_RECONSTRUCTED_UPDATE_INSTANTS",
+          "valid_300_fresh_windows": 27,
+          "window_count_evaluated": 62
+        }
+      ],
+      "valid_300_fresh_windows": 27
+    }
+  }
 }

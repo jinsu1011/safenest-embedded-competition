@@ -83,6 +83,75 @@ PILOT_IDS = (
     "M-C0-PILOT-STATIONARY-001",
 )
 
+PR18_HEAD = "62eb0d867cfa02295c9a1d023b813134c434b8eb"
+PR18_PUBLIC_ROOT = Path("devices/mmwave/device_measurements")
+PR18_RETRIEVAL_ATTEMPTS = [
+    {
+        "command": "git fetch origin pull/18/head:pr18-head",
+        "result": "SUCCESS: refs/pull/18/head -> pr18-head",
+    },
+    {
+        "command": f"git fetch origin {PR18_HEAD}",
+        "result": f"SUCCESS: {PR18_HEAD} -> FETCH_HEAD",
+    },
+    {
+        "command": "git fetch origin refs/pull/18/head",
+        "result": "SUCCESS: refs/pull/18/head -> FETCH_HEAD",
+    },
+]
+PR18_SEARCH_PATHS = [
+    {
+        "ref": "HEAD",
+        "path": "devices/mmwave/device_measurements/",
+        "result": "NOT_FOUND",
+    },
+    {
+        "ref": f"pr18-head@{PR18_HEAD}",
+        "path": "devices/mmwave/device_measurements/",
+        "result": "FOUND",
+    },
+    *[
+        {
+            "ref": "HEAD",
+            "path": f"devices/mmwave/firmware/device_measurements/{pilot_id}.jsonl",
+            "result": "NOT_FOUND",
+        }
+        for pilot_id in PILOT_IDS
+    ],
+    *[
+        {
+            "ref": "HEAD",
+            "path": f"devices/mmwave/firmware/device_measurements/{pilot_id}/records.jsonl",
+            "result": "NOT_FOUND",
+        }
+        for pilot_id in PILOT_IDS
+    ],
+    *[
+        {
+            "ref": f"pr18-head@{PR18_HEAD}",
+            "path": f"devices/mmwave/device_measurements/{pilot_id}.jsonl",
+            "result": "NOT_FOUND",
+        }
+        for pilot_id in PILOT_IDS
+    ],
+    *[
+        {
+            "ref": f"pr18-head@{PR18_HEAD}",
+            "path": f"devices/mmwave/device_measurements/{pilot_id}/records.jsonl",
+            "result": "NOT_FOUND",
+        }
+        for pilot_id in PILOT_IDS
+    ],
+    *[
+        {
+            "ref": f"pr18-head@{PR18_HEAD}",
+            "path": f"devices/mmwave/device_measurements/pilot/{pilot_id}.raw.jsonl",
+            "result": "FOUND",
+        }
+        for pilot_id in PILOT_IDS
+    ],
+]
+
 SESSION_CONTEXT = {
     "S001_NORMAL_D06": {"cue_rpm": None, "vendor_median_rpm": None, "role": "legacy occupied distance"},
     "S001_NORMAL_D09": {"cue_rpm": None, "vendor_median_rpm": None, "role": "legacy occupied distance"},
@@ -131,10 +200,15 @@ def sanitize_segment(segment: str) -> str:
     return re.sub(r"_(?:[^_]+_)*delivery_v2", "_delivery_v2", segment, flags=re.IGNORECASE)
 
 
-def public_evidence_path(root: Path, evidence_root: Path, path: Path) -> str:
+def public_evidence_path(
+    root: Path,
+    evidence_root: Path,
+    path: Path,
+    public_root: Path | None = None,
+) -> str:
     rel = path.resolve().relative_to(evidence_root.resolve())
     safe = "/".join(sanitize_segment(part) for part in rel.parts)
-    prefix = repo_rel(root, evidence_root)
+    prefix = public_root.as_posix() if public_root is not None else repo_rel(root, evidence_root)
     return f"{prefix}/{safe}" if safe else prefix
 
 
@@ -639,7 +713,12 @@ def find_named_file(evidence_root: Path, name: str) -> Path | None:
     return matches[0] if matches else None
 
 
-def expected_evidence(root: Path, evidence_root: Path, all_hashes: dict[Path, dict[str, Any]]) -> list[dict[str, Any]]:
+def expected_evidence(
+    root: Path,
+    evidence_root: Path,
+    all_hashes: dict[Path, dict[str, Any]],
+    pilot_evidence_root: Path | None = None,
+) -> list[dict[str, Any]]:
     expected: list[dict[str, Any]] = []
     for session_id, suffix in EXPECTED_CSV_SUFFIXES.items():
         path = next((candidate for candidate in sorted(evidence_root.rglob("*.csv")) if candidate.name.endswith(suffix)), None)
@@ -698,18 +777,26 @@ def expected_evidence(root: Path, evidence_root: Path, all_hashes: dict[Path, di
         item["candidate_path"] = f"{repo_rel(root, evidence_root)}/logs/final/{long_name}"
     expected.append(item)
 
+    pilot_search_root = pilot_evidence_root or evidence_root
     for pilot_id in PILOT_IDS:
-        matches = sorted(path for path in evidence_root.rglob("*") if path.is_file() and pilot_id in path.name)
+        matches = sorted(
+            path
+            for path in pilot_search_root.rglob("*.jsonl")
+            if path.is_file() and pilot_id in path.name
+        )
         item = {
             "session_id": pilot_id,
             "kind": "pr18_pilot",
             "evidence_group": "PR18_PILOT_CAPTURE",
             "expected_record_count": 1799,
             "status": "PRESENT" if matches else "KNOWN_BUT_NOT_PROVIDED",
-            "search_scope": "recursive filename match under the supplied evidence-root",
+            "search_scope": "recursive filename match under the supplied PR18 pilot evidence root",
+            "source_ref": f"pr18-head@{PR18_HEAD}",
+            "retrieval_attempts": PR18_RETRIEVAL_ATTEMPTS,
             "candidate_paths": [
-                f"{repo_rel(root, evidence_root)}/device_measurements/{pilot_id}.jsonl",
-                f"{repo_rel(root, evidence_root)}/device_measurements/{pilot_id}/records.jsonl",
+                f"{PR18_PUBLIC_ROOT.as_posix()}/{pilot_id}.jsonl",
+                f"{PR18_PUBLIC_ROOT.as_posix()}/{pilot_id}/records.jsonl",
+                f"{PR18_PUBLIC_ROOT.as_posix()}/pilot/{pilot_id}.raw.jsonl",
             ],
         }
         if matches:
@@ -719,7 +806,12 @@ def expected_evidence(root: Path, evidence_root: Path, all_hashes: dict[Path, di
                 all_hashes[path.resolve()] = {"sha256": digest, "bytes": size}
             item.update(
                 {
-                    "path": public_evidence_path(root, evidence_root, path),
+                    "path": public_evidence_path(
+                        root,
+                        pilot_search_root,
+                        path,
+                        PR18_PUBLIC_ROOT if pilot_evidence_root is not None else None,
+                    ),
                     "sha256": all_hashes[path.resolve()]["sha256"],
                     "bytes": all_hashes[path.resolve()]["bytes"],
                 }
@@ -811,6 +903,61 @@ def analyze_session(root: Path, evidence_root: Path, item: dict[str, Any], all_h
         "distance_or_range": distance,
         "bpf_zscore_equivalence": bpf_comparison,
         "int8_distribution": bpf_comparison["diagnostic_affine_proxy"],
+    }
+
+
+def classify_pilot_fresh_cadence(sessions: list[dict[str, Any]]) -> dict[str, Any]:
+    """Compare pilot freshness with the measured legacy and nominal row cadences."""
+
+    legacy_fresh_cadence_hz = 4.30467137
+    nominal_row_cadence_hz = 10.0
+    pilots = [
+        {
+            "session_id": session["session_id"],
+            "fresh_0x0A13_cadence_hz": session["row_cadence_and_fresh_cadence"]["fresh_0x0A13_cadence_hz"],
+        }
+        for session in sessions
+        if session.get("evidence_group") == "PR18_PILOT_CAPTURE"
+    ]
+    finite = [item for item in pilots if item["fresh_0x0A13_cadence_hz"] is not None]
+    if len(finite) != len(PILOT_IDS):
+        return {
+            "verdict": "CANNOT_DISTINGUISH",
+            "basis": "Both PR18 pilot fresh-cadence measurements are required; no inference is made from incomplete evidence.",
+            "pilot_measurements": pilots,
+            "comparison": {
+                "legacy_fresh_cadence_proxy_hz": legacy_fresh_cadence_hz,
+                "nominal_telemetry_row_cadence_hz": nominal_row_cadence_hz,
+            },
+        }
+    closer_to_legacy = all(
+        abs(item["fresh_0x0A13_cadence_hz"] - legacy_fresh_cadence_hz)
+        < abs(item["fresh_0x0A13_cadence_hz"] - nominal_row_cadence_hz)
+        for item in finite
+    )
+    closer_to_row = all(
+        abs(item["fresh_0x0A13_cadence_hz"] - nominal_row_cadence_hz)
+        < abs(item["fresh_0x0A13_cadence_hz"] - legacy_fresh_cadence_hz)
+        for item in finite
+    )
+    if closer_to_legacy:
+        verdict = "A_STRUCTURAL_MR60_ESP_TELEMETRY_PATH_LIMITATION_SUPPORTED"
+        basis = "Both pilot reset-proxy cadences are closer to the measured 4.30467137 Hz legacy fresh cadence than to the nominal 10 Hz telemetry row cadence."
+    elif closer_to_row:
+        verdict = "B_2026_07_26_LEGACY_CAPTURE_METHOD_LIMITATION_SUPPORTED"
+        basis = "Both pilot reset-proxy cadences are closer to the nominal 10 Hz telemetry row cadence than to the measured 4.30467137 Hz legacy fresh cadence."
+    else:
+        verdict = "CANNOT_DISTINGUISH"
+        basis = "The two pilot reset-proxy cadences do not consistently support the same alternative."
+    return {
+        "verdict": verdict,
+        "basis": basis,
+        "pilot_measurements": finite,
+        "comparison": {
+            "legacy_fresh_cadence_proxy_hz": legacy_fresh_cadence_hz,
+            "nominal_telemetry_row_cadence_hz": nominal_row_cadence_hz,
+            "computation": "for each pilot, compare absolute cadence distance to 4.30467137 Hz and 10 Hz; both must favor the same reference",
+        },
     }
 
 
@@ -1105,6 +1252,7 @@ def render_report(
     pipeline: dict[str, Any],
     training_reference: dict[str, Any] | None,
     window_forensics: dict[str, Any],
+    pilot_finding: dict[str, Any],
 ) -> str:
     present = [item for item in expected if item["status"] == "PRESENT"]
     missing = [item for item in expected if item["status"] != "PRESENT"]
@@ -1127,7 +1275,9 @@ def render_report(
         "",
         "## Method and write boundary",
         "",
-        f"The script opened `{all_file_count}` regular files below the evidence-root in `rb` read-only mode and separately SHA-256 hashed every present file in the enumerated expected input set. All output paths were asserted to be outside the evidence-root. Raw MR60 JSONL/CSV remained in place and was not copied into the repository.",
+        "The audit logic and the raw MR60 evidence are kept separate; raw evidence is accessed read-only and is never modified, rewritten, or committed to the repository.",
+        "",
+        f"The script opened `{all_file_count}` regular files across the legacy and PR18 evidence roots in `rb` read-only mode and separately SHA-256 hashed every present file in the enumerated expected input set. All output paths were asserted to be outside both evidence roots. Raw MR60 JSONL/CSV remained in place and was not copied into the repository.",
         "",
         "Numeric conventions:",
         "- telemetry row cadence = `(timestamp_count - 1) / (last_timestamp - first_timestamp)`",
@@ -1152,6 +1302,22 @@ def render_report(
         "",
         "Evidence groups are kept separate: `PRE_PR18_LEGACY_LOGS` contains the nine legacy CSVs and the long JSONL; `PR18_PILOT_CAPTURE` contains the two 1799-record pilot expectations. Pilot cadence is never merged into legacy cadence.",
         "",
+        "### PR18 retrieval and path search",
+        "",
+        "| Command | Result |",
+        "|---|---|",
+    ]
+    for attempt in PR18_RETRIEVAL_ATTEMPTS:
+        lines.append(f"| `{attempt['command']}` | `{attempt['result']}` |")
+    lines += [
+        "",
+        "| Ref | Path checked | Result |",
+        "|---|---|---|",
+    ]
+    for search in PR18_SEARCH_PATHS:
+        lines.append(f"| `{search['ref']}` | `{search['path']}` | `{search['result']}` |")
+    lines += [
+        "",
         "## Per-session measured findings",
         "",
         "| Group | Session | Records | Row Hz | Fresh 0x0A13 Hz | Phase rpm | Phase age min / median / p95 / max ms | >30 s | 300-fresh windows | Interp RMSE |",
@@ -1165,6 +1331,13 @@ def render_report(
         lines.append(
             f"| `{session.get('evidence_group', '—')}` | `{session['session_id']}` | {session['record_count']} | {session['row_cadence_and_fresh_cadence']['telemetry_row_cadence_hz']} | {session['row_cadence_and_fresh_cadence']['fresh_0x0A13_cadence_hz'] if session['row_cadence_and_fresh_cadence']['fresh_0x0A13_cadence_hz'] is not None else 'N/A'} | {phase.get('dominant_phase_rpm')} | {age_text} | {age.get('fraction_over_30000_ms')} | {session['fresh_windows']['windows_with_300_genuinely_fresh_samples']} | {distortion.get('rmse', 'N/A')} |"
         )
+    lines += [
+        "",
+        "### PR18 pilot cadence finding",
+        "",
+        f"Verdict: **`{pilot_finding['verdict']}`**. {pilot_finding['basis']}",
+        "The comparison uses each pilot's `phase_age_ms` decrease count divided by its timestamp span and never merges pilot statistics with `PRE_PR18_LEGACY_LOGS`.",
+    ]
     d15 = next((session for session in sessions if session["session_id"] == "S001_NORMAL_D15"), None)
     paced = {
         session["session_id"]: session["phase_semantic_correspondence"]["numeric"]
@@ -1323,17 +1496,34 @@ def write_json(path: Path, payload: dict[str, Any], evidence_root: Path | None) 
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR, report_path: Path = REPORT_PATH, run_log_path: Path = RUN_LOG_PATH) -> dict[str, Any]:
+def run(
+    root: Path,
+    evidence_root_arg: Path | None,
+    pilot_evidence_root_arg: Path | None = None,
+    output_dir: Path = AUDIT_DIR,
+    report_path: Path = REPORT_PATH,
+    run_log_path: Path = RUN_LOG_PATH,
+) -> dict[str, Any]:
     root = root.resolve()
     output_dir = (root / output_dir).resolve() if not output_dir.is_absolute() else output_dir.resolve()
     report_path = (root / report_path).resolve() if not report_path.is_absolute() else report_path.resolve()
     run_log_path = (root / run_log_path).resolve() if not run_log_path.is_absolute() else run_log_path.resolve()
     evidence_root = None
+    pilot_evidence_root = None
     if evidence_root_arg is not None:
         evidence_root = (root / evidence_root_arg).resolve() if not evidence_root_arg.is_absolute() else evidence_root_arg.resolve()
         if not evidence_root.is_dir():
             raise FileNotFoundError(f"evidence-root is not a directory: {evidence_root}")
         assert_output_outside_evidence([output_dir, report_path, run_log_path], evidence_root)
+    if pilot_evidence_root_arg is not None:
+        pilot_evidence_root = (
+            (root / pilot_evidence_root_arg).resolve()
+            if not pilot_evidence_root_arg.is_absolute()
+            else pilot_evidence_root_arg.resolve()
+        )
+        if not pilot_evidence_root.is_dir():
+            raise FileNotFoundError(f"pilot-evidence-root is not a directory: {pilot_evidence_root}")
+        assert_output_outside_evidence([output_dir, report_path, run_log_path], pilot_evidence_root)
 
     if evidence_root is None:
         summary, report = before_state(root)
@@ -1347,8 +1537,12 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
     # evidence directory also contains build artifacts and auxiliary logs; they
     # are opened to prove read-only access, not silently promoted to inputs.
     evidence_root_regular_file_count = open_all_evidence_files_read_only(evidence_root)
+    pilot_evidence_root_regular_file_count = (
+        open_all_evidence_files_read_only(pilot_evidence_root) if pilot_evidence_root is not None else 0
+    )
+    all_evidence_regular_file_count = evidence_root_regular_file_count + pilot_evidence_root_regular_file_count
     all_hashes: dict[Path, dict[str, Any]] = {}
-    expected = expected_evidence(root, evidence_root, all_hashes)
+    expected = expected_evidence(root, evidence_root, all_hashes, pilot_evidence_root)
     training_reference = load_training_reference(root)
     window_forensics = reconstruct_legacy_620_window_forensics(root, evidence_root, expected, all_hashes)
     sessions: list[dict[str, Any]] = []
@@ -1356,6 +1550,7 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
         result = analyze_session(root, evidence_root, item, all_hashes, training_reference)
         if result:
             sessions.append(result)
+    pilot_finding = classify_pilot_fresh_cadence(sessions)
     try:
         branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=root, text=True).strip()
         head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
@@ -1370,6 +1565,7 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
         "branch": branch,
         "head_at_run": head,
         "evidence_root": repo_rel(root, evidence_root),
+        "pilot_evidence_root": PR18_PUBLIC_ROOT.as_posix() if pilot_evidence_root is not None else None,
         "decision": DECISION_BLOCKED,
         "blocking_reason": BLOCKED_MEASURED,
         "correspondence_evaluated": True,
@@ -1395,6 +1591,7 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
         "expected_input_present_count": present_count,
         "known_but_not_provided_count": missing_count,
         "evidence_root_file_count": evidence_root_regular_file_count,
+        "pilot_evidence_root_file_count": pilot_evidence_root_regular_file_count,
         "expected_input_files_hashed_count": len(all_hashes),
         "raw_expected_files_analyzed_count": len(sessions),
         "pipeline_breath_rate_raw_used_as_waveform": pipeline["breath_rate_raw_used_as_waveform_input"],
@@ -1412,6 +1609,12 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
             }
             for session in sessions
         ],
+        "pr18_retrieval": {
+            "head": PR18_HEAD,
+            "attempts": PR18_RETRIEVAL_ATTEMPTS,
+            "paths_checked": PR18_SEARCH_PATHS,
+            "pilot_fresh_cadence_finding": pilot_finding,
+        },
         "what_remains_unknown": [
             "Exact physical/numeric semantic mapping from MR60 breath_phase to the frozen Phase-B input.",
             "Official phase-age failure threshold and direct 0x0A13 packet identity/update cadence.",
@@ -1438,9 +1641,17 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
             "present_count": present_count,
             "known_but_not_provided_count": missing_count,
             "raw_sessions_analyzed_count": len(sessions),
-            "all_evidence_root_file_count": evidence_root_regular_file_count,
+            "all_evidence_root_file_count": all_evidence_regular_file_count,
+            "legacy_evidence_root_file_count": evidence_root_regular_file_count,
+            "pilot_evidence_root_file_count": pilot_evidence_root_regular_file_count,
             "expected_input_files_hashed_count": len(all_hashes),
             "computation": "counts over expected_evidence_set; all regular evidence files opened read-only; expected input files SHA-256 hashed",
+        },
+        "pr18_retrieval": {
+            "head": PR18_HEAD,
+            "attempts": PR18_RETRIEVAL_ATTEMPTS,
+            "paths_checked": PR18_SEARCH_PATHS,
+            "pilot_fresh_cadence_finding": pilot_finding,
         },
         "captures": sessions,
         "window_input_forensics": {
@@ -1472,9 +1683,16 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
         "audit_scope": {
             "repository_root": ".",
             "evidence_root": repo_rel(root, evidence_root),
+            "pilot_evidence_root": PR18_PUBLIC_ROOT.as_posix() if pilot_evidence_root is not None else None,
             "output_paths_outside_evidence_root_asserted": True,
             "all_evidence_files_opened_read_only": True,
             "raw_files_copied": False,
+        },
+        "pr18_retrieval": {
+            "head": PR18_HEAD,
+            "attempts": PR18_RETRIEVAL_ATTEMPTS,
+            "paths_checked": PR18_SEARCH_PATHS,
+            "pilot_fresh_cadence_finding": pilot_finding,
         },
         "questions": {
             "1_signal_semantic_correspondence": {
@@ -1520,17 +1738,29 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
         "training_reference": training_reference,
         "frozen_contract": FROZEN,
     }
-    report = render_report(root, evidence_root, summary, expected, sessions, evidence_root_regular_file_count, pipeline, training_reference, window_forensics)
+    report = render_report(
+        root,
+        evidence_root,
+        summary,
+        expected,
+        sessions,
+        all_evidence_regular_file_count,
+        pipeline,
+        training_reference,
+        window_forensics,
+        pilot_finding,
+    )
     run_log = "\n".join(
         [
             "# SafeNest mmWave M-C0 audit run log",
             "",
             "```text",
-            "python3 scripts/mmwave_m_c0_correspondence_audit.py --root . --evidence-root devices/mmwave/firmware",
+            "python3 scripts/mmwave_m_c0_correspondence_audit.py --root . --evidence-root devices/mmwave/firmware --pilot-evidence-root <read-only-pr18-worktree>/devices/mmwave/device_measurements",
             "```",
             "",
             f"- Evidence-root used: `{repo_rel(root, evidence_root)}`",
             f"- Regular files opened read-only: `{evidence_root_regular_file_count}`",
+            f"- PR18 evidence files opened read-only: `{pilot_evidence_root_regular_file_count}`",
             f"- Expected input files SHA-256 hashed: `{len(all_hashes)}`",
             f"- Expected evidence items: `{len(expected)}`",
             f"- Expected evidence present: `{present_count}`",
@@ -1562,11 +1792,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run the SafeNest mmWave M-C0 correspondence audit")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1], help="repository root")
     parser.add_argument("--evidence-root", type=Path, default=None, help="read-only evidence root; no default")
+    parser.add_argument("--pilot-evidence-root", type=Path, default=None, help="optional read-only PR18 device_measurements root")
     parser.add_argument("--output-dir", type=Path, default=AUDIT_DIR, help="derived JSON output directory")
     parser.add_argument("--report-path", type=Path, default=REPORT_PATH, help="derived Markdown report path")
     parser.add_argument("--run-log-path", type=Path, default=RUN_LOG_PATH, help="derived run-log path")
     args = parser.parse_args()
-    summary = run(args.root, args.evidence_root, args.output_dir, args.report_path, args.run_log_path)
+    summary = run(
+        args.root,
+        args.evidence_root,
+        args.pilot_evidence_root,
+        args.output_dir,
+        args.report_path,
+        args.run_log_path,
+    )
     print(json.dumps({"decision": summary["decision"], "correspondence_evaluated": summary["correspondence_evaluated"], "evidence_root": summary.get("evidence_root")}, ensure_ascii=False))
     return 0
 

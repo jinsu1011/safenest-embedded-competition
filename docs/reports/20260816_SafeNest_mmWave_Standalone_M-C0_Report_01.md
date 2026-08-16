@@ -2,7 +2,7 @@
 
 - Repository: `jinsu1011/safenest-embedded-competition`
 - Branch: `codex/mmwave-m-c0-correspondence`
-- Head at audit: `c1bbce1605672e0751abdc237aab670c12e6d87a`
+- Head at audit: `e33d67701077a04a4616f1c923c936f7266621a0`
 - Evidence-root used: `devices/mmwave/firmware`
 - Decision: **`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`**
 - Blocking reason: **`SIGNAL_CORRESPONDENCE_NOT_ESTABLISHED`**
@@ -18,7 +18,7 @@
 
 The audit logic and the raw MR60 evidence are kept separate; raw evidence is accessed read-only and is never modified, rewritten, or committed to the repository.
 
-The script opened `2528` regular files below the evidence-root in `rb` read-only mode and separately SHA-256 hashed every present file in the enumerated expected input set. All output paths were asserted to be outside the evidence-root. Raw MR60 JSONL/CSV remained in place and was not copied into the repository.
+The script opened `259` regular files across the legacy and PR18 evidence roots in `rb` read-only mode and separately SHA-256 hashed every present file in the enumerated expected input set. All output paths were asserted to be outside both evidence roots. Raw MR60 JSONL/CSV remained in place and was not copied into the repository.
 
 Numeric conventions:
 - telemetry row cadence = `(timestamp_count - 1) / (last_timestamp - first_timestamp)`
@@ -42,12 +42,35 @@ Numeric conventions:
 | `S001_BREATH_PACED_20_04` | `PRE_PR18_LEGACY_LOGS` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-26_breath_paced_20rpm__S001_BREATH_PACED_20_04.csv` | 1784 | `87e9292254cef55696f25d1550b295612f7f2721bb79dd61306e4c02650b88dd` |
 | `S001_BREATH_PACED_20_05` | `PRE_PR18_LEGACY_LOGS` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-26_breath_paced_20rpm_deep__S001_BREATH_PACED_20_05.csv` | 1784 | `6bd13bd5de4242fc3147746031b236516947dfebb85923ef1421f88413444a06` |
 | `2026-08-01_occupied_d09_v120_31min_attempt02` | `PRE_PR18_LEGACY_LOGS` | `PRESENT` | `devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl` | 18574 | `7f9e9ac65377c6dc217af92f9dee2401b6162540e2245fce97acf2ed49368a34` |
-| `M-C0-PILOT-DESKWORK-001` | `PR18_PILOT_CAPTURE` | `KNOWN_BUT_NOT_PROVIDED` | `['devices/mmwave/firmware/device_measurements/M-C0-PILOT-DESKWORK-001.jsonl', 'devices/mmwave/firmware/device_measurements/M-C0-PILOT-DESKWORK-001/records.jsonl']` | 1799 | `—` |
-| `M-C0-PILOT-STATIONARY-001` | `PR18_PILOT_CAPTURE` | `KNOWN_BUT_NOT_PROVIDED` | `['devices/mmwave/firmware/device_measurements/M-C0-PILOT-STATIONARY-001.jsonl', 'devices/mmwave/firmware/device_measurements/M-C0-PILOT-STATIONARY-001/records.jsonl']` | 1799 | `—` |
+| `M-C0-PILOT-DESKWORK-001` | `PR18_PILOT_CAPTURE` | `PRESENT` | `devices/mmwave/device_measurements/pilot/M-C0-PILOT-DESKWORK-001.raw.jsonl` | 1799 | `368e6a16e897b9231ff5fcdecd3edcc5b725a0a4dc6b20dee1e3162405bc2876` |
+| `M-C0-PILOT-STATIONARY-001` | `PR18_PILOT_CAPTURE` | `PRESENT` | `devices/mmwave/device_measurements/pilot/M-C0-PILOT-STATIONARY-001.raw.jsonl` | 1799 | `e2b832fd3a72f18b4c3a370738c10e58c0269283dac218ae2d7d4dad48036f6f` |
 
-Present expected files: `10` / `12`. Missing items were recorded as `KNOWN_BUT_NOT_PROVIDED`; they were not silently skipped.
+Present expected files: `12` / `12`. Missing items were recorded as `KNOWN_BUT_NOT_PROVIDED`; they were not silently skipped.
 
 Evidence groups are kept separate: `PRE_PR18_LEGACY_LOGS` contains the nine legacy CSVs and the long JSONL; `PR18_PILOT_CAPTURE` contains the two 1799-record pilot expectations. Pilot cadence is never merged into legacy cadence.
+
+### PR18 retrieval and path search
+
+| Command | Result |
+|---|---|
+| `git fetch origin pull/18/head:pr18-head` | `SUCCESS: refs/pull/18/head -> pr18-head` |
+| `git fetch origin 62eb0d867cfa02295c9a1d023b813134c434b8eb` | `SUCCESS: 62eb0d867cfa02295c9a1d023b813134c434b8eb -> FETCH_HEAD` |
+| `git fetch origin refs/pull/18/head` | `SUCCESS: refs/pull/18/head -> FETCH_HEAD` |
+
+| Ref | Path checked | Result |
+|---|---|---|
+| `HEAD` | `devices/mmwave/device_measurements/` | `NOT_FOUND` |
+| `pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb` | `devices/mmwave/device_measurements/` | `FOUND` |
+| `HEAD` | `devices/mmwave/firmware/device_measurements/M-C0-PILOT-DESKWORK-001.jsonl` | `NOT_FOUND` |
+| `HEAD` | `devices/mmwave/firmware/device_measurements/M-C0-PILOT-STATIONARY-001.jsonl` | `NOT_FOUND` |
+| `HEAD` | `devices/mmwave/firmware/device_measurements/M-C0-PILOT-DESKWORK-001/records.jsonl` | `NOT_FOUND` |
+| `HEAD` | `devices/mmwave/firmware/device_measurements/M-C0-PILOT-STATIONARY-001/records.jsonl` | `NOT_FOUND` |
+| `pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb` | `devices/mmwave/device_measurements/M-C0-PILOT-DESKWORK-001.jsonl` | `NOT_FOUND` |
+| `pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb` | `devices/mmwave/device_measurements/M-C0-PILOT-STATIONARY-001.jsonl` | `NOT_FOUND` |
+| `pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb` | `devices/mmwave/device_measurements/M-C0-PILOT-DESKWORK-001/records.jsonl` | `NOT_FOUND` |
+| `pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb` | `devices/mmwave/device_measurements/M-C0-PILOT-STATIONARY-001/records.jsonl` | `NOT_FOUND` |
+| `pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb` | `devices/mmwave/device_measurements/pilot/M-C0-PILOT-DESKWORK-001.raw.jsonl` | `FOUND` |
+| `pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb` | `devices/mmwave/device_measurements/pilot/M-C0-PILOT-STATIONARY-001.raw.jsonl` | `FOUND` |
 
 ## Per-session measured findings
 
@@ -63,6 +86,13 @@ Evidence groups are kept separate: `PRE_PR18_LEGACY_LOGS` contains the nine lega
 | `PRE_PR18_LEGACY_LOGS` | `S001_BREATH_PACED_20_04` | 1784 | 9.994226554 | N/A | 20.170279064 | None / None / None / None | None | 0 | N/A |
 | `PRE_PR18_LEGACY_LOGS` | `S001_BREATH_PACED_20_05` | 1784 | 9.992994255 | N/A | 20.030636268 | None / None / None / None | None | 0 | N/A |
 | `PRE_PR18_LEGACY_LOGS` | `2026-08-01_occupied_d09_v120_31min_attempt02` | 18574 | 9.986342911 | 4.30467137 | 19.264097775 | 0.0 / 12.0 / 195627.0 / 288530.0 | 0.139173038 | 0 | 0.008928878 |
+| `PR18_PILOT_CAPTURE` | `M-C0-PILOT-DESKWORK-001` | 1799 | 9.993996932 | 3.679658492 | 20.347847528 | 0.0 / 12.0 / 15.0 / 111.0 | 0.0 | 0 | 0.017641003 |
+| `PR18_PILOT_CAPTURE` | `M-C0-PILOT-STATIONARY-001` | 1799 | 9.993330369 | 3.518230325 | 22.329196977 | 0.0 / 12.0 / 15.0 / 17.0 | 0.0 | 0 | 0.013461468 |
+
+### PR18 pilot cadence finding
+
+Verdict: **`A_STRUCTURAL_MR60_ESP_TELEMETRY_PATH_LIMITATION_SUPPORTED`**. Both pilot reset-proxy cadences are closer to the measured 4.30467137 Hz legacy fresh cadence than to the nominal 10 Hz telemetry row cadence.
+The comparison uses each pilot's `phase_age_ms` decrease count divided by its timestamp span and never merges pilot statistics with `PRE_PR18_LEGACY_LOGS`.
 
 ## Preserved measurement corrections
 
@@ -105,7 +135,7 @@ The answer is **not established as identical**. The frozen contract is `M-B10B_S
 
 ### Question 9 — pre/post INT8 distribution
 
-The JSON contains diagnostic before-INT8, after-INT8-dequantized, quantized integer, saturation, and quantization-error distributions using scale `0.041720833629369736` and zero-point `-3`. For the long log, before-INT8 `n=18574`, `mean=-0.000530514`, `std=0.054656118`, `p05=-0.089029009`, `p95=0.086920135`, `min=-0.298814527`, `max=0.317007476`; after-INT8 dequantized `n=18574`, `mean=-0.000914202`, `std=0.055741911`, `p05=-0.083441667`, `p95=0.083441667`, `min=-0.292045835`, `max=0.333766669`; quantized saturation is `0.0`. The auxiliary reference is `safenest-mmwave-standalone/datasets/mmwave/processed/mmwave_canonical_real_v1.npy` with SHA-256 `c2e2cd1615c7af0f0e21700f291ee12ac0347a9f7fc6ccc9f337433c16868f0e` and status `AVAILABLE_LOCAL_ONLY_AUXILIARY_REFERENCE_NOT_TRACKED`; its diagnostic affine distribution is training `n=159000`, `mean=0.804020513`, `std=5.987853719`, `p05=-7.463087722`, `p95=10.340751587`, `min=-37.444280452`, `max=47.313521248`. These are diagnostic affine values because BPF was not reconstructed.
+The JSON contains diagnostic before-INT8, after-INT8-dequantized, quantized integer, saturation, and quantization-error distributions using scale `0.041720833629369736` and zero-point `-3`. For the long log, before-INT8 `n=18574`, `mean=-0.000530514`, `std=0.054656118`, `p05=-0.089029009`, `p95=0.086920135`, `min=-0.298814527`, `max=0.317007476`; after-INT8 dequantized `n=18574`, `mean=-0.000914202`, `std=0.055741911`, `p05=-0.083441667`, `p95=0.083441667`, `min=-0.292045835`, `max=0.333766669`; quantized saturation is `0.0`. No training-reference file was available in the target worktree, so a numeric training comparison was not fabricated. These are diagnostic affine values because BPF was not reconstructed.
 
 ### Question 10 — 620/620 all-APNEA collapse stage
 

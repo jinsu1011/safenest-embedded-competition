@@ -26,7 +26,6 @@
           },
           "bpf_applied": false,
           "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-          "mean_delta_vs_training_reference": -0.804673157,
           "quantization_error": {
             "count": 2998,
             "max": 0.020303241,
@@ -48,18 +47,7 @@
             "std": 2.706999278
           },
           "quantized_saturation_fraction": 0.0,
-          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-          "std_delta_vs_training_reference": -5.875705717,
-          "training_reference_before_int8": {
-            "count": 159000,
-            "max": 47.313521248,
-            "mean": 0.804020513,
-            "median": 0.461574795,
-            "min": -37.444280452,
-            "p05": -7.463087722,
-            "p95": 10.340751587,
-            "std": 5.987853719
-          }
+          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
         },
         "frozen_contract": {
           "band_hz": [
@@ -152,7 +140,6 @@
         },
         "bpf_applied": false,
         "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-        "mean_delta_vs_training_reference": -0.804673157,
         "quantization_error": {
           "count": 2998,
           "max": 0.020303241,
@@ -174,18 +161,7 @@
           "std": 2.706999278
         },
         "quantized_saturation_fraction": 0.0,
-        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-        "std_delta_vs_training_reference": -5.875705717,
-        "training_reference_before_int8": {
-          "count": 159000,
-          "max": 47.313521248,
-          "mean": 0.804020513,
-          "median": 0.461574795,
-          "min": -37.444280452,
-          "p05": -7.463087722,
-          "p95": 10.340751587,
-          "std": 5.987853719
-        }
+        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
       },
       "interpolation": {
         "applied_to_audit": false,
@@ -305,7 +281,6 @@
           },
           "bpf_applied": false,
           "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-          "mean_delta_vs_training_reference": -0.805271332,
           "quantization_error": {
             "count": 2998,
             "max": 0.020239076,
@@ -327,18 +302,7 @@
             "std": 1.041563243
           },
           "quantized_saturation_fraction": 0.0,
-          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-          "std_delta_vs_training_reference": -5.945914394,
-          "training_reference_before_int8": {
-            "count": 159000,
-            "max": 47.313521248,
-            "mean": 0.804020513,
-            "median": 0.461574795,
-            "min": -37.444280452,
-            "p05": -7.463087722,
-            "p95": 10.340751587,
-            "std": 5.987853719
-          }
+          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
         },
         "frozen_contract": {
           "band_hz": [
@@ -431,7 +395,6 @@
         },
         "bpf_applied": false,
         "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-        "mean_delta_vs_training_reference": -0.805271332,
         "quantization_error": {
           "count": 2998,
           "max": 0.020239076,
@@ -453,18 +416,7 @@
           "std": 1.041563243
         },
         "quantized_saturation_fraction": 0.0,
-        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-        "std_delta_vs_training_reference": -5.945914394,
-        "training_reference_before_int8": {
-          "count": 159000,
-          "max": 47.313521248,
-          "mean": 0.804020513,
-          "median": 0.461574795,
-          "min": -37.444280452,
-          "p05": -7.463087722,
-          "p95": 10.340751587,
-          "std": 5.987853719
-        }
+        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
       },
       "interpolation": {
         "applied_to_audit": false,
@@ -584,7 +536,6 @@
           },
           "bpf_applied": false,
           "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-          "mean_delta_vs_training_reference": -0.804589639,
           "quantization_error": {
             "count": 2998,
             "max": 0.020271159,
@@ -606,18 +557,7 @@
             "std": 1.891393552
           },
           "quantized_saturation_fraction": 0.0,
-          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-          "std_delta_vs_training_reference": -5.909687114,
-          "training_reference_before_int8": {
-            "count": 159000,
-            "max": 47.313521248,
-            "mean": 0.804020513,
-            "median": 0.461574795,
-            "min": -37.444280452,
-            "p05": -7.463087722,
-            "p95": 10.340751587,
-            "std": 5.987853719
-          }
+          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
         },
         "frozen_contract": {
           "band_hz": [
@@ -710,7 +650,6 @@
         },
         "bpf_applied": false,
         "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-        "mean_delta_vs_training_reference": -0.804589639,
         "quantization_error": {
           "count": 2998,
           "max": 0.020271159,
@@ -732,18 +671,7 @@
           "std": 1.891393552
         },
         "quantized_saturation_fraction": 0.0,
-        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-        "std_delta_vs_training_reference": -5.909687114,
-        "training_reference_before_int8": {
-          "count": 159000,
-          "max": 47.313521248,
-          "mean": 0.804020513,
-          "median": 0.461574795,
-          "min": -37.444280452,
-          "p05": -7.463087722,
-          "p95": 10.340751587,
-          "std": 5.987853719
-        }
+        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
       },
       "interpolation": {
         "applied_to_audit": false,
@@ -863,7 +791,6 @@
           },
           "bpf_applied": false,
           "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-          "mean_delta_vs_training_reference": -0.808458588,
           "quantization_error": {
             "count": 2999,
             "max": 0.004438075,
@@ -885,18 +812,7 @@
             "std": 0.0
           },
           "quantized_saturation_fraction": 0.0,
-          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-          "std_delta_vs_training_reference": -5.987853719,
-          "training_reference_before_int8": {
-            "count": 159000,
-            "max": 47.313521248,
-            "mean": 0.804020513,
-            "median": 0.461574795,
-            "min": -37.444280452,
-            "p05": -7.463087722,
-            "p95": 10.340751587,
-            "std": 5.987853719
-          }
+          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
         },
         "frozen_contract": {
           "band_hz": [
@@ -989,7 +905,6 @@
         },
         "bpf_applied": false,
         "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-        "mean_delta_vs_training_reference": -0.808458588,
         "quantization_error": {
           "count": 2999,
           "max": 0.004438075,
@@ -1011,18 +926,7 @@
           "std": 0.0
         },
         "quantized_saturation_fraction": 0.0,
-        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-        "std_delta_vs_training_reference": -5.987853719,
-        "training_reference_before_int8": {
-          "count": 159000,
-          "max": 47.313521248,
-          "mean": 0.804020513,
-          "median": 0.461574795,
-          "min": -37.444280452,
-          "p05": -7.463087722,
-          "p95": 10.340751587,
-          "std": 5.987853719
-        }
+        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
       },
       "interpolation": {
         "applied_to_audit": false,
@@ -1142,7 +1046,6 @@
           },
           "bpf_applied": false,
           "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-          "mean_delta_vs_training_reference": -0.805118725,
           "quantization_error": {
             "count": 2087,
             "max": 0.020271159,
@@ -1164,18 +1067,7 @@
             "std": 2.917684634
           },
           "quantized_saturation_fraction": 0.0,
-          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-          "std_delta_vs_training_reference": -5.866441755,
-          "training_reference_before_int8": {
-            "count": 159000,
-            "max": 47.313521248,
-            "mean": 0.804020513,
-            "median": 0.461574795,
-            "min": -37.444280452,
-            "p05": -7.463087722,
-            "p95": 10.340751587,
-            "std": 5.987853719
-          }
+          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
         },
         "frozen_contract": {
           "band_hz": [
@@ -1268,7 +1160,6 @@
         },
         "bpf_applied": false,
         "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-        "mean_delta_vs_training_reference": -0.805118725,
         "quantization_error": {
           "count": 2087,
           "max": 0.020271159,
@@ -1290,18 +1181,7 @@
           "std": 2.917684634
         },
         "quantized_saturation_fraction": 0.0,
-        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-        "std_delta_vs_training_reference": -5.866441755,
-        "training_reference_before_int8": {
-          "count": 159000,
-          "max": 47.313521248,
-          "mean": 0.804020513,
-          "median": 0.461574795,
-          "min": -37.444280452,
-          "p05": -7.463087722,
-          "p95": 10.340751587,
-          "std": 5.987853719
-        }
+        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
       },
       "interpolation": {
         "applied_to_audit": false,
@@ -1421,7 +1301,6 @@
           },
           "bpf_applied": false,
           "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-          "mean_delta_vs_training_reference": -0.8050101,
           "quantization_error": {
             "count": 1774,
             "max": 0.020271159,
@@ -1443,18 +1322,7 @@
             "std": 3.078326493
           },
           "quantized_saturation_fraction": 0.0,
-          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-          "std_delta_vs_training_reference": -5.859854696,
-          "training_reference_before_int8": {
-            "count": 159000,
-            "max": 47.313521248,
-            "mean": 0.804020513,
-            "median": 0.461574795,
-            "min": -37.444280452,
-            "p05": -7.463087722,
-            "p95": 10.340751587,
-            "std": 5.987853719
-          }
+          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
         },
         "frozen_contract": {
           "band_hz": [
@@ -1547,7 +1415,6 @@
         },
         "bpf_applied": false,
         "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-        "mean_delta_vs_training_reference": -0.8050101,
         "quantization_error": {
           "count": 1774,
           "max": 0.020271159,
@@ -1569,18 +1436,7 @@
           "std": 3.078326493
         },
         "quantized_saturation_fraction": 0.0,
-        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-        "std_delta_vs_training_reference": -5.859854696,
-        "training_reference_before_int8": {
-          "count": 159000,
-          "max": 47.313521248,
-          "mean": 0.804020513,
-          "median": 0.461574795,
-          "min": -37.444280452,
-          "p05": -7.463087722,
-          "p95": 10.340751587,
-          "std": 5.987853719
-        }
+        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
       },
       "interpolation": {
         "applied_to_audit": false,
@@ -1700,7 +1556,6 @@
           },
           "bpf_applied": false,
           "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-          "mean_delta_vs_training_reference": -0.805044518,
           "quantization_error": {
             "count": 1779,
             "max": 0.020271159,
@@ -1722,18 +1577,7 @@
             "std": 2.812053233
           },
           "quantized_saturation_fraction": 0.0,
-          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-          "std_delta_vs_training_reference": -5.870990312,
-          "training_reference_before_int8": {
-            "count": 159000,
-            "max": 47.313521248,
-            "mean": 0.804020513,
-            "median": 0.461574795,
-            "min": -37.444280452,
-            "p05": -7.463087722,
-            "p95": 10.340751587,
-            "std": 5.987853719
-          }
+          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
         },
         "frozen_contract": {
           "band_hz": [
@@ -1826,7 +1670,6 @@
         },
         "bpf_applied": false,
         "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-        "mean_delta_vs_training_reference": -0.805044518,
         "quantization_error": {
           "count": 1779,
           "max": 0.020271159,
@@ -1848,18 +1691,7 @@
           "std": 2.812053233
         },
         "quantized_saturation_fraction": 0.0,
-        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-        "std_delta_vs_training_reference": -5.870990312,
-        "training_reference_before_int8": {
-          "count": 159000,
-          "max": 47.313521248,
-          "mean": 0.804020513,
-          "median": 0.461574795,
-          "min": -37.444280452,
-          "p05": -7.463087722,
-          "p95": 10.340751587,
-          "std": 5.987853719
-        }
+        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
       },
       "interpolation": {
         "applied_to_audit": false,
@@ -1979,7 +1811,6 @@
           },
           "bpf_applied": false,
           "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-          "mean_delta_vs_training_reference": -0.80440543,
           "quantization_error": {
             "count": 1784,
             "max": 0.020239076,
@@ -2001,18 +1832,7 @@
             "std": 0.946432714
           },
           "quantized_saturation_fraction": 0.0,
-          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-          "std_delta_vs_training_reference": -5.949489577,
-          "training_reference_before_int8": {
-            "count": 159000,
-            "max": 47.313521248,
-            "mean": 0.804020513,
-            "median": 0.461574795,
-            "min": -37.444280452,
-            "p05": -7.463087722,
-            "p95": 10.340751587,
-            "std": 5.987853719
-          }
+          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
         },
         "frozen_contract": {
           "band_hz": [
@@ -2105,7 +1925,6 @@
         },
         "bpf_applied": false,
         "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-        "mean_delta_vs_training_reference": -0.80440543,
         "quantization_error": {
           "count": 1784,
           "max": 0.020239076,
@@ -2127,18 +1946,7 @@
           "std": 0.946432714
         },
         "quantized_saturation_fraction": 0.0,
-        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-        "std_delta_vs_training_reference": -5.949489577,
-        "training_reference_before_int8": {
-          "count": 159000,
-          "max": 47.313521248,
-          "mean": 0.804020513,
-          "median": 0.461574795,
-          "min": -37.444280452,
-          "p05": -7.463087722,
-          "p95": 10.340751587,
-          "std": 5.987853719
-        }
+        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
       },
       "interpolation": {
         "applied_to_audit": false,
@@ -2258,7 +2066,6 @@
           },
           "bpf_applied": false,
           "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-          "mean_delta_vs_training_reference": -0.806512617,
           "quantization_error": {
             "count": 1784,
             "max": 0.020303241,
@@ -2280,18 +2087,7 @@
             "std": 4.064006957
           },
           "quantized_saturation_fraction": 0.0,
-          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-          "std_delta_vs_training_reference": -5.818435427,
-          "training_reference_before_int8": {
-            "count": 159000,
-            "max": 47.313521248,
-            "mean": 0.804020513,
-            "median": 0.461574795,
-            "min": -37.444280452,
-            "p05": -7.463087722,
-            "p95": 10.340751587,
-            "std": 5.987853719
-          }
+          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
         },
         "frozen_contract": {
           "band_hz": [
@@ -2384,7 +2180,6 @@
         },
         "bpf_applied": false,
         "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-        "mean_delta_vs_training_reference": -0.806512617,
         "quantization_error": {
           "count": 1784,
           "max": 0.020303241,
@@ -2406,18 +2201,7 @@
           "std": 4.064006957
         },
         "quantized_saturation_fraction": 0.0,
-        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-        "std_delta_vs_training_reference": -5.818435427,
-        "training_reference_before_int8": {
-          "count": 159000,
-          "max": 47.313521248,
-          "mean": 0.804020513,
-          "median": 0.461574795,
-          "min": -37.444280452,
-          "p05": -7.463087722,
-          "p95": 10.340751587,
-          "std": 5.987853719
-        }
+        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
       },
       "interpolation": {
         "applied_to_audit": false,
@@ -2537,7 +2321,6 @@
           },
           "bpf_applied": false,
           "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-          "mean_delta_vs_training_reference": -0.804551027,
           "quantization_error": {
             "count": 18574,
             "max": 0.020271159,
@@ -2559,18 +2342,7 @@
             "std": 1.336068976
           },
           "quantized_saturation_fraction": 0.0,
-          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-          "std_delta_vs_training_reference": -5.933197601,
-          "training_reference_before_int8": {
-            "count": 159000,
-            "max": 47.313521248,
-            "mean": 0.804020513,
-            "median": 0.461574795,
-            "min": -37.444280452,
-            "p05": -7.463087722,
-            "p95": 10.340751587,
-            "std": 5.987853719
-          }
+          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
         },
         "frozen_contract": {
           "band_hz": [
@@ -2663,7 +2435,6 @@
         },
         "bpf_applied": false,
         "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
-        "mean_delta_vs_training_reference": -0.804551027,
         "quantization_error": {
           "count": 18574,
           "max": 0.020271159,
@@ -2685,18 +2456,7 @@
           "std": 1.336068976
         },
         "quantized_saturation_fraction": 0.0,
-        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY",
-        "std_delta_vs_training_reference": -5.933197601,
-        "training_reference_before_int8": {
-          "count": 159000,
-          "max": 47.313521248,
-          "mean": 0.804020513,
-          "median": 0.461574795,
-          "min": -37.444280452,
-          "p05": -7.463087722,
-          "p95": 10.340751587,
-          "std": 5.987853719
-        }
+        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
       },
       "interpolation": {
         "applied_to_audit": false,
@@ -2797,16 +2557,544 @@
           "longest_interval_run": 0
         }
       }
+    },
+    {
+      "bpf_zscore_equivalence": {
+        "assessment": "NOT_ESTABLISHED",
+        "diagnostic_affine_proxy": {
+          "after_int8_dequantized": {
+            "count": 1799,
+            "max": 0.250325002,
+            "mean": -0.002504641,
+            "median": 0.0,
+            "min": -0.250325002,
+            "p05": -0.125162501,
+            "p95": 0.125162501,
+            "std": 0.077984426
+          },
+          "before_int8": {
+            "count": 1799,
+            "max": 0.252718366,
+            "mean": -0.001844391,
+            "median": -0.001054437,
+            "min": -0.237909054,
+            "p05": -0.143167207,
+            "p95": 0.124140146,
+            "std": 0.076825189
+          },
+          "bpf_applied": false,
+          "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
+          "quantization_error": {
+            "count": 1799,
+            "max": 0.020271159,
+            "mean": -0.00066025,
+            "median": -0.001212015,
+            "min": -0.020396654,
+            "p05": -0.019247387,
+            "p95": 0.018004706,
+            "std": 0.012108572
+          },
+          "quantized_integer_stats": {
+            "count": 1799,
+            "max": 3.0,
+            "mean": -3.060033352,
+            "median": -3.0,
+            "min": -9.0,
+            "p05": -6.0,
+            "p95": 0.0,
+            "std": 1.869196246
+          },
+          "quantized_saturation_fraction": 0.0,
+          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
+        },
+        "frozen_contract": {
+          "band_hz": [
+            0.1,
+            0.5
+          ],
+          "contract_id": "M-B10B_SELECTED_REAL_CANDIDATE_BPF_ZSCORE_V1",
+          "sample_rate_hz": 10.0,
+          "zscore_mean": 0.0031162832173884064,
+          "zscore_std": 2.955399434649939
+        },
+        "meaning_equivalent_to_frozen_contract": false,
+        "raw_phase_stats_before_any_bpf": {
+          "count": 1799,
+          "max": 0.75,
+          "mean": -0.00233463,
+          "median": -0.0,
+          "min": -0.7,
+          "p05": -0.42,
+          "p95": 0.37,
+          "std": 0.227049121
+        },
+        "reason": "Raw MR60 phase-like values were measured, but the exact frozen zero-phase Butterworth BPF semantic cannot be established from telemetry alone; the diagnostic affine is not silently treated as the contract.",
+        "scale_equivalent_to_frozen_contract": false
+      },
+      "breath_rate_raw": {
+        "computation": "field mapping plus static pipeline scan; vendor rate is kept as telemetry/diagnostic and is not placed in the waveform array",
+        "field_present": true,
+        "finite_value_count": 1799,
+        "stats": {
+          "count": 1799,
+          "max": 32.0,
+          "mean": 21.498054475,
+          "median": 21.0,
+          "min": 0.0,
+          "p05": 11.0,
+          "p95": 31.0,
+          "std": 6.071545971
+        },
+        "used_as_waveform_input": false,
+        "waveform_field_used": "breath_phase"
+      },
+      "bytes": 1819539,
+      "distance_or_range": {
+        "computation": "population stats plus sample standard deviation over finite distance telemetry values; legacy CSV range_m is in metres",
+        "field": "distance_cm_raw",
+        "finite_sample_count": 1799,
+        "sample_std": 20.42376135,
+        "sample_std_cm": null,
+        "stats": {
+          "count": 1799,
+          "max": 120.54,
+          "mean": 56.06311284,
+          "median": 51.66,
+          "min": 40.18,
+          "p05": 45.92,
+          "p95": 120.54,
+          "std": 20.41808414
+        },
+        "unit": "cm"
+      },
+      "evidence_group": "PR18_PILOT_CAPTURE",
+      "evidence_path": "devices/mmwave/device_measurements/pilot/M-C0-PILOT-DESKWORK-001.raw.jsonl",
+      "fresh_windows": {
+        "computation": "count reset-proxy events per fixed non-overlapping 30 s bin; count bins >= 300",
+        "max_fresh_samples_in_nonoverlapping_30s_window": 151,
+        "status": "MEASURED_FROM_PHASE_AGE_RESET_PROXY",
+        "windows_with_300_genuinely_fresh_samples": 0
+      },
+      "int8_distribution": {
+        "after_int8_dequantized": {
+          "count": 1799,
+          "max": 0.250325002,
+          "mean": -0.002504641,
+          "median": 0.0,
+          "min": -0.250325002,
+          "p05": -0.125162501,
+          "p95": 0.125162501,
+          "std": 0.077984426
+        },
+        "before_int8": {
+          "count": 1799,
+          "max": 0.252718366,
+          "mean": -0.001844391,
+          "median": -0.001054437,
+          "min": -0.237909054,
+          "p05": -0.143167207,
+          "p95": 0.124140146,
+          "std": 0.076825189
+        },
+        "bpf_applied": false,
+        "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
+        "quantization_error": {
+          "count": 1799,
+          "max": 0.020271159,
+          "mean": -0.00066025,
+          "median": -0.001212015,
+          "min": -0.020396654,
+          "p05": -0.019247387,
+          "p95": 0.018004706,
+          "std": 0.012108572
+        },
+        "quantized_integer_stats": {
+          "count": 1799,
+          "max": 3.0,
+          "mean": -3.060033352,
+          "median": -3.0,
+          "min": -9.0,
+          "p05": -6.0,
+          "p95": 0.0,
+          "std": 1.869196246
+        },
+        "quantized_saturation_fraction": 0.0,
+        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
+      },
+      "interpolation": {
+        "applied_to_audit": false,
+        "computation": "linear interpolation between phase_age reset-proxy samples; compared with observed held/repeated telemetry at the original timestamps",
+        "distortion": {
+          "interpolated_std": 0.217906037,
+          "mae": 0.010100385,
+          "max_abs": 0.09,
+          "observed_std": 0.226751812,
+          "rmse": 0.017641003,
+          "sample_count": 1797
+        },
+        "required_status": "UNRESOLVED",
+        "simulation_status": "SIMULATED_LINEAR_INTERPOLATION_FROM_PHASE_AGE_RESET_PROXY"
+      },
+      "kind": "pr18_pilot",
+      "malformed_record_count": 0,
+      "phase_age_ms": {
+        "fraction_over_30000_ms": 0.0,
+        "max": 111.0,
+        "median": 12.0,
+        "min": 0.0,
+        "p95": 15.0
+      },
+      "phase_semantic_correspondence": {
+        "assessment": "PHASE_LIKE_SIGNAL_OBSERVED_BUT_PHASE_B_EQUIVALENCE_NOT_ESTABLISHED",
+        "basis": "finite phase values and, where detectable, a periodic phase-like component were observed; no independent Phase-B semantic/reference signal exists in this evidence set",
+        "correspondence_disproven": false,
+        "numeric": {
+          "computation": "center signal by its session mean; estimate period from median interval between positive mean crossings; rpm=60/period_s",
+          "documented_actual_trial_rpm": null,
+          "documented_vendor_median_rpm": null,
+          "dominant_period_s_from_median_positive_crossing_interval": 2.948714842,
+          "dominant_phase_rpm": 20.347847528,
+          "field": "breath_phase",
+          "finite_sample_count": 1799,
+          "paced_cue_rpm": null,
+          "phase_minus_vendor_median_rpm": null,
+          "positive_crossing_count": 56,
+          "stats": {
+            "count": 1799,
+            "freeze_intervals": {
+              "interval_count": 230,
+              "longest_interval_run": 9
+            },
+            "max": 0.75,
+            "mean": -0.00233463,
+            "median": -0.0,
+            "min": -0.7,
+            "p05": -0.42,
+            "p95": 0.37,
+            "std": 0.227049121,
+            "unique_value_count": 131
+          }
+        }
+      },
+      "record_count": 1799,
+      "role": null,
+      "row_cadence_and_fresh_cadence": {
+        "computation": {
+          "fresh": "fresh event proxy = phase_age_ms[i] < phase_age_ms[i-1]; cadence = reset_count / timestamp span",
+          "row": "(timestamp_count - 1) / (last_timestamp - first_timestamp)"
+        },
+        "fresh_0x0A13_cadence_hz": 3.679658492,
+        "fresh_cadence_status": "INFERRED_FROM_PHASE_AGE_RESETS",
+        "telemetry_row_cadence_hz": 9.993996932
+      },
+      "session_id": "M-C0-PILOT-DESKWORK-001",
+      "sha256": "368e6a16e897b9231ff5fcdecd3edcc5b725a0a4dc6b20dee1e3162405bc2876",
+      "timestamp_integrity": {
+        "computation": {
+          "gap_count": "interval_ms > max(150 ms, 1.5 * median_positive_interval_ms); diagnostic only, not an official failure threshold",
+          "row_cadence_hz": "(timestamp_count - 1) / (last_timestamp - first_timestamp)"
+        },
+        "duplicate_timestamp_count": 0,
+        "duration_s": 179.908,
+        "freeze_flag_count": 0,
+        "gap_count": 0,
+        "gap_threshold_ms_diagnostic": 150.0,
+        "max_interval_ms": 103.0,
+        "median_interval_ms": 100.0,
+        "min_interval_ms": 100.0,
+        "nonmonotonic_timestamp_count": 0,
+        "record_count_with_timestamp": 1799,
+        "row_cadence_hz": 9.993996932,
+        "sequence": {
+          "computation": "sum(max(seq[i+1]-seq[i]-1, 0) for positive sequence gaps)",
+          "duplicate_sequence_count": 0,
+          "first": 11146,
+          "last": 12944,
+          "missing_sequence_count": 0,
+          "nonmonotonic_sequence_count": 0,
+          "record_count": 1799,
+          "status": "MEASURED"
+        },
+        "timestamp_freeze_intervals": {
+          "interval_count": 0,
+          "longest_interval_run": 0
+        }
+      }
+    },
+    {
+      "bpf_zscore_equivalence": {
+        "assessment": "NOT_ESTABLISHED",
+        "diagnostic_affine_proxy": {
+          "after_int8_dequantized": {
+            "count": 1799,
+            "max": 0.208604168,
+            "mean": -0.000602969,
+            "median": 0.0,
+            "min": -0.250325002,
+            "p05": -0.083441667,
+            "p95": 0.083441667,
+            "std": 0.059113772
+          },
+          "before_int8": {
+            "count": 1799,
+            "max": 0.195196531,
+            "mean": -0.000873876,
+            "median": -0.001054437,
+            "min": -0.248059966,
+            "p05": -0.095796284,
+            "p95": 0.086920135,
+            "std": 0.057550808
+          },
+          "bpf_applied": false,
+          "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
+          "quantization_error": {
+            "count": 1799,
+            "max": 0.020239076,
+            "mean": 0.000270907,
+            "median": 0.001022355,
+            "min": -0.020396654,
+            "p05": -0.019247387,
+            "p95": 0.019089809,
+            "std": 0.012227779
+          },
+          "quantized_integer_stats": {
+            "count": 1799,
+            "max": 2.0,
+            "mean": -3.014452474,
+            "median": -3.0,
+            "min": -9.0,
+            "p05": -5.0,
+            "p95": -1.0,
+            "std": 1.416888573
+          },
+          "quantized_saturation_fraction": 0.0,
+          "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
+        },
+        "frozen_contract": {
+          "band_hz": [
+            0.1,
+            0.5
+          ],
+          "contract_id": "M-B10B_SELECTED_REAL_CANDIDATE_BPF_ZSCORE_V1",
+          "sample_rate_hz": 10.0,
+          "zscore_mean": 0.0031162832173884064,
+          "zscore_std": 2.955399434649939
+        },
+        "meaning_equivalent_to_frozen_contract": false,
+        "raw_phase_stats_before_any_bpf": {
+          "count": 1799,
+          "max": 0.58,
+          "mean": 0.00053363,
+          "median": -0.0,
+          "min": -0.73,
+          "p05": -0.28,
+          "p95": 0.26,
+          "std": 0.170085627
+        },
+        "reason": "Raw MR60 phase-like values were measured, but the exact frozen zero-phase Butterworth BPF semantic cannot be established from telemetry alone; the diagnostic affine is not silently treated as the contract.",
+        "scale_equivalent_to_frozen_contract": false
+      },
+      "breath_rate_raw": {
+        "computation": "field mapping plus static pipeline scan; vendor rate is kept as telemetry/diagnostic and is not placed in the waveform array",
+        "field_present": true,
+        "finite_value_count": 1799,
+        "stats": {
+          "count": 1799,
+          "max": 32.0,
+          "mean": 22.674819344,
+          "median": 23.0,
+          "min": 1.0,
+          "p05": 8.0,
+          "p95": 31.0,
+          "std": 7.09879341
+        },
+        "used_as_waveform_input": false,
+        "waveform_field_used": "breath_phase"
+      },
+      "bytes": 1837444,
+      "distance_or_range": {
+        "computation": "population stats plus sample standard deviation over finite distance telemetry values; legacy CSV range_m is in metres",
+        "field": "distance_cm_raw",
+        "finite_sample_count": 1799,
+        "sample_std": 20.378211738,
+        "sample_std_cm": null,
+        "stats": {
+          "count": 1799,
+          "max": 91.84,
+          "mean": 63.714319066,
+          "median": 51.66,
+          "min": 45.92,
+          "p05": 45.92,
+          "p95": 91.84,
+          "std": 20.37254719
+        },
+        "unit": "cm"
+      },
+      "evidence_group": "PR18_PILOT_CAPTURE",
+      "evidence_path": "devices/mmwave/device_measurements/pilot/M-C0-PILOT-STATIONARY-001.raw.jsonl",
+      "fresh_windows": {
+        "computation": "count reset-proxy events per fixed non-overlapping 30 s bin; count bins >= 300",
+        "max_fresh_samples_in_nonoverlapping_30s_window": 110,
+        "status": "MEASURED_FROM_PHASE_AGE_RESET_PROXY",
+        "windows_with_300_genuinely_fresh_samples": 0
+      },
+      "int8_distribution": {
+        "after_int8_dequantized": {
+          "count": 1799,
+          "max": 0.208604168,
+          "mean": -0.000602969,
+          "median": 0.0,
+          "min": -0.250325002,
+          "p05": -0.083441667,
+          "p95": 0.083441667,
+          "std": 0.059113772
+        },
+        "before_int8": {
+          "count": 1799,
+          "max": 0.195196531,
+          "mean": -0.000873876,
+          "median": -0.001054437,
+          "min": -0.248059966,
+          "p05": -0.095796284,
+          "p95": 0.086920135,
+          "std": 0.057550808
+        },
+        "bpf_applied": false,
+        "computation": "normalized_proxy=(raw_phase - frozen_mean)/frozen_std; q=round_half_away_from_zero(normalized/scale)+zero_point; clamp int8; dequantize=(q-zero_point)*scale",
+        "quantization_error": {
+          "count": 1799,
+          "max": 0.020239076,
+          "mean": 0.000270907,
+          "median": 0.001022355,
+          "min": -0.020396654,
+          "p05": -0.019247387,
+          "p95": 0.019089809,
+          "std": 0.012227779
+        },
+        "quantized_integer_stats": {
+          "count": 1799,
+          "max": 2.0,
+          "mean": -3.014452474,
+          "median": -3.0,
+          "min": -9.0,
+          "p05": -5.0,
+          "p95": -1.0,
+          "std": 1.416888573
+        },
+        "quantized_saturation_fraction": 0.0,
+        "status": "DIAGNOSTIC_AFFINE_AND_INT8_ONLY"
+      },
+      "interpolation": {
+        "applied_to_audit": false,
+        "computation": "linear interpolation between phase_age reset-proxy samples; compared with observed held/repeated telemetry at the original timestamps",
+        "distortion": {
+          "interpolated_std": 0.162939168,
+          "mae": 0.00829552,
+          "max_abs": 0.06,
+          "observed_std": 0.169863102,
+          "rmse": 0.013461468,
+          "sample_count": 1793
+        },
+        "required_status": "UNRESOLVED",
+        "simulation_status": "SIMULATED_LINEAR_INTERPOLATION_FROM_PHASE_AGE_RESET_PROXY"
+      },
+      "kind": "pr18_pilot",
+      "malformed_record_count": 0,
+      "phase_age_ms": {
+        "fraction_over_30000_ms": 0.0,
+        "max": 17.0,
+        "median": 12.0,
+        "min": 0.0,
+        "p95": 15.0
+      },
+      "phase_semantic_correspondence": {
+        "assessment": "PHASE_LIKE_SIGNAL_OBSERVED_BUT_PHASE_B_EQUIVALENCE_NOT_ESTABLISHED",
+        "basis": "finite phase values and, where detectable, a periodic phase-like component were observed; no independent Phase-B semantic/reference signal exists in this evidence set",
+        "correspondence_disproven": false,
+        "numeric": {
+          "computation": "center signal by its session mean; estimate period from median interval between positive mean crossings; rpm=60/period_s",
+          "documented_actual_trial_rpm": null,
+          "documented_vendor_median_rpm": null,
+          "dominant_period_s_from_median_positive_crossing_interval": 2.687064835,
+          "dominant_phase_rpm": 22.329196977,
+          "field": "breath_phase",
+          "finite_sample_count": 1799,
+          "paced_cue_rpm": null,
+          "phase_minus_vendor_median_rpm": null,
+          "positive_crossing_count": 61,
+          "stats": {
+            "count": 1799,
+            "freeze_intervals": {
+              "interval_count": 208,
+              "longest_interval_run": 5
+            },
+            "max": 0.58,
+            "mean": 0.00053363,
+            "median": -0.0,
+            "min": -0.73,
+            "p05": -0.28,
+            "p95": 0.26,
+            "std": 0.170085627,
+            "unique_value_count": 112
+          }
+        }
+      },
+      "record_count": 1799,
+      "role": null,
+      "row_cadence_and_fresh_cadence": {
+        "computation": {
+          "fresh": "fresh event proxy = phase_age_ms[i] < phase_age_ms[i-1]; cadence = reset_count / timestamp span",
+          "row": "(timestamp_count - 1) / (last_timestamp - first_timestamp)"
+        },
+        "fresh_0x0A13_cadence_hz": 3.518230325,
+        "fresh_cadence_status": "INFERRED_FROM_PHASE_AGE_RESETS",
+        "telemetry_row_cadence_hz": 9.993330369
+      },
+      "session_id": "M-C0-PILOT-STATIONARY-001",
+      "sha256": "e2b832fd3a72f18b4c3a370738c10e58c0269283dac218ae2d7d4dad48036f6f",
+      "timestamp_integrity": {
+        "computation": {
+          "gap_count": "interval_ms > max(150 ms, 1.5 * median_positive_interval_ms); diagnostic only, not an official failure threshold",
+          "row_cadence_hz": "(timestamp_count - 1) / (last_timestamp - first_timestamp)"
+        },
+        "duplicate_timestamp_count": 0,
+        "duration_s": 179.92,
+        "freeze_flag_count": 0,
+        "gap_count": 0,
+        "gap_threshold_ms_diagnostic": 150.0,
+        "max_interval_ms": 102.0,
+        "median_interval_ms": 100.0,
+        "min_interval_ms": 100.0,
+        "nonmonotonic_timestamp_count": 0,
+        "record_count_with_timestamp": 1799,
+        "row_cadence_hz": 9.993330369,
+        "sequence": {
+          "computation": "sum(max(seq[i+1]-seq[i]-1, 0) for positive sequence gaps)",
+          "duplicate_sequence_count": 0,
+          "first": 19088,
+          "last": 20886,
+          "missing_sequence_count": 0,
+          "nonmonotonic_sequence_count": 0,
+          "record_count": 1799,
+          "status": "MEASURED"
+        },
+        "timestamp_freeze_intervals": {
+          "interval_count": 0,
+          "longest_interval_run": 0
+        }
+      }
     }
   ],
   "catalog_summary": {
-    "all_evidence_root_file_count": 2528,
+    "all_evidence_root_file_count": 259,
     "computation": "counts over expected_evidence_set; all regular evidence files opened read-only; expected input files SHA-256 hashed",
     "expected_count": 12,
-    "expected_input_files_hashed_count": 10,
-    "known_but_not_provided_count": 2,
-    "present_count": 10,
-    "raw_sessions_analyzed_count": 10
+    "expected_input_files_hashed_count": 12,
+    "known_but_not_provided_count": 0,
+    "legacy_evidence_root_file_count": 224,
+    "pilot_evidence_root_file_count": 35,
+    "present_count": 12,
+    "raw_sessions_analyzed_count": 12
   },
   "evidence_root": "devices/mmwave/firmware",
   "expected_evidence_set": [
@@ -2942,28 +3230,70 @@
       "status": "PRESENT"
     },
     {
+      "bytes": 1819539,
       "candidate_paths": [
-        "devices/mmwave/firmware/device_measurements/M-C0-PILOT-DESKWORK-001.jsonl",
-        "devices/mmwave/firmware/device_measurements/M-C0-PILOT-DESKWORK-001/records.jsonl"
+        "devices/mmwave/device_measurements/M-C0-PILOT-DESKWORK-001.jsonl",
+        "devices/mmwave/device_measurements/M-C0-PILOT-DESKWORK-001/records.jsonl",
+        "devices/mmwave/device_measurements/pilot/M-C0-PILOT-DESKWORK-001.raw.jsonl"
       ],
       "evidence_group": "PR18_PILOT_CAPTURE",
       "expected_record_count": 1799,
       "kind": "pr18_pilot",
-      "search_scope": "recursive filename match under the supplied evidence-root",
+      "malformed_record_count": 0,
+      "path": "devices/mmwave/device_measurements/pilot/M-C0-PILOT-DESKWORK-001.raw.jsonl",
+      "record_count": 1799,
+      "retrieval_attempts": [
+        {
+          "command": "git fetch origin pull/18/head:pr18-head",
+          "result": "SUCCESS: refs/pull/18/head -> pr18-head"
+        },
+        {
+          "command": "git fetch origin 62eb0d867cfa02295c9a1d023b813134c434b8eb",
+          "result": "SUCCESS: 62eb0d867cfa02295c9a1d023b813134c434b8eb -> FETCH_HEAD"
+        },
+        {
+          "command": "git fetch origin refs/pull/18/head",
+          "result": "SUCCESS: refs/pull/18/head -> FETCH_HEAD"
+        }
+      ],
+      "search_scope": "recursive filename match under the supplied PR18 pilot evidence root",
       "session_id": "M-C0-PILOT-DESKWORK-001",
-      "status": "KNOWN_BUT_NOT_PROVIDED"
+      "sha256": "368e6a16e897b9231ff5fcdecd3edcc5b725a0a4dc6b20dee1e3162405bc2876",
+      "source_ref": "pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb",
+      "status": "PRESENT"
     },
     {
+      "bytes": 1837444,
       "candidate_paths": [
-        "devices/mmwave/firmware/device_measurements/M-C0-PILOT-STATIONARY-001.jsonl",
-        "devices/mmwave/firmware/device_measurements/M-C0-PILOT-STATIONARY-001/records.jsonl"
+        "devices/mmwave/device_measurements/M-C0-PILOT-STATIONARY-001.jsonl",
+        "devices/mmwave/device_measurements/M-C0-PILOT-STATIONARY-001/records.jsonl",
+        "devices/mmwave/device_measurements/pilot/M-C0-PILOT-STATIONARY-001.raw.jsonl"
       ],
       "evidence_group": "PR18_PILOT_CAPTURE",
       "expected_record_count": 1799,
       "kind": "pr18_pilot",
-      "search_scope": "recursive filename match under the supplied evidence-root",
+      "malformed_record_count": 0,
+      "path": "devices/mmwave/device_measurements/pilot/M-C0-PILOT-STATIONARY-001.raw.jsonl",
+      "record_count": 1799,
+      "retrieval_attempts": [
+        {
+          "command": "git fetch origin pull/18/head:pr18-head",
+          "result": "SUCCESS: refs/pull/18/head -> pr18-head"
+        },
+        {
+          "command": "git fetch origin 62eb0d867cfa02295c9a1d023b813134c434b8eb",
+          "result": "SUCCESS: 62eb0d867cfa02295c9a1d023b813134c434b8eb -> FETCH_HEAD"
+        },
+        {
+          "command": "git fetch origin refs/pull/18/head",
+          "result": "SUCCESS: refs/pull/18/head -> FETCH_HEAD"
+        }
+      ],
+      "search_scope": "recursive filename match under the supplied PR18 pilot evidence root",
       "session_id": "M-C0-PILOT-STATIONARY-001",
-      "status": "KNOWN_BUT_NOT_PROVIDED"
+      "sha256": "e2b832fd3a72f18b4c3a370738c10e58c0269283dac218ae2d7d4dad48036f6f",
+      "source_ref": "pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb",
+      "status": "PRESENT"
     }
   ],
   "input_files_hashed": [
@@ -3026,8 +3356,118 @@
       "path": "devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl",
       "session_id": "2026-08-01_occupied_d09_v120_31min_attempt02",
       "sha256": "7f9e9ac65377c6dc217af92f9dee2401b6162540e2245fce97acf2ed49368a34"
+    },
+    {
+      "bytes": 1819539,
+      "path": "devices/mmwave/device_measurements/pilot/M-C0-PILOT-DESKWORK-001.raw.jsonl",
+      "session_id": "M-C0-PILOT-DESKWORK-001",
+      "sha256": "368e6a16e897b9231ff5fcdecd3edcc5b725a0a4dc6b20dee1e3162405bc2876"
+    },
+    {
+      "bytes": 1837444,
+      "path": "devices/mmwave/device_measurements/pilot/M-C0-PILOT-STATIONARY-001.raw.jsonl",
+      "session_id": "M-C0-PILOT-STATIONARY-001",
+      "sha256": "e2b832fd3a72f18b4c3a370738c10e58c0269283dac218ae2d7d4dad48036f6f"
     }
   ],
+  "pr18_retrieval": {
+    "attempts": [
+      {
+        "command": "git fetch origin pull/18/head:pr18-head",
+        "result": "SUCCESS: refs/pull/18/head -> pr18-head"
+      },
+      {
+        "command": "git fetch origin 62eb0d867cfa02295c9a1d023b813134c434b8eb",
+        "result": "SUCCESS: 62eb0d867cfa02295c9a1d023b813134c434b8eb -> FETCH_HEAD"
+      },
+      {
+        "command": "git fetch origin refs/pull/18/head",
+        "result": "SUCCESS: refs/pull/18/head -> FETCH_HEAD"
+      }
+    ],
+    "head": "62eb0d867cfa02295c9a1d023b813134c434b8eb",
+    "paths_checked": [
+      {
+        "path": "devices/mmwave/device_measurements/",
+        "ref": "HEAD",
+        "result": "NOT_FOUND"
+      },
+      {
+        "path": "devices/mmwave/device_measurements/",
+        "ref": "pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb",
+        "result": "FOUND"
+      },
+      {
+        "path": "devices/mmwave/firmware/device_measurements/M-C0-PILOT-DESKWORK-001.jsonl",
+        "ref": "HEAD",
+        "result": "NOT_FOUND"
+      },
+      {
+        "path": "devices/mmwave/firmware/device_measurements/M-C0-PILOT-STATIONARY-001.jsonl",
+        "ref": "HEAD",
+        "result": "NOT_FOUND"
+      },
+      {
+        "path": "devices/mmwave/firmware/device_measurements/M-C0-PILOT-DESKWORK-001/records.jsonl",
+        "ref": "HEAD",
+        "result": "NOT_FOUND"
+      },
+      {
+        "path": "devices/mmwave/firmware/device_measurements/M-C0-PILOT-STATIONARY-001/records.jsonl",
+        "ref": "HEAD",
+        "result": "NOT_FOUND"
+      },
+      {
+        "path": "devices/mmwave/device_measurements/M-C0-PILOT-DESKWORK-001.jsonl",
+        "ref": "pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb",
+        "result": "NOT_FOUND"
+      },
+      {
+        "path": "devices/mmwave/device_measurements/M-C0-PILOT-STATIONARY-001.jsonl",
+        "ref": "pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb",
+        "result": "NOT_FOUND"
+      },
+      {
+        "path": "devices/mmwave/device_measurements/M-C0-PILOT-DESKWORK-001/records.jsonl",
+        "ref": "pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb",
+        "result": "NOT_FOUND"
+      },
+      {
+        "path": "devices/mmwave/device_measurements/M-C0-PILOT-STATIONARY-001/records.jsonl",
+        "ref": "pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb",
+        "result": "NOT_FOUND"
+      },
+      {
+        "path": "devices/mmwave/device_measurements/pilot/M-C0-PILOT-DESKWORK-001.raw.jsonl",
+        "ref": "pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb",
+        "result": "FOUND"
+      },
+      {
+        "path": "devices/mmwave/device_measurements/pilot/M-C0-PILOT-STATIONARY-001.raw.jsonl",
+        "ref": "pr18-head@62eb0d867cfa02295c9a1d023b813134c434b8eb",
+        "result": "FOUND"
+      }
+    ],
+    "pilot_fresh_cadence_finding": {
+      "basis": "Both pilot reset-proxy cadences are closer to the measured 4.30467137 Hz legacy fresh cadence than to the nominal 10 Hz telemetry row cadence.",
+      "comparison": {
+        "computation": "for each pilot, compare absolute cadence distance to 4.30467137 Hz and 10 Hz; both must favor the same reference",
+        "legacy_fresh_cadence_proxy_hz": 4.30467137,
+        "nominal_telemetry_row_cadence_hz": 10.0
+      },
+      "pilot_measurements": [
+        {
+          "fresh_0x0A13_cadence_hz": 3.679658492,
+          "session_id": "M-C0-PILOT-DESKWORK-001"
+        },
+        {
+          "fresh_0x0A13_cadence_hz": 3.518230325,
+          "session_id": "M-C0-PILOT-STATIONARY-001"
+        }
+      ],
+      "verdict": "A_STRUCTURAL_MR60_ESP_TELEMETRY_PATH_LIMITATION_SUPPORTED"
+    }
+  },
   "raw_files_copied": false,
   "schema_version": "M-C0_EXISTING_MEASUREMENT_INVENTORY_V2",
   "window_input_forensics": {

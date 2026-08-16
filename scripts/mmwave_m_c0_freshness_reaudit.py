@@ -11,6 +11,15 @@ import statistics
 from pathlib import Path
 from typing import Any
 
+try:
+    from scripts.mmwave_m_c0_correspondence_audit import (
+        assert_freshness_estimator_consistency,
+    )
+except ModuleNotFoundError:  # Direct execution puts scripts/ first on sys.path.
+    from mmwave_m_c0_correspondence_audit import (
+        assert_freshness_estimator_consistency,
+    )
+
 
 OUTPUT_PATH = Path(
     "datasets/mmwave/manifests/M-C0_correspondence_audit/freshness_estimator_reaudit.json"
@@ -108,6 +117,21 @@ def analyze_session(session_id: str, public_path: Path, local_path: Path) -> dic
         for index in range(1, len(rows))
         if update_instants_ms[index] > update_instants_ms[index - 1]
     ]
+    positive_intervals_ms = [
+        timestamps_ms[index] - timestamps_ms[index - 1]
+        for index in range(1, len(rows))
+        if timestamps_ms[index] > timestamps_ms[index - 1]
+    ]
+    row_cadence_hz = (len(rows) - 1) / span_s
+    reconstructed_cadence_hz = len(reconstructed_update_advance) / span_s
+    regression_guards = assert_freshness_estimator_consistency(
+        max_phase_age_ms=max(ages_ms),
+        telemetry_interval_ms=statistics.median(positive_intervals_ms),
+        fresh_cadence_hz=reconstructed_cadence_hz,
+        row_cadence_hz=row_cadence_hz,
+        timestamp_age_transition_count=len(reconstructed_update_advance),
+        age_interval_transition_count=len(age_newer_than_previous_emission),
+    )
 
     methods = {
         "old_phase_age_decrease_proxy": method_result(
@@ -142,7 +166,7 @@ def analyze_session(session_id: str, public_path: Path, local_path: Path) -> dic
         "source_sha256": sha256_file(local_path),
         "record_count": len(rows),
         "timestamp_span_s": round_value(span_s),
-        "telemetry_row_cadence_hz": round_value((len(rows) - 1) / span_s),
+        "telemetry_row_cadence_hz": round_value(row_cadence_hz),
         "phase_age_ms": {
             "min": round_value(min(ages_ms)),
             "median": round_value(statistics.median(ages_ms)),
@@ -151,6 +175,7 @@ def analyze_session(session_id: str, public_path: Path, local_path: Path) -> dic
         },
         "methods": methods,
         "selected_method": "reconstructed_update_instant_advances",
+        "regression_guards": regression_guards,
     }
 
 

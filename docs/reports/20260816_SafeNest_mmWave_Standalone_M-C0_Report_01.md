@@ -2,7 +2,7 @@
 
 - Repository: `jinsu1011/safenest-embedded-competition`
 - Branch: `codex/mmwave-m-c0-correspondence`
-- Head at audit: `441796cd8cd864bfab9078b0ec22c84b656e4bf3`
+- Head at audit: `230f1b6d6dc63996dc0e3d89a023e3e153da79c8`
 - Evidence-root used: `devices/mmwave/firmware`
 - Decision: **`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`**
 - Blocking reason: **`SIGNAL_CORRESPONDENCE_NOT_ESTABLISHED`**

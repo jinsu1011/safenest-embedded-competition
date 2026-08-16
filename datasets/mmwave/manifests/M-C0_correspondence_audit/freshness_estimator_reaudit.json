@@ -54,6 +54,15 @@
         "p95": 195627.0
       },
       "record_count": 18574,
+      "regression_guards": {
+        "age_interval_transition_count": 15658,
+        "cross_check": "EXACT_MATCH",
+        "low_age_definition": "max(phase_age_ms) < 2 * median telemetry interval; regression diagnostic only",
+        "low_age_regime": false,
+        "materially_below_row_cadence_definition": "fresh cadence < 0.95 * row cadence; regression diagnostic only",
+        "status": "PASS",
+        "timestamp_age_transition_count": 15658
+      },
       "selected_method": "reconstructed_update_instant_advances",
       "session_id": "2026-08-01_occupied_d09_v120_31min_attempt02",
       "source_path": "devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl",
@@ -99,6 +108,15 @@
         "p95": 15.0
       },
       "record_count": 1799,
+      "regression_guards": {
+        "age_interval_transition_count": 1797,
+        "cross_check": "EXACT_MATCH",
+        "low_age_definition": "max(phase_age_ms) < 2 * median telemetry interval; regression diagnostic only",
+        "low_age_regime": true,
+        "materially_below_row_cadence_definition": "fresh cadence < 0.95 * row cadence; regression diagnostic only",
+        "status": "PASS",
+        "timestamp_age_transition_count": 1797
+      },
       "selected_method": "reconstructed_update_instant_advances",
       "session_id": "M-C0-PILOT-DESKWORK-001",
       "source_path": "devices/mmwave/device_measurements/pilot/M-C0-PILOT-DESKWORK-001.raw.jsonl",
@@ -144,6 +162,15 @@
         "p95": 15.0
       },
       "record_count": 1799,
+      "regression_guards": {
+        "age_interval_transition_count": 1798,
+        "cross_check": "EXACT_MATCH",
+        "low_age_definition": "max(phase_age_ms) < 2 * median telemetry interval; regression diagnostic only",
+        "low_age_regime": true,
+        "materially_below_row_cadence_definition": "fresh cadence < 0.95 * row cadence; regression diagnostic only",
+        "status": "PASS",
+        "timestamp_age_transition_count": 1798
+      },
       "selected_method": "reconstructed_update_instant_advances",
       "session_id": "M-C0-PILOT-STATIONARY-001",
       "source_path": "devices/mmwave/device_measurements/pilot/M-C0-PILOT-STATIONARY-001.raw.jsonl",

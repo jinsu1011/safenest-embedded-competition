@@ -35,6 +35,7 @@ DECISION_AUTHORIZED = "AUTHORIZED_FOR_EXPLORATORY_INFERENCE"
 BLOCKED_BEFORE = "EVIDENCE_NOT_ACCESSIBLE_IN_STANDALONE"
 BLOCKED_MEASURED = "SIGNAL_CORRESPONDENCE_NOT_ESTABLISHED"
 EXPECTED_LONG_LOG_SHA256 = "7f9e9ac65377c6dc217af92f9dee2401b6162540e2245fce97acf2ed49368a34"
+FRESH_CADENCE_MATERIAL_RATIO = 0.95
 
 AUDIT_DIR = Path("datasets/mmwave/manifests/M-C0_correspondence_audit")
 SUMMARY_PATH = AUDIT_DIR / "m_c0_summary.json"
@@ -486,6 +487,72 @@ def phase_signal_summary(records: list[dict[str, Any]], context: dict[str, Any])
     }
 
 
+def assert_freshness_estimator_consistency(
+    *,
+    max_phase_age_ms: float,
+    telemetry_interval_ms: float,
+    fresh_cadence_hz: float,
+    row_cadence_hz: float,
+    timestamp_age_transition_count: int,
+    age_interval_transition_count: int,
+) -> dict[str, Any]:
+    """Fail closed when independent freshness estimators become inconsistent."""
+
+    low_age_regime = max_phase_age_ms < 2.0 * telemetry_interval_ms
+    minimum_expected_fresh_cadence_hz = row_cadence_hz * FRESH_CADENCE_MATERIAL_RATIO
+    if low_age_regime and fresh_cadence_hz < minimum_expected_fresh_cadence_hz:
+        raise AssertionError(
+            "FRESHNESS_GUARD_LOW_AGE_CADENCE_UNDERCOUNT: "
+            f"max_phase_age_ms={max_phase_age_ms}, telemetry_interval_ms={telemetry_interval_ms}, "
+            f"fresh_cadence_hz={fresh_cadence_hz}, row_cadence_hz={row_cadence_hz}, "
+            f"minimum_ratio={FRESH_CADENCE_MATERIAL_RATIO}"
+        )
+    if timestamp_age_transition_count != age_interval_transition_count:
+        raise AssertionError(
+            "FRESHNESS_GUARD_ESTIMATOR_DIVERGENCE: "
+            f"timestamp_age_transition_count={timestamp_age_transition_count}, "
+            f"age_interval_transition_count={age_interval_transition_count}"
+        )
+    return {
+        "status": "PASS",
+        "low_age_regime": low_age_regime,
+        "low_age_definition": "max(phase_age_ms) < 2 * median telemetry interval; regression diagnostic only",
+        "materially_below_row_cadence_definition": (
+            f"fresh cadence < {FRESH_CADENCE_MATERIAL_RATIO} * row cadence; regression diagnostic only"
+        ),
+        "timestamp_age_transition_count": timestamp_age_transition_count,
+        "age_interval_transition_count": age_interval_transition_count,
+        "cross_check": "EXACT_MATCH",
+    }
+
+
+def assert_no_combined_fresh_window_total(summary: dict[str, Any]) -> None:
+    """Reject a summary that collapses the two evidence groups into one total."""
+
+    forbidden_keys = {
+        "combined_valid_300_fresh_windows",
+        "total_valid_300_fresh_windows",
+        "valid_300_fresh_windows_total",
+    }
+    present_forbidden = sorted(forbidden_keys.intersection(summary))
+    if present_forbidden:
+        raise AssertionError(
+            "FRESHNESS_GUARD_COMBINED_WINDOW_TOTAL: forbidden keys "
+            + ", ".join(present_forbidden)
+        )
+    grouped = summary.get("valid_300_fresh_windows")
+    required_groups = {"PRE_PR18_LEGACY_LOGS", "PR18_PILOT_CAPTURE"}
+    if not isinstance(grouped, dict) or set(grouped) != required_groups:
+        raise AssertionError(
+            "FRESHNESS_GUARD_COMBINED_WINDOW_TOTAL: valid_300_fresh_windows must be "
+            "a two-group mapping, never a scalar or combined total"
+        )
+    if summary.get("valid_300_fresh_windows_aggregate_reported") is not False:
+        raise AssertionError(
+            "FRESHNESS_GUARD_COMBINED_WINDOW_TOTAL: aggregate reporting must remain false"
+        )
+
+
 def freshness_summary(records: list[dict[str, Any]]) -> tuple[dict[str, Any], list[int]]:
     age_pairs = [(index, r["timestamp_s"], r["phase_age_ms"]) for index, r in enumerate(records) if r["timestamp_s"] is not None and r["phase_age_ms"] is not None]
     if not age_pairs:
@@ -521,6 +588,21 @@ def freshness_summary(records: list[dict[str, Any]]) -> tuple[dict[str, Any], li
     span = age_pairs[-1][1] - age_pairs[0][1]
     selected_count = len(reconstructed_update_advance_indices)
     cadence = selected_count / span if span > 0 else None
+    positive_intervals_ms = [
+        (current[1] - previous[1]) * 1000.0
+        for previous, current in zip(age_pairs, age_pairs[1:])
+        if current[1] > previous[1]
+    ]
+    telemetry_interval_ms = statistics.median(positive_intervals_ms)
+    row_cadence_hz = (len(age_pairs) - 1) / span
+    regression_guards = assert_freshness_estimator_consistency(
+        max_phase_age_ms=max(ages),
+        telemetry_interval_ms=telemetry_interval_ms,
+        fresh_cadence_hz=cadence,
+        row_cadence_hz=row_cadence_hz,
+        timestamp_age_transition_count=selected_count,
+        age_interval_transition_count=len(age_newer_than_previous_emission_indices),
+    )
 
     def method(
         count: int,
@@ -549,6 +631,7 @@ def freshness_summary(records: list[dict[str, Any]]) -> tuple[dict[str, Any], li
             },
             "selected_fresh_update_count": selected_count,
             "selected_method": "reconstructed_update_instant_advances",
+            "regression_guards": regression_guards,
             "estimator_methods": {
                 "old_phase_age_decrease_proxy": method(
                     len(old_reset_indices),
@@ -985,6 +1068,7 @@ def analyze_session(root: Path, evidence_root: Path, item: dict[str, Any], all_h
             "fresh_cadence_status": freshness["status"],
             "selected_fresh_update_count": freshness.get("selected_fresh_update_count"),
             "selected_method": freshness.get("selected_method"),
+            "regression_guards": freshness.get("regression_guards"),
             "superseded_fresh_0x0A13_cadence_hz": freshness.get(
                 "superseded_fresh_0x0A13_cadence_hz"
             ),
@@ -1879,6 +1963,7 @@ def run(
                 "superseded_fresh_0x0A13_cadence_hz": session["row_cadence_and_fresh_cadence"].get("superseded_fresh_0x0A13_cadence_hz"),
                 "superseded_fresh_cadence_status": session["row_cadence_and_fresh_cadence"].get("superseded_fresh_cadence_status"),
                 "freshness_estimator_methods": session["row_cadence_and_fresh_cadence"].get("estimator_methods"),
+                "freshness_regression_guards": session["row_cadence_and_fresh_cadence"].get("regression_guards"),
                 "phase_age_ms": session["phase_age_ms"],
                 "windows_with_300_genuinely_fresh_samples": session["fresh_windows"]["windows_with_300_genuinely_fresh_samples"],
                 "phase_rpm": session["phase_semantic_correspondence"]["numeric"]["dominant_phase_rpm"],
@@ -1909,6 +1994,7 @@ def run(
             "expected_long_log_sha256": EXPECTED_LONG_LOG_SHA256,
         },
     }
+    assert_no_combined_fresh_window_total(summary)
     inventory = {
         "schema_version": "M-C0_EXISTING_MEASUREMENT_INVENTORY_V2",
         "evidence_root": repo_rel(root, evidence_root),

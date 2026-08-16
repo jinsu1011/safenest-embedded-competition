@@ -28,7 +28,7 @@
   "expected_input_file_count": 12,
   "expected_input_files_hashed_count": 12,
   "expected_input_present_count": 12,
-  "head_at_run": "441796cd8cd864bfab9078b0ec22c84b656e4bf3",
+  "head_at_run": "230f1b6d6dc63996dc0e3d89a023e3e153da79c8",
   "known_but_not_provided_count": 0,
   "phase": "M-C0",
   "pilot_evidence_root": "devices/mmwave/device_measurements",
@@ -193,6 +193,7 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "freshness_estimator_methods": null,
+      "freshness_regression_guards": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -230,6 +231,7 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "freshness_estimator_methods": null,
+      "freshness_regression_guards": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -267,6 +269,7 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "freshness_estimator_methods": null,
+      "freshness_regression_guards": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -304,6 +307,7 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "freshness_estimator_methods": null,
+      "freshness_regression_guards": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -341,6 +345,7 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "freshness_estimator_methods": null,
+      "freshness_regression_guards": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -378,6 +383,7 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "freshness_estimator_methods": null,
+      "freshness_regression_guards": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -415,6 +421,7 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "freshness_estimator_methods": null,
+      "freshness_regression_guards": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -452,6 +459,7 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "freshness_estimator_methods": null,
+      "freshness_regression_guards": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -489,6 +497,7 @@
       "evidence_group": "PRE_PR18_LEGACY_LOGS",
       "fresh_0x0A13_cadence_hz": null,
       "freshness_estimator_methods": null,
+      "freshness_regression_guards": null,
       "phase_age_ms": {
         "fraction_over_30000_ms": null,
         "max": null,
@@ -554,6 +563,15 @@
           "status": "CURRENT_DIAGNOSTIC",
           "transition_count": 15658
         }
+      },
+      "freshness_regression_guards": {
+        "age_interval_transition_count": 15658,
+        "cross_check": "EXACT_MATCH",
+        "low_age_definition": "max(phase_age_ms) < 2 * median telemetry interval; regression diagnostic only",
+        "low_age_regime": false,
+        "materially_below_row_cadence_definition": "fresh cadence < 0.95 * row cadence; regression diagnostic only",
+        "status": "PASS",
+        "timestamp_age_transition_count": 15658
       },
       "phase_age_ms": {
         "fraction_over_30000_ms": 0.139173038,
@@ -621,6 +639,15 @@
           "transition_count": 1797
         }
       },
+      "freshness_regression_guards": {
+        "age_interval_transition_count": 1797,
+        "cross_check": "EXACT_MATCH",
+        "low_age_definition": "max(phase_age_ms) < 2 * median telemetry interval; regression diagnostic only",
+        "low_age_regime": true,
+        "materially_below_row_cadence_definition": "fresh cadence < 0.95 * row cadence; regression diagnostic only",
+        "status": "PASS",
+        "timestamp_age_transition_count": 1797
+      },
       "phase_age_ms": {
         "fraction_over_30000_ms": 0.0,
         "max": 111.0,
@@ -686,6 +713,15 @@
           "status": "CURRENT_DIAGNOSTIC",
           "transition_count": 1798
         }
+      },
+      "freshness_regression_guards": {
+        "age_interval_transition_count": 1798,
+        "cross_check": "EXACT_MATCH",
+        "low_age_definition": "max(phase_age_ms) < 2 * median telemetry interval; regression diagnostic only",
+        "low_age_regime": true,
+        "materially_below_row_cadence_definition": "fresh cadence < 0.95 * row cadence; regression diagnostic only",
+        "status": "PASS",
+        "timestamp_age_transition_count": 1798
       },
       "phase_age_ms": {
         "fraction_over_30000_ms": 0.0,

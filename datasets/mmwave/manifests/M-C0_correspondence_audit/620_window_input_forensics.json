@@ -61,7 +61,7 @@
       "min": 0.0,
       "status": "EVIDENCE_PROVEN_FRACTION_ZERO_ACTUAL_FRACTION_UNKNOWN"
     },
-    "historical_620_of_620_all_apnea_interpretation": "The historical 620/620 all-APNEA result demonstrates that the evaluated inputs came from a window generator whose freshness provenance violates or fails to establish the frozen input contract before BPF_ZSCORE; it does not demonstrate model performance.",
+    "historical_620_of_620_all_apnea_interpretation": "The historical 620/620 all-APNEA exploratory run is attributable here only to an input contract violation: the measured input composition contains 53820/186000 stale-repeat slots and 169041/186000 interpolated slots, 0/620 windows meet the 300-fresh-sample contract, and the first established divergence is LEGACY_CSV_WINDOW_GENERATION_FRESHNESS_PROVENANCE. These input-side facts do not measure or characterize model performance.",
     "input_contract_divergence": {
       "frozen_contract": "M-B10B_SELECTED_REAL_CANDIDATE_BPF_ZSCORE_V1",
       "stage": "LEGACY_CSV_WINDOW_GENERATION_FRESHNESS_PROVENANCE",

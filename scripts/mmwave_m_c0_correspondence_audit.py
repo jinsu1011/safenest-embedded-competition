@@ -1300,7 +1300,7 @@ def reconstruct_legacy_620_window_forensics(
             "stage": "LEGACY_CSV_WINDOW_GENERATION_FRESHNESS_PROVENANCE",
             "timing": "BEFORE_BPF_ZSCORE",
         },
-        "historical_620_of_620_all_apnea_interpretation": "The historical 620/620 all-APNEA result demonstrates that the evaluated inputs came from a window generator whose freshness provenance violates or fails to establish the frozen input contract before BPF_ZSCORE; it does not demonstrate model performance.",
+        "historical_620_of_620_all_apnea_interpretation": "The historical 620/620 all-APNEA exploratory run is attributable here only to an input contract violation: the measured input composition contains 53820/186000 stale-repeat slots and 169041/186000 interpolated slots, 0/620 windows meet the 300-fresh-sample contract, and the first established divergence is LEGACY_CSV_WINDOW_GENERATION_FRESHNESS_PROVENANCE. These input-side facts do not measure or characterize model performance.",
     }
     return {
         "schema_version": "M-C0_620_WINDOW_INPUT_FORENSICS_V2",

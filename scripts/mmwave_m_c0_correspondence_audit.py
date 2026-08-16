@@ -227,6 +227,28 @@ def numeric_stats(values: Iterable[float]) -> dict[str, Any]:
     }
 
 
+def distance_summary(rows: list[dict[str, Any]], kind: str) -> dict[str, Any]:
+    """Summarize distance telemetry without confusing it with phase freeze."""
+
+    if kind == "legacy_csv":
+        field = "range_m"
+        unit = "m"
+        values = [value for value in (as_float(row.get(field)) for row in rows) if value is not None]
+    else:
+        field = "distance_cm_raw"
+        unit = "cm"
+        values = [value for value in (as_float(row.get(field)) for row in rows) if value is not None]
+    return {
+        "field": field,
+        "unit": unit,
+        "finite_sample_count": len(values),
+        "stats": numeric_stats(values),
+        "sample_std": round_value(statistics.stdev(values)) if len(values) > 1 else None,
+        "sample_std_cm": round_value(statistics.stdev(values) * 100.0) if kind == "legacy_csv" and len(values) > 1 else None,
+        "computation": "population stats plus sample standard deviation over finite distance telemetry values; legacy CSV range_m is in metres",
+    }
+
+
 def run_lengths(flags: list[bool]) -> dict[str, int]:
     count = 0
     longest = 0
@@ -712,6 +734,7 @@ def analyze_session(root: Path, evidence_root: Path, item: dict[str, Any], all_h
     freshness, reset_indices = freshness_summary(records)
     fresh_windows = fixed_window_freshness(records, reset_indices)
     interpolation = interpolation_diagnostic(records, reset_indices)
+    distance = distance_summary(rows, kind)
     finite_phase = [record["phase"] for record in records if record["phase"] is not None]
     bpf_comparison = {
         "meaning_equivalent_to_frozen_contract": False,
@@ -765,6 +788,7 @@ def analyze_session(root: Path, evidence_root: Path, item: dict[str, Any], all_h
         "phase_age_ms": freshness["phase_age_ms"],
         "fresh_windows": fresh_windows,
         "interpolation": interpolation,
+        "distance_or_range": distance,
         "bpf_zscore_equivalence": bpf_comparison,
         "int8_distribution": bpf_comparison["diagnostic_affine_proxy"],
     }
@@ -845,6 +869,7 @@ def render_report(root: Path, evidence_root: Path, summary: dict[str, Any], expe
         "- fresh 0x0A13 cadence = count of `phase_age_ms` decreases divided by timestamp span; this is an inferred reset proxy, not a direct packet counter",
         "- phase-age p95 uses linear percentile interpolation; `>30,000 ms` is a reporting partition, not an official failure threshold",
         "- 30-second fresh-window count uses fixed non-overlapping 30-second bins and counts bins with at least 300 reset-proxy events",
+        "- phase rpm = 60 divided by the median interval between positive crossings of the session-mean-centered phase; it is a signal diagnostic, not a paced-cue-to-label mapping",
         "- interpolation and INT8 calculations are diagnostics only; the frozen BPF/resampling contract was not silently applied",
         "",
         "## Expected evidence and SHA-256",
@@ -873,7 +898,31 @@ def render_report(root: Path, evidence_root: Path, summary: dict[str, Any], expe
         lines.append(
             f"| `{session['session_id']}` | {session['record_count']} | {session['row_cadence_and_fresh_cadence']['telemetry_row_cadence_hz']} | {session['row_cadence_and_fresh_cadence']['fresh_0x0A13_cadence_hz'] if session['row_cadence_and_fresh_cadence']['fresh_0x0A13_cadence_hz'] is not None else 'N/A'} | {phase.get('dominant_phase_rpm')} | {age_text} | {age.get('fraction_over_30000_ms')} | {session['fresh_windows']['windows_with_300_genuinely_fresh_samples']} | {distortion.get('rmse', 'N/A')} |"
         )
+    d15 = next((session for session in sessions if session["session_id"] == "S001_NORMAL_D15"), None)
+    paced = {
+        session["session_id"]: session["phase_semantic_correspondence"]["numeric"]
+        for session in sessions
+        if session["session_id"].startswith("S001_BREATH_PACED_")
+    }
     lines += [
+        "",
+        "## Preserved measurement corrections",
+        "",
+    ]
+    if d15 is not None:
+        d15_distance = d15["distance_or_range"]
+        d15_phase_stats = d15["phase_semantic_correspondence"]["numeric"]["stats"]
+        lines.append(
+            f"- `S001_NORMAL_D15`: the finite `range_m` sample standard deviation is `{d15_distance['sample_std_cm']}` cm, computed from `{d15_distance['finite_sample_count']}` rows in `{d15['evidence_path']}`. The same file's `resp_phase` population std is `{d15_phase_stats['std']}`; the frozen value is the phase/vitals signal, not distance."
+        )
+    if "S001_BREATH_PACED_12_01" in paced:
+        failed = paced["S001_BREATH_PACED_12_01"]
+        lines.append(
+            f"- `S001_BREATH_PACED_12_01` is not treated as a 12-rpm ground truth: `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/DELIVERY_NOTES.md` records an actual trial of approximately `{failed['documented_actual_trial_rpm']}` rpm. The cue remains metadata only."
+        )
+    lines += [
+        "- Existing project records retain the corrected phase periods `12.34` / `15.00–15.01` / `20.00` rpm versus vendor medians `14.0` / `19.0` / `23.0` (`docs/operations/PROJECT_PROGRESS.md` and the delivery notes). These are measurement notes and do not create a paced-rpm-to-class mapping.",
+        "- The phase-rpm values in the table are independently recomputed from each listed evidence file using the positive-crossing formula above; they are not substituted with paced cues or vendor medians.",
         "",
         "### Question 1 — signal-semantic correspondence",
         "",
@@ -1022,6 +1071,7 @@ def run(root: Path, evidence_root_arg: Path | None, output_dir: Path = AUDIT_DIR
                 "phase_age_ms": session["phase_age_ms"],
                 "windows_with_300_genuinely_fresh_samples": session["fresh_windows"]["windows_with_300_genuinely_fresh_samples"],
                 "phase_rpm": session["phase_semantic_correspondence"]["numeric"]["dominant_phase_rpm"],
+                "distance_or_range": session["distance_or_range"],
             }
             for session in sessions
         ],

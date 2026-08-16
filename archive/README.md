@@ -13,7 +13,7 @@
 현재 실행에 필수인 코드, 최신 설정, 원본 데이터·모델·CAD, 임시 백업은 포함하지 않는다.
 
 ## 5. 주요 하위 구성
-`legacy_prototypes/pi/`에 초기 위험 엔진, `legacy_prototypes/config/`에 내용 해시를 확인한 legacy JSON 설정 한 사본이 있다.
+`legacy_prototypes/pi/`에 초기 위험 엔진, `legacy_prototypes/config/`에 내용 해시를 확인한 legacy JSON 설정 한 사본이 있다. `legacy_prototypes/ondevice_ai_competition_runtime_20260816/`에는 현재 `integration/` 경로로 대체된 Raspberry Pi LCD·웹 runtime 사본을 보존한다.
 
 ## 6. 입력과 출력 인터페이스
 기본 런타임 입력·출력에는 연결되지 않으며 비교나 수동 복구 시에만 읽는다.

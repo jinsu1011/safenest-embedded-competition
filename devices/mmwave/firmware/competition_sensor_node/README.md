@@ -7,6 +7,7 @@ Before uploading the sketch, copy `secrets.example.h` to `secrets.h` locally
 and configure the Wi-Fi credentials and Raspberry Pi address. `secrets.h` is
 ignored by the repository and must not be committed.
 
-The matching receiver and dashboard live in
-`ondevice_ai/integrated_node/competition_runtime/`. Setup and communication
-guides live in `docs/competition_runtime/`.
+The current matching receiver and dashboard live in `integration/`. Setup and
+communication guides live in `docs/competition_runtime/`. The earlier duplicate
+copy is retained only as historical reference under
+`archive/legacy_prototypes/ondevice_ai_competition_runtime_20260816/`.

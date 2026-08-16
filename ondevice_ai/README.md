@@ -34,7 +34,9 @@
    - `HUMAN_FALL`/`LYING` ≠ verified `FALL_EVENT`
    - Thermal-44 실기기 검증은 **미완**
 4. **통합 규칙**
-   - 팀 전용 파일(`integrated_node/competition_runtime/`, `esp32_sensor_node.ino`, 구버전 모델/스크립트)은 **삭제하지 않고 보존**
+   - 현재 Pi 수신·표시·웹 runtime은 팀 `integration/` 영역이 권위 경로이며, 이전 `integrated_node/competition_runtime/` 사본은 `archive/legacy_prototypes/ondevice_ai_competition_runtime_20260816/`에 역사 자료로 보존
+   - `risk/`와 `integrated_node/run_node.py`는 AI provider 주입·fail-closed 계약 및 validator가 사용하는 active AI 경로로 유지
+   - `integrated_node/safenest_risk_engine.py`는 legacy compatibility이며 현재 역사 테스트가 직접 참조하므로 이번 정리에서는 이동하지 않음
    - 기본 runtime `config/models.yaml` / `models/model_manifest.json`은 여전히 역사적 v0.1.0을 가리킴. B-complete 후보는 `docs/integration/20260816_b_complete_active_offline_candidates.json`
    - 실드라이버 중복 복사 금지, fail-closed 유지
 5. **문서**

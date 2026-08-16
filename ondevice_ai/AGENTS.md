@@ -58,9 +58,10 @@
 - Missing, invalid, stale, NaN, or unavailable device/sensor data must not become a synthetic normal value.
 - Real mode without an injected team provider must report `valid=false` and fail closed.
 
-## Current synced development status (source SHA `77b1695`)
+## Current synced development status (source SHA `efc7e2e`)
 
-- mmWave: M-A0..M-A6 and M-B0..M-B12 completed with recorded warnings and a non-pristine final-evaluation limitation. The locked artifact is an offline candidate only. MR60 and Raspberry Pi validation remain pending.
-- CO₂: C-A0..C-A6 and C-B0..C-B5 completed. The locked UCI occupancy artifact is an offline candidate only. SCD40 device-domain validation remains pending.
-- Thermal: T-A0..T-A6 completed with recorded data and evaluation limitations. T-B is not authorized (`t_b_authorized=false`), so there is no new Thermal model candidate. Thermal device-domain validation remains pending.
-- The synchronized checkpoint is the standalone prerelease `multisensor-intermediate-2026-08-13`; it is not production, physical-sensor, Raspberry Pi, clinical, safety, or multisensor-integration approval.
+- mmWave: M-A0..M-A6 and M-B0..M-B12 remain the frozen offline candidate. Real MR60 correspondence (standalone M-C0) and device-domain classification performance are not proven. Raspberry Pi latency is not proven.
+- CO₂: C-A0..C-A6, C-B0..C-B5, and C-B6 reduced-feature (`CO2` + `CO2_slope`) INT8 candidate are frozen as offline occupancy evidence. SCD40 device-domain validation is not proven. C-C1 measurement guides/tooling are documentation only, not formal C-complete validation.
+- Thermal: T-A0..T-A6 and T-B0..T-B5 offline candidate lock are complete with recorded limitations. The T-B5 FULL_INT8 binary is external-SSD identity only (`binaries_tracked_in_git=false`). `HUMAN_FALL` remains a lying-derived posture proxy, not a verified `FALL_EVENT`. Thermal-44 device-domain validation is not proven.
+- Default runtime `models/model_manifest.json` and `config/models.yaml` still resolve historical v0.1.0 mock/runtime artifacts. B-complete locked candidates are recorded in `docs/integration/20260816_b_complete_active_offline_candidates.json` and must not be confused with hardware-validated production models.
+- This checkpoint is a B-complete offline candidate baseline for team Pi integration and subsequent real-device Phase C. It is not production, physical-sensor, Raspberry Pi long-run, clinical, safety, or final multisensor-deployment approval.

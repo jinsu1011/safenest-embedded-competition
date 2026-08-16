@@ -1,0 +1,38 @@
+{
+  "schema_version": "M-C0_SUMMARY_V1",
+  "phase": "M-C0",
+  "target_repository": "jinsu1011/safenest-embedded-competition",
+  "branch": "codex/mmwave-m-c0-correspondence",
+  "base_commit": "0e8538c75354691fccf5f223029b0e633c1260af",
+  "decision": "BLOCKED_PENDING_SIGNAL_CORRESPONDENCE",
+  "blocking_reason": "EVIDENCE_NOT_ACCESSIBLE_IN_STANDALONE",
+  "correspondence_evaluated": false,
+  "correspondence_disproven": false,
+  "evidence_root_supplied": false,
+  "preflight_gate": "PASS_INHERITED_FROM_PREVIOUS_STANDALONE_RUN",
+  "execution": {
+    "m_c0_executed": false,
+    "model_scoring_executed": false,
+    "m_c0b_inference_executed": false,
+    "m_c1_capture_executed": false,
+    "m_c2_metrics_executed": false,
+    "locked_test_reopened": false,
+    "raw_files_modified": false
+  },
+  "decision_is_successful_blocked_outcome": true,
+  "what_remains_unknown": [
+    "MR60 breath_phase semantic and numeric correspondence to the frozen Phase-B input.",
+    "Fresh 0x0A13 cadence separately from telemetry row cadence.",
+    "Per-session phase_age_ms distributions and timestamp integrity from raw evidence.",
+    "Any 300 genuinely fresh sample window over approximately 30 seconds.",
+    "Interpolation/resampling method and measured distortion.",
+    "MR60 pre-INT8 and post-INT8 distributions against the frozen training distribution.",
+    "The transform stage responsible for the historical 620/620 APNEA exploratory collapse.",
+    "Independent reference hardware, formal M-C1 sample size, and paced-rpm label mapping."
+  ],
+  "provenance": {
+    "raw_mr60_jsonl_csv_committed": false,
+    "raw_mr60_jsonl_csv_modified": false,
+    "note": "This is the reproducible before-state. The audit was not evaluated because no evidence-root was supplied to the standalone workflow."
+  }
+}

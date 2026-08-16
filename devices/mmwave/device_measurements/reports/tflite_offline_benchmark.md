@@ -22,8 +22,10 @@
 - 최대: `0.052583 ms`
 - 예측 결과: `NORMAL 0`, `RAPID_OR_ABNORMAL 0`, `APNEA 620`
 
-`NORMAL_D06/D09/D12/D15`와 `BREATH_PACED_12/15/20` 모든 source label 그룹에서도 예측은 전부 APNEA였다. 따라서 현재 CSV delivery를 locked model에 직접 넣었을 때 **class collapse 또는 domain mismatch 의심 신호**가 확인됐다.
+`NORMAL_D06/D09/D12/D15`와 `BREATH_PACED_12/15/20` 모든 source label 그룹에서도 예측은 전부 APNEA였다. 분류는 `EXPLORATORY_PRE_CORRESPONDENCE_INFERENCE`이며, `PIPELINE_CORRESPONDENCE_WARNING` 및 `DEVICE_DOMAIN_MISMATCH_WARNING`이다.
 
-모든 입력이 APNEA로 나온 것은 성능 통과가 아니다. 기존 CSV의 `NORMAL_D06`, `BREATH_PACED_12` 같은 labels는 모델의 `NORMAL/RAPID_OR_ABNORMAL/APNEA`에 대한 독립 ground truth가 아니므로 accuracy·F1을 계산하지 않았다. 이 결과는 **실제 model invoke와 출력 편향 확인**이며, formal 성능 평가가 아니다.
+현재 구성한 legacy CSV `resp_phase` → nominal 10Hz interpolation → `BPF_ZSCORE` → INT8 → frozen Phase-B TFLite 경로에서 620/620 window가 APNEA 출력을 냈다. MR60과 Phase-B 사이의 신호·시간 대응이 아직 확립되지 않았으므로 이는 exploratory collapse 관찰 및 correspondence/domain warning이지, 실제 장치 모델 성능이나 M-C2 결과가 아니다. 한 가지 원인을 확정하지 않는다.
+
+모든 입력이 APNEA로 나온 것은 성능 통과가 아니다. 기존 CSV의 `NORMAL_D06`, `BREATH_PACED_12` 같은 labels는 모델의 `NORMAL/RAPID_OR_ABNORMAL/APNEA`에 대한 독립 ground truth가 아니므로 accuracy·F1·recall·confusion matrix를 계산하지 않았다. M-C0 correspondence와 M-C2는 완료되지 않았으며 임상 apnea 근거도 아니다.
 
 또한 latency는 Apple Silicon 개발 host에서 측정한 값이다. Raspberry Pi 또는 ESP32의 배포 latency로 해석하면 안 된다.

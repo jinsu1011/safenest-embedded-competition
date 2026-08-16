@@ -36,7 +36,8 @@ duration: 180 seconds
 records: 1,799
 raw bytes: 1,819,539
 raw SHA-256: 368e6a16e897b9231ff5fcdecd3edcc5b725a0a4dc6b20dee1e3162405bc2876
-effective cadence: 9.993997Hz
+telemetry-row cadence: 9.993997Hz
+fresh phase cadence: FRESH_PHASE_CADENCE_NOT_YET_FULLY_VERIFIED
 median/p95 interval: 100/100ms
 jitter: 0.299715ms
 maximum gap: 103ms
@@ -68,17 +69,18 @@ duration: 180 seconds
 records: 1,799
 raw bytes: 1,837,444
 raw SHA-256: e2b832fd3a72f18b4c3a370738c10e58c0269283dac218ae2d7d4dad48036f6f
-capture-console cadence: approximately 9.99Hz
+capture-console telemetry-row cadence: approximately 9.99Hz
 capture-console maximum gap: 102ms
 capture-console JSON/UART/checksum failures: 0/0/0
 QA/manifest/derived interpretation: intentionally pending user approval
 ```
 
-The raw files remain outside Git by repository policy (`*.jsonl` is ignored). Their immutable identities are recorded by path, size, record count and SHA-256. Do not fabricate, edit or silently promote the stationary raw into formal evidence.
+Both curated Pilot raw files are intentionally Git-tracked as narrow `TRACKED_EXCEPTION` evidence despite the general `*.jsonl` ignore rule. This does not authorize arbitrary raw dumps. Their immutable identities are recorded by path, size, record count and SHA-256; do not fabricate, edit or silently promote them into formal evidence.
 
 ## Interpretation boundary
 
 - The stream and timing integrity passed for this Pilot.
+- The measured rate is telemetry-row cadence, not exact fresh `0x0A13` cadence. Producer validity uses `kPhaseMaxAgeMs = 500ms`, but that threshold does not reconstruct exact arrivals; repeated values alone are not stale proof.
 - The session demonstrates movement sensitivity; it does not establish accuracy.
 - Do not add this Pilot to model training data without a later, explicit dataset-design and labeling decision.
 - Do not retrain, change thresholds, modify `BPF_ZSCORE`, alter window semantics, or modify the locked TFLite artifact.

@@ -70,6 +70,11 @@
   },
   "tflite_invoke": {
     "status": "COMPLETED_HOST_BENCHMARK",
+    "classification": "EXPLORATORY_PRE_CORRESPONDENCE_INFERENCE",
+    "warning_classifications": ["PIPELINE_CORRESPONDENCE_WARNING", "DEVICE_DOMAIN_MISMATCH_WARNING"],
+    "m_c0_correspondence_complete": false,
+    "m_c2_complete": false,
+    "clinical_apnea_evidence": false,
     "tensorflow": "2.21.0",
     "model_sha256": "6dff6aaa72c79d76715d40cf7e32bb1e6cd9b2c2e3ac78eaf2fda737561430c5",
     "invoke_count": 620,

@@ -37,6 +37,11 @@
     "device_id": {"type": "string"},
     "seq": {"type": "integer", "minimum": 0},
     "ts_monotonic_ms": {"type": "integer", "minimum": 0},
+    "phase_age_ms": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "description": "Optional producer freshness evidence. Historical records may omit it; without it, fresh phase cadence remains unverified."
+    },
     "uart_frame_ok": {"type": "boolean"},
     "checksum_ok": {"type": "boolean"},
     "human_detected_raw": {"type": ["boolean", "null"]},

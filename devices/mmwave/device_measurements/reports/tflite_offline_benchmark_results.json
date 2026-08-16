@@ -6,6 +6,9 @@
     "delegate": "XNNPACK_CPU"
   },
   "model": {
+    "authoritative_evidence_repository": "https://github.com/sheepmeat/test.git",
+    "authoritative_evidence_commit": "efc7e2eb61a49e221ce0ebf6057b0c1617525ad1",
+    "authoritative_lock_path": "models/mmwave/experiments/M-B6_stage_equivalence/M-B3_CONV1D_GAP_BASELINE_seed42_M-B5_CAL_CLASS_BALANCED_120_int8.tflite",
     "source_relative_path": "ondevice_ai/models/mmwave/experiments/M-B5_representative_calibration/M-B3_CONV1D_GAP_BASELINE_seed42_M-B5_CAL_CLASS_BALANCED_120_int8.tflite",
     "sha256": "6dff6aaa72c79d76715d40cf7e32bb1e6cd9b2c2e3ac78eaf2fda737561430c5",
     "input_shape": [1, 300, 1],
@@ -38,6 +41,15 @@
     "quantized_max": 9
   },
   "inference": {
+    "classification": "EXPLORATORY_PRE_CORRESPONDENCE_INFERENCE",
+    "warning_classifications": [
+      "PIPELINE_CORRESPONDENCE_WARNING",
+      "DEVICE_DOMAIN_MISMATCH_WARNING"
+    ],
+    "m_c0_correspondence_complete": false,
+    "m_c2_complete": false,
+    "clinical_apnea_evidence": false,
+    "single_root_cause_claimed": false,
     "invoke_count": 620,
     "warmup_count": 10,
     "all_invokes_completed": true,
@@ -68,6 +80,8 @@
   "performance_metrics": {
     "accuracy": null,
     "macro_f1": null,
+    "recall": null,
+    "confusion_matrix": null,
     "reason": "No independent ground-truth labels aligned to the three model classes were available."
   }
 }

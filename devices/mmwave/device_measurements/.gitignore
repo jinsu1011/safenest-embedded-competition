@@ -1,4 +1,6 @@
-# 실제 측정 원본은 별도 보관하고 이 증거 레포에는 기본적으로 넣지 않는다.
+# 실제 측정 원본은 기본적으로 무시한다. PR #18에서 이미 추적 중인 두 Pilot
+# JSONL은 provenance/identity/QA 검토를 거친 좁은 TRACKED_EXCEPTION이며, 이 규칙은
+# 새 scratch·private·unreviewed JSONL을 자동 허용하지 않는다.
 raw/
 *.jsonl
 *.csv

@@ -42,7 +42,7 @@ locked SHA-256과 일치하는 int8 TFLite model과 TensorFlow `2.21.0` 임시 r
 - 최대: `0.052583 ms`
 - 예측: `NORMAL 0`, `RAPID_OR_ABNORMAL 0`, `APNEA 620`
 
-모든 입력이 APNEA로 나온 것은 성능 통과가 아니다. 기존 CSV label은 세 모델 class의 독립 ground truth가 아니므로 accuracy·F1은 계산하지 않았다. latency도 Apple Silicon host의 값이며 Raspberry Pi/ESP32 배포 latency가 아니다. 상세 결과는 `reports/tflite_offline_benchmark.md`에 기록했다.
+이 620/620 관찰의 분류는 `EXPLORATORY_PRE_CORRESPONDENCE_INFERENCE`이고 경고는 `PIPELINE_CORRESPONDENCE_WARNING`, `DEVICE_DOMAIN_MISMATCH_WARNING`이다. MR60-to-Phase-B 신호·시간 대응이 미확립 상태이므로 formal 장치 성능, M-C2, 모델 실패, 실제 APNEA 또는 임상 근거로 해석하지 않는다. 기존 CSV label은 독립 ground truth가 아니므로 accuracy·F1·recall·confusion matrix를 계산하지 않았고 단일 원인도 확정하지 않았다. latency도 Apple Silicon host 값이다.
 
 ## Synthetic edge-case tests
 

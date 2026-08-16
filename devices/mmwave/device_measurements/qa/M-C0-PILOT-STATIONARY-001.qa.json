@@ -16,12 +16,12 @@
       "ratio": 1.0
     },
     "breath_phase_std": {
-      "populated": 1799,
-      "ratio": 1.0
+      "populated": 1798,
+      "ratio": 0.999444
     },
     "breath_rate_filtered": {
-      "populated": 838,
-      "ratio": 0.465814
+      "populated": 231,
+      "ratio": 0.128405
     },
     "breath_rate_raw": {
       "populated": 1799,
@@ -32,8 +32,8 @@
       "ratio": 1.0
     },
     "distance_std_cm": {
-      "populated": 1795,
-      "ratio": 0.997777
+      "populated": 1786,
+      "ratio": 0.992774
     },
     "heart_phase": {
       "populated": 1799,
@@ -61,8 +61,8 @@
     }
   },
   "error_code_counts": {
-    "BREATH_PHASE_LOW_AMPLITUDE": 961,
-    "None": 838
+    "BREATH_PHASE_LOW_AMPLITUDE": 1568,
+    "None": 231
   },
   "freshness": {
     "exact_phase_frame_arrival_identity_available": false,
@@ -72,7 +72,7 @@
       "at_or_above_threshold": 0,
       "count": 1799,
       "invalid": 0,
-      "max_ms": 111.0,
+      "max_ms": 17.0,
       "median_ms": 12.0,
       "min_ms": 0.0,
       "missing_or_null": 0,
@@ -102,106 +102,106 @@
   "numeric_ranges": {
     "breath_phase": {
       "count": 1799,
-      "max": 0.75,
-      "mean": -0.002335,
+      "max": 0.58,
+      "mean": 0.000534,
       "median": -0.0,
-      "min": -0.7
+      "min": -0.73
     },
     "breath_phase_std": {
-      "count": 1799,
-      "max": 0.34,
-      "mean": 0.216971,
-      "median": 0.19,
+      "count": 1798,
+      "max": 0.28,
+      "mean": 0.154093,
+      "median": 0.15,
       "min": 0.09
     },
     "breath_rate_filtered": {
-      "count": 838,
-      "max": 22.49,
-      "mean": 18.351229,
-      "median": 18.59,
-      "min": 13.58
+      "count": 231,
+      "max": 23.43,
+      "mean": 19.619394,
+      "median": 20.4,
+      "min": 14.37
     },
     "breath_rate_raw": {
       "count": 1799,
       "max": 32.0,
-      "mean": 21.498054,
-      "median": 21.0,
-      "min": 0.0
+      "mean": 22.674819,
+      "median": 23.0,
+      "min": 1.0
     },
     "distance_cm_raw": {
       "count": 1799,
-      "max": 120.54,
-      "mean": 56.063113,
+      "max": 91.84,
+      "mean": 63.714319,
       "median": 51.66,
-      "min": 40.18
+      "min": 45.92
     },
     "distance_std_cm": {
-      "count": 1795,
-      "max": 33.08,
-      "mean": 8.83449,
-      "median": 2.78,
+      "count": 1786,
+      "max": 22.2,
+      "mean": 6.026652,
+      "median": 2.18,
       "min": 0.0
     },
     "heart_phase": {
       "count": 1799,
-      "max": 1.67,
-      "mean": -1.7e-05,
-      "median": -0.0,
-      "min": -1.65
+      "max": 1.01,
+      "mean": 0.0006,
+      "median": 0.0,
+      "min": -0.89
     },
     "heart_rate_raw": {
       "count": 1799,
       "max": 118.0,
-      "mean": 82.815453,
-      "median": 82.0,
-      "min": 0.0
+      "mean": 89.804892,
+      "median": 88.0,
+      "min": 63.0
     },
     "total_phase": {
       "count": 1799,
-      "max": 3.13,
-      "mean": 0.009166,
-      "median": -0.02,
-      "min": -3.01
+      "max": 2.81,
+      "mean": 0.010856,
+      "median": -0.01,
+      "min": -3.03
     }
   },
   "qa_schema_version": "m-c0-physical-qa-1.1",
   "raw": {
-    "byte_count": 1819539,
+    "byte_count": 1837444,
     "malformed_line_count": 0,
     "malformed_lines": [],
-    "path": "devices/mmwave/device_measurements/pilot/M-C0-PILOT-DESKWORK-001.raw.jsonl",
+    "path": "devices/mmwave/device_measurements/pilot/M-C0-PILOT-STATIONARY-001.raw.jsonl",
     "physical_lines": 1799,
-    "sha256": "368e6a16e897b9231ff5fcdecd3edcc5b725a0a4dc6b20dee1e3162405bc2876",
+    "sha256": "e2b832fd3a72f18b4c3a370738c10e58c0269283dac218ae2d7d4dad48036f6f",
     "valid_json_records": 1799
   },
   "sensor_state_counts": {
-    "DEGRADED": 961,
-    "VALID": 838
+    "DEGRADED": 1568,
+    "VALID": 231
   },
   "sequence": {
     "backwards": 0,
     "duplicates": 0,
-    "first": 11146,
+    "first": 19088,
     "gap_events": 0,
-    "last": 12944,
+    "last": 20886,
     "missing_sequences": 0
   },
   "stream_integrity_pass": true,
   "timing": {
     "backward_timestamps": 0,
     "duplicate_timestamps": 0,
-    "duration_ms": 179908,
-    "effective_cadence_hz": 9.993997,
-    "first_ts_monotonic_ms": 1116494,
+    "duration_ms": 179920,
+    "effective_cadence_hz": 9.99333,
+    "first_ts_monotonic_ms": 1911293,
     "gap_over_500ms": 0,
-    "jitter_pstdev_ms": 0.299715,
-    "last_ts_monotonic_ms": 1296402,
-    "maximum_gap_ms": 103.0,
-    "mean_interval_ms": 100.060067,
+    "jitter_pstdev_ms": 0.307481,
+    "last_ts_monotonic_ms": 2091213,
+    "maximum_gap_ms": 102.0,
+    "mean_interval_ms": 100.066741,
     "median_interval_ms": 100.0,
     "minimum_interval_ms": 100.0,
     "nominal_30s_windows": 5,
-    "p95_interval_ms": 100.0,
+    "p95_interval_ms": 101.0,
     "telemetry_interval_count": 1798,
     "telemetry_row_count": 1799
   }

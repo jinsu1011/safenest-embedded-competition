@@ -2,7 +2,7 @@
 
 ## Decision
 
-`M-C0-PILOT-DESKWORK-001` proves that the standalone MR60BHA2 → ESP32 → USB JSON acquisition path can preserve a 10Hz physical stream with no observed transport-integrity failures during a 180-second desk-work session.
+`M-C0-PILOT-DESKWORK-001` proves that the standalone MR60BHA2 → ESP32 → USB JSON acquisition path can preserve an approximately 10Hz telemetry-row stream with no observed transport-integrity failures during a 180-second desk-work session. It does not by itself prove a 10Hz fresh `0x0A13 breath_phase` update stream.
 
 The session is `PASS_WITH_LIMITATIONS`, not formal evidence and not training data. Small arm/paperwork movement coincided with large distance variation and a high proportion of `BREATH_PHASE_LOW_AMPLITUDE`/`DEGRADED` records. No independent respiration reference was collected, so respiration and heart accuracy remain unverified.
 
@@ -24,7 +24,7 @@ The session is `PASS_WITH_LIMITATIONS`, not formal evidence and not training dat
 
 ## Immutable raw identity
 
-The raw file remains local and gitignored pending an explicit evidence-file/privacy review.
+This curated Pilot raw is intentionally Git-tracked under the narrow `TRACKED_EXCEPTION` policy. The general JSONL ignore rule remains in force for unrelated or unreviewed data.
 
 ```text
 path: devices/mmwave/device_measurements/pilot/M-C0-PILOT-DESKWORK-001.raw.jsonl
@@ -37,7 +37,9 @@ SHA-256: 368e6a16e897b9231ff5fcdecd3edcc5b725a0a4dc6b20dee1e3162405bc2876
 
 | Metric | Result |
 |---|---:|
-| Effective cadence | 9.993997Hz |
+| Telemetry rows / intervals | 1,799 / 1,798 |
+| Telemetry-row cadence | 9.993997Hz |
+| Minimum interval | 100ms |
 | Mean interval | 100.060067ms |
 | Median interval | 100ms |
 | p95 interval | 100ms |
@@ -52,6 +54,8 @@ SHA-256: 368e6a16e897b9231ff5fcdecd3edcc5b725a0a4dc6b20dee1e3162405bc2876
 | Timestamp duplicate/backward | 0/0 |
 
 Strict contract validation passed with `raw_records=1799`.
+
+`phase_age_ms` was present and valid in all 1,799 rows: min `0ms`, median `12ms`, p95 `15ms`, max `111ms`; missing/null `0`, invalid `0`. The producer validity threshold is `kPhaseMaxAgeMs = 500ms` in `devices/mmwave/firmware/include/mmwave_config.h`; no row reached it. This threshold supports producer stale/valid classification but does not reconstruct exact arrivals. `phase_age_ms` is freshness evidence, not an exact frame-arrival log, and repeated numeric values alone are not stale proof. Final status: `FRESH_PHASE_CADENCE_NOT_YET_FULLY_VERIFIED`.
 
 ## Physical fields
 
@@ -82,7 +86,8 @@ This is evidence that the desk-work condition materially affects the current fil
 
 ```text
 physical JSON signal captured = true
-physical cadence measured = true for this Pilot
+telemetry row cadence measured = true for this Pilot
+exact fresh phase cadence verified = false
 transport integrity passed = true for this Pilot
 phase fields physically populated = true
 phase units/scale/reset semantics verified = false

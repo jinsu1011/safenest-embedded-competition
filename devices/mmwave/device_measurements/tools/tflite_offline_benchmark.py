@@ -129,6 +129,15 @@ def main() -> int:
             "quantized_max": int(np.max(input_batch)),
         },
         "inference": {
+            "classification": "EXPLORATORY_PRE_CORRESPONDENCE_INFERENCE",
+            "warning_classifications": [
+                "PIPELINE_CORRESPONDENCE_WARNING",
+                "DEVICE_DOMAIN_MISMATCH_WARNING",
+            ],
+            "m_c0_correspondence_complete": False,
+            "m_c2_complete": False,
+            "clinical_apnea_evidence": False,
+            "single_root_cause_claimed": False,
             "invoke_count": len(input_batch),
             "warmup_count": warmup_count,
             "all_invokes_completed": True,
@@ -150,6 +159,8 @@ def main() -> int:
         "performance_metrics": {
             "accuracy": None,
             "macro_f1": None,
+            "recall": None,
+            "confusion_matrix": None,
             "reason": "No independent ground-truth labels aligned to NORMAL/RAPID_OR_ABNORMAL/APNEA were available in this CSV delivery.",
         },
     }

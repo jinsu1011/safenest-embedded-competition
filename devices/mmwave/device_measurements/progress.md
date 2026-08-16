@@ -23,8 +23,10 @@
 - USB serial raw 저장과 1초 주기 상태 표시 monitor 작성 및 기존 raw replay dry-run
 - standalone ESP32 firmware를 실제 보드에 빌드·플래시하고 100ms structured JSON 출력 확인
 - `M-C0-PILOT-DESKWORK-001` 180초 물리 Pilot 기록 및 manifest·환경 metadata·QA 생성
-- 실제 1,799-record raw에서 cadence·jitter·gap·sequence·timestamp·UART·checksum·physical field coverage 검증
-- `M-C0-PILOT-STATIONARY-001` 180초 raw 1,799개 수집 완료; 사용자 요청에 따라 추가 QA·해석은 보류하고 원본 해시만 기록
+- 실제 1,799-record raw에서 telemetry-row cadence·jitter·gap·sequence·timestamp·UART·checksum·physical field coverage 검증. fresh phase cadence와는 분리함
+- `M-C0-PILOT-STATIONARY-001` 180초 raw 1,799개 및 derived QA 생성; 두 Pilot raw는 좁은 `TRACKED_EXCEPTION`으로 보존
+- `phase_age_ms`를 optional-with-limitation schema/QA로 명시하고 exact fresh cadence는 `FRESH_PHASE_CADENCE_NOT_YET_FULLY_VERIFIED`로 제한
+- D15 distance 표준편차를 원본에서 재현하고 620/620 결과를 `EXPLORATORY_PRE_CORRESPONDENCE_INFERENCE`로 재분류
 
 ## Verification
 
@@ -47,7 +49,7 @@
 
 ## Pending after physical captures
 
-- stationary raw의 manifest·QA 및 desk-work Pilot과 derived 비교
+- stationary raw의 manifest·desk-work Pilot과 derived 비교
 - 센서 절대 높이 측정, 주변인을 FOV 밖으로 둔 baseline metadata 작성
 - phase 단위·scale·reset·missing-value semantics 확인
 - 독립 respiration reference 동기화 세션 기록
@@ -55,4 +57,4 @@
 
 ## Offline completion boundary
 
-센서 없이 가능한 감사와 백테스트는 완료했고, desk-work physical Pilot으로 MR60→ESP32→USB JSON, 실제 cadence와 transport integrity, physical phase population까지 확인했다. stationary raw도 별도 수집했지만 QA·해석은 아직 승인 전 상태다. 독립 reference, phase semantics, Pi E2E와 실제 장치 raw의 locked preprocessing 비교는 아직 남아 있다.
+센서 없이 가능한 감사와 백테스트는 완료했고, 두 Pilot에서 MR60→ESP32→USB JSON의 telemetry-row cadence와 transport integrity, physical phase population을 확인했다. 이는 exact fresh `0x0A13` cadence 입증이 아니다. 독립 reference, phase semantics, Pi E2E와 실제 장치 raw의 locked preprocessing 비교는 아직 남아 있다.

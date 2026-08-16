@@ -5,7 +5,7 @@
 ## 원칙
 
 - `ondevice_ai/`, Phase-A/B 데이터, `LOCKED_TEST`, 기존 모델과 펌웨어 코드는 변경하지 않습니다.
-- formal raw evidence는 session manifest·QA·SHA-256을 함께 준비한 뒤 `pilot/` 또는 `formal_raw/` 아래에 보존할 수 있습니다. 현재 `.gitignore`는 raw JSONL/CSV의 실수 공개를 막으며, 실제 formal 파일은 별도 검토 후 추가합니다. 개인 로컬 scratch 로그는 커밋하지 않습니다.
+- raw 기본 정책은 ignore입니다. 단, PR #18의 `M-C0-PILOT-DESKWORK-001.raw.jsonl`과 `M-C0-PILOT-STATIONARY-001.raw.jsonl`은 provenance, session identity, SHA-256, record/byte count와 QA 검토를 동반한 의도적인 좁은 `TRACKED_EXCEPTION`입니다. 이 예외는 다른 scratch·private·large·unreviewed payload의 추가를 허가하지 않습니다.
 - 기존 raw 로그를 임의로 복사·수정하지 않고, 필요한 경우 원본 경로·커밋·검증 결과만 기록합니다.
 - 사람을 식별할 수 있는 이름·얼굴·영상은 수집하지 않습니다.
 - 호흡 정지, 과호흡, 극단적 동작, 가스·밀폐 환경 시험은 이 프로토콜의 범위가 아닙니다.
@@ -27,7 +27,7 @@
 - `../../../docs/mmwave/MR60BHA2_DEVICE_MEASUREMENT_PROTOCOL_M-C0.md`: mmWave 없이 먼저 하는 작업과 이후 측정 순서
 - `protocols/mc0_measurement_contract.json`: 센서 연결 전 고정한 machine-readable 측정 계약
 - `schemas/session_manifest.schema.json`: 세션 메타데이터 계약
-- `schemas/raw_record.schema.json`: 현재 MR60/ESP JSONL에 맞춘 raw record 계약
+- `schemas/raw_record.schema.json`: 현재 MR60/ESP JSONL 계약. `phase_age_ms`는 역사 자료 호환을 위해 `EXPLICITLY_OPTIONAL_WITH_LIMITATION`이며, 없으면 fresh phase cadence를 입증할 수 없음
 - `validators/validate_contract.py`: 외부 패키지 없이 실행하는 manifest/raw 검증기
 - `manifests/main_repo_audit.json`: 메인 저장소 read-only 감사 결과
 - `reports/existing_evidence_audit.md`: 기존 78개 raw JSONL의 실제 재분석 결과

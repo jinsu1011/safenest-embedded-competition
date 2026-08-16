@@ -31,6 +31,9 @@ COVERAGE_FIELDS = (
     "sensor_firmware_version",
 )
 
+PHASE_MAX_AGE_MS = 500
+PHASE_MAX_AGE_SOURCE = "devices/mmwave/firmware/include/mmwave_config.h:kPhaseMaxAgeMs"
+
 
 def finite(value: object) -> bool:
     return (
@@ -50,6 +53,33 @@ def percentile(values: list[float], fraction: float) -> float | None:
 
 def rounded(value: float | None) -> float | None:
     return None if value is None else round(value, 6)
+
+
+def summarize_phase_age(records: list[dict]) -> dict:
+    values: list[float] = []
+    missing_or_null = 0
+    invalid = 0
+    for record in records:
+        value = record.get("phase_age_ms")
+        if value is None:
+            missing_or_null += 1
+        elif finite(value) and float(value) >= 0:
+            values.append(float(value))
+        else:
+            invalid += 1
+    return {
+        "count": len(values),
+        "missing_or_null": missing_or_null,
+        "invalid": invalid,
+        "min_ms": rounded(min(values)) if values else None,
+        "median_ms": rounded(statistics.median(values)) if values else None,
+        "p95_ms": rounded(percentile(values, 0.95)),
+        "max_ms": rounded(max(values)) if values else None,
+        "threshold_classification": "PRODUCER_VALIDITY_THRESHOLD_DEFINED",
+        "threshold_ms": PHASE_MAX_AGE_MS,
+        "threshold_source": PHASE_MAX_AGE_SOURCE,
+        "at_or_above_threshold": sum(value >= PHASE_MAX_AGE_MS for value in values),
+    }
 
 
 def main() -> int:
@@ -154,7 +184,7 @@ def main() -> int:
     ))
 
     result = {
-        "qa_schema_version": "m-c0-physical-qa-1.0",
+        "qa_schema_version": "m-c0-physical-qa-1.1",
         "raw": {
             "path": args.raw_jsonl.as_posix(),
             "sha256": hashlib.sha256(args.raw_jsonl.read_bytes()).hexdigest(),
@@ -179,10 +209,13 @@ def main() -> int:
             "backwards": sequence_backwards,
         },
         "timing": {
+            "telemetry_row_count": len(records),
+            "telemetry_interval_count": len(intervals_ms),
             "first_ts_monotonic_ms": records[0].get("ts_monotonic_ms") if records else None,
             "last_ts_monotonic_ms": records[-1].get("ts_monotonic_ms") if records else None,
             "duration_ms": duration_ms,
             "effective_cadence_hz": rounded(1000.0 / mean_interval) if mean_interval else None,
+            "minimum_interval_ms": rounded(min(intervals_ms)) if intervals_ms else None,
             "mean_interval_ms": rounded(mean_interval),
             "median_interval_ms": rounded(statistics.median(intervals_ms)) if intervals_ms else None,
             "p95_interval_ms": rounded(percentile(intervals_ms, 0.95)),
@@ -192,6 +225,14 @@ def main() -> int:
             "duplicate_timestamps": timestamp_duplicates,
             "backward_timestamps": timestamp_backwards,
             "nominal_30s_windows": math.floor(duration_ms / 30000) if duration_ms is not None else 0,
+        },
+        "freshness": {
+            "phase_age_ms": summarize_phase_age(records),
+            "telemetry_row_cadence_is_fresh_phase_cadence": False,
+            "exact_phase_frame_arrival_identity_available": False,
+            "fresh_phase_cadence_status": "FRESH_PHASE_CADENCE_NOT_YET_FULLY_VERIFIED",
+            "repeated_identical_breath_phase_is_sufficient_stale_proof": False,
+            "limitation": "phase_age_ms is staleness evidence, not an exact log of every 0x0A13 frame arrival.",
         },
         "communication": {
             "uart_bad": uart_bad,

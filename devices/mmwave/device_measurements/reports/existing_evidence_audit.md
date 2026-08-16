@@ -81,7 +81,7 @@
 기존 manifest의 해석도 그대로 보존해야 한다.
 
 - D12: presence 81.4%인 range-limit case
-- D15: distance std=0인 lock-loss case
+- D15: 원본 CSV의 finite `range_m` 2,639개는 변동했다. 모집단 표준편차(`ddof=0`)는 `2.937040294cm`, 표본 표준편차(`ddof=1`)는 `2.937596920cm`다. corrected 문서는 표본 값을 사용한다. 반면 finite `resp_phase` 2,999개는 모두 `-0.01`로 표준편차 0이었다. 따라서 D15는 vitals/phase freeze 또는 lock-loss 탐색 증거로 남지만, 거리 분산 0을 근거로 삼지 않는다. source: `devices/mmwave/firmware/csv/2026-07-26_han_junwoo_delivery_v2/2026-07-25_occupied_d15_v1_360s__S001_NORMAL_D15.csv`; 결측/비유한 값 제외, 단위 `range_m × 100 = cm`, Python `statistics.pstdev/stdev`로 재현.
 - 최초 12 rpm 시도: 실제 약 6.06 rpm인 failure case
 - 20 rpm shallow: low-amplitude failure case
 - preferred 12/15/20 rpm 세션은 별도로 표시되어 있음

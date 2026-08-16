@@ -84,7 +84,7 @@ def test_v2_contract_stays_mtu_safe_and_preserves_full_raw_frame() -> None:
 def test_sender_status_packet_round_trip_preserves_observed_counters() -> None:
     expected = SenderStatus(
         sender_uptime_ms=123456,
-        ready_signals_generated=100,
+        d_ready_events_observed=100,
         dropped_ready_signals=3,
         transport_frames_attempted=97,
         transport_frames_emitted=95,
@@ -249,7 +249,7 @@ def _write_complete_v2_capture(tmp_path: Path, session_id: str = "session_v2_com
     status_packet = encode_sender_status(
         SenderStatus(
             sender_uptime_ms=30000,
-            ready_signals_generated=31,
+            d_ready_events_observed=31,
             dropped_ready_signals=1,
             transport_frames_attempted=30,
             transport_frames_emitted=29,
@@ -387,7 +387,30 @@ def test_complete_raw_chunk_inventory_passes(tmp_path: Path) -> None:
     writer = _write_complete_v2_capture(tmp_path)
     result = validate_capture(writer.collection_dir)
     assert result["errors"] == []
-    assert result["sessions"][0]["sender_telemetry"]["status"] == "MACHINE_READABLE_STATUS_RECEIVED"
+    session_result = result["sessions"][0]
+    assert session_result["sender_telemetry"]["status"] == "MACHINE_READABLE_STATUS_RECEIVED"
+    assert session_result["sender_telemetry"]["latest"]["d_ready_events_observed"] == 31
+    assert len(list(writer.raw_chunks_dir.glob("*.bin"))) == 10
+    checksum_paths = {
+        line.split("  ", 1)[1]
+        for line in writer.checksums_path.read_text(encoding="utf-8").splitlines()
+    }
+    assert "sender_telemetry.jsonl" in checksum_paths
+    assert len([path for path in checksum_paths if path.startswith("raw_chunks/")]) == 10
+
+
+def test_legacy_sender_status_field_is_accepted_with_semantic_warning(tmp_path: Path) -> None:
+    writer = _write_complete_v2_capture(tmp_path, "session_legacy_sender_status")
+    record = json.loads(writer.sender_telemetry_path.read_text(encoding="utf-8"))
+    record["schema_version"] = "safenest.thermal.sender_status.v1"
+    record["ready_signals_generated"] = record.pop("d_ready_events_observed")
+    record["semantics"]["ready_signals_generated"] = record["semantics"].pop("d_ready_events_observed")
+    writer.sender_telemetry_path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+    _refresh_checksums(writer.session_dir)
+
+    result = validate_capture(writer.collection_dir)
+    assert result["errors"] == []
+    assert "LEGACY_D_READY_FIELD_NAME" in {item["code"] for item in result["warnings"]}
 
 
 def test_deleted_raw_chunk_is_detected(tmp_path: Path) -> None:

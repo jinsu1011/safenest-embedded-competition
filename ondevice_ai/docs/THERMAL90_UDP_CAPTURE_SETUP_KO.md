@@ -114,7 +114,7 @@ python3 ~/safenest-thermal-capture/thermal_udp_capture.py \
 ├── collection.json
 └── subjects/S000/sessions/session_S000_001/
     ├── raw/*.udp.bin                 # CRC 통과 후 재조립된 원본 10,080-byte 논리 frame
-    ├── raw_chunks/*.bin              # 수신한 32-byte header 포함 UDP datagram
+    ├── raw_chunks/*.bin              # 수신한 모든 raw SNTR datagram: frame chunk + sender status
     ├── decoded_native/*_pixels_u16le.bin
     ├── sender_telemetry.jsonl        # 수신된 SNTR sender status; 없으면 명시적 관측성 제한
     ├── frames.jsonl
@@ -123,9 +123,9 @@ python3 ~/safenest-thermal-capture/thermal_udp_capture.py \
     └── checksums.sha256
 ```
 
-`raw/`에는 resize, crop, rotation, normalization, calibration, colour-map이 전혀 적용되지 않는다. `decoded_native/`도 원본 pixel word를 little-endian `uint16`으로만 분리한 파일이다. `checksums.sha256`은 `raw_chunks/` 실제 파일과 양방향 exact inventory가 일치해야 하며 누락, 변조, registry 누락, 미등록 추가 파일을 모두 실패로 처리한다.
+`raw/`에는 resize, crop, rotation, normalization, calibration, colour-map이 전혀 적용되지 않는다. `decoded_native/`도 원본 pixel word를 little-endian `uint16`으로만 분리한 파일이다. `raw_chunks/`는 frame reconstruction용 SNTR frame-chunk와 수신한 32-byte sender status 원본을 모두 보존한다. `sender_telemetry.jsonl`은 status 원본의 decoded machine-readable view이며 별도 원본 datagram이 아니다. 둘 다 `checksums.sha256` coverage를 받으며, validator는 `raw_chunks/` 실제 파일과 registry의 양방향 exact inventory에서 누락, 변조, registry 누락, 미등록 추가 파일을 모두 실패로 처리한다.
 
-펌웨어는 주기적으로 `dropped_ready_signals`, `send_failures`, transport frame attempted/emitted, sender uptime과 D_READY 관찰 수를 SNTR V2 status packet으로 보낸다. Pi가 이를 받으면 `sender_telemetry.jsonl`에 보존한다. status가 없으면 `SENDER_SIDE_ACQUISITION_LOSS_NOT_FULLY_OBSERVABLE_FROM_PI_CAPTURE` 제한이 남는다. 낮은 FPS는 센서 생성률, ESP32 acquisition/SPI 지연, ready drop, UDP send 실패, Wi-Fi/Pi receive 손실, disk backlog 중 어느 하나로 증거 없이 단정하지 않는다.
+펌웨어는 주기적으로 `d_ready_events_observed`, `dropped_ready_signals`, `send_failures`, transport frame attempted/emitted와 sender uptime을 SNTR V2 status packet으로 보낸다. `d_ready_events_observed`는 ESP32가 관측한 D_READY edge 수일 뿐 sensor-internal generated-frame count가 아니다. Pi가 이를 받으면 원본은 `raw_chunks/`, decoded view는 `sender_telemetry.jsonl`에 보존한다. status가 없으면 `SENDER_SIDE_ACQUISITION_LOSS_NOT_FULLY_OBSERVABLE_FROM_PI_CAPTURE` 제한이 남는다. 낮은 FPS나 센서 generation rate를 D_READY만으로 추론하지 않는다.
 
 ## 5. Pi에서 즉시 검사
 
@@ -175,7 +175,7 @@ PC에서 동일 validator를 다시 실행하고 `validator_result.json`, `colle
 | 증상 | 확인 순서 |
 | --- | --- |
 | Pi가 `0` frame | Pi 수집기를 먼저 실행했는지, XIAO receiver IP/port가 맞는지, 동일 2.4 GHz Wi-Fi인지, Serial Monitor의 Wi-Fi·send failure를 확인 |
-| invalid datagram | Serial 문구가 UDP V2인지, magic/version/header/길이가 맞는지 확인. 해당 datagram은 `raw_chunks/`에 보존됨 |
+| invalid datagram | Serial 문구가 UDP V2인지, magic/version/header/길이가 맞는지 확인. frame chunk/status를 포함한 수신 원본 datagram은 `raw_chunks/`에 보존됨 |
 | incomplete frame / CRC 실패 | 대량 수집을 중단하고 Wi-Fi·send failure·chunk loss를 조사. 누락 frame을 다음 frame bytes로 보충하지 않음 |
 | checksum 실패 | 수집 종료 후 파일을 수정·이동하지 말고, Pi의 원본 session 폴더에서 다시 회수 |
 | validator raw 오류 | `raw/`, `decoded_native/`, `frames.jsonl`을 따로 지우거나 이름 변경하지 말 것 |

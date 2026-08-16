@@ -83,7 +83,7 @@ class FramedChunk:
 @dataclass(frozen=True)
 class SenderStatus:
     sender_uptime_ms: int
-    ready_signals_generated: int
+    d_ready_events_observed: int
     dropped_ready_signals: int
     transport_frames_attempted: int
     transport_frames_emitted: int
@@ -209,7 +209,7 @@ def decode_sender_status(datagram: bytes) -> SenderStatus:
         message_type,
         header_size,
         sender_uptime_ms,
-        ready_signals_generated,
+        d_ready_events_observed,
         dropped_ready_signals,
         transport_frames_attempted,
         transport_frames_emitted,
@@ -225,7 +225,7 @@ def decode_sender_status(datagram: bytes) -> SenderStatus:
         raise ChunkProtocolError("sender failure count exceeds attempted-frame count")
     return SenderStatus(
         sender_uptime_ms=sender_uptime_ms,
-        ready_signals_generated=ready_signals_generated,
+        d_ready_events_observed=d_ready_events_observed,
         dropped_ready_signals=dropped_ready_signals,
         transport_frames_attempted=transport_frames_attempted,
         transport_frames_emitted=transport_frames_emitted,
@@ -245,7 +245,7 @@ def encode_sender_status(status: SenderStatus) -> bytes:
         CHUNK_MESSAGE_TYPE_SENDER_STATUS,
         SENDER_STATUS_BYTES,
         status.sender_uptime_ms,
-        status.ready_signals_generated,
+        status.d_ready_events_observed,
         status.dropped_ready_signals,
         status.transport_frames_attempted,
         status.transport_frames_emitted,
@@ -663,7 +663,7 @@ class CaptureWriter:
         self.invalid_frame_count += 1
 
     def record_udp_chunk(self, data: bytes, chunk_index: int) -> None:
-        """Preserve each UDP datagram used by chunked reassembly."""
+        """Preserve every received raw datagram, including sender status packets."""
         chunk_name = "chunk_{:08d}_{}B.bin".format(chunk_index, len(data))
         (self.raw_chunks_dir / chunk_name).write_bytes(data)
 
@@ -756,12 +756,12 @@ class CaptureWriter:
 
         status = decode_sender_status(data)
         record = {
-            "schema_version": "safenest.thermal.sender_status.v1",
+            "schema_version": "safenest.thermal.sender_status.v2",
             **asdict(status),
             "pi_receive_monotonic_ns": time.monotonic_ns(),
             "pi_receive_wall_time": wall_time_now(),
             "semantics": {
-                "ready_signals_generated": "ESP32_D_READY_ISR_EVENTS_OBSERVED",
+                "d_ready_events_observed": "ESP32_D_READY_ISR_EVENTS_OBSERVED_ONLY_NOT_SENSOR_INTERNAL_GENERATION",
                 "dropped_ready_signals": "READY_EVENTS_COALESCED_BEFORE_SPI_ACQUISITION",
                 "transport_frames_attempted": "LOGICAL_FRAMES_HANDED_TO_SNTR_TRANSPORT",
                 "transport_frames_emitted": "LOGICAL_FRAMES_WITH_ALL_UDP_CHUNKS_EMITTED",
@@ -865,6 +865,12 @@ class CaptureWriter:
                 "checksums_file": "checksums.sha256",
                 "raw_root": "raw",
                 "raw_chunks_root": "raw_chunks" if self._chunk_capture_enabled() else None,
+                "raw_chunks_scope": (
+                    "ALL_RECEIVED_RAW_DATAGRAMS_INCLUDING_SNTR_FRAME_CHUNKS_AND_SENDER_STATUS"
+                    if self.args.reassemble_udp_chunks
+                    else "LEGACY_RECEIVED_RAW_DATAGRAMS" if self.args.legacy_stream_reassembly else None
+                ),
+                "sender_status_raw_datagrams_retained": True if self.args.reassemble_udp_chunks else None,
                 "decoded_native_root": "decoded_native",
                 "sender_telemetry_file": "sender_telemetry.jsonl" if self.args.reassemble_udp_chunks else None,
                 "model_input_root": None,

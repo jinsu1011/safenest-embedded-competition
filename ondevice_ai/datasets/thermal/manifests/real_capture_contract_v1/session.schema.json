@@ -159,6 +159,8 @@
         "raw_root": { "type": "string", "minLength": 1 },
         "decoded_native_root": { "type": "string", "minLength": 1 },
         "raw_chunks_root": { "type": ["string", "null"] },
+        "raw_chunks_scope": { "type": ["string", "null"] },
+        "sender_status_raw_datagrams_retained": { "type": ["boolean", "null"] },
         "sender_telemetry_file": { "type": ["string", "null"] },
         "model_input_root": { "type": ["string", "null"] }
       }

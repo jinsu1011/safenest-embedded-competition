@@ -598,9 +598,8 @@ def _validate_sender_telemetry(
     if not records:
         _warning(warnings, limitation, _display_path(path), "Sender telemetry file is empty; sender-side acquisition loss remains unobservable.")
         return {"status": limitation, "record_count": 0, "latest": None}
-    required = (
+    common_required = (
         "sender_uptime_ms",
-        "ready_signals_generated",
         "dropped_ready_signals",
         "transport_frames_attempted",
         "transport_frames_emitted",
@@ -609,9 +608,21 @@ def _validate_sender_telemetry(
     previous: dict[str, int] = {}
     for index, record in enumerate(records):
         item_path = f"sender_telemetry.jsonl:{index}"
-        if record.get("schema_version") != "safenest.thermal.sender_status.v1":
+        schema_version = record.get("schema_version")
+        if schema_version == "safenest.thermal.sender_status.v2":
+            observation_field = "d_ready_events_observed"
+        elif schema_version == "safenest.thermal.sender_status.v1":
+            observation_field = "ready_signals_generated"
+            _warning(
+                warnings,
+                "LEGACY_D_READY_FIELD_NAME",
+                f"{item_path}:{observation_field}",
+                "Legacy field name means ESP32-observed D_READY events only, not independently verified sensor-internal frame generation.",
+            )
+        else:
             _error(errors, "SENDER_TELEMETRY_SCHEMA_INVALID", item_path, "Unexpected sender telemetry schema version.")
-        for field in required:
+            observation_field = "d_ready_events_observed"
+        for field in ("sender_uptime_ms", observation_field, *common_required[1:]):
             value = record.get(field)
             if not isinstance(value, int) or isinstance(value, bool) or value < 0:
                 _error(errors, "SENDER_TELEMETRY_VALUE_INVALID", f"{item_path}:{field}", f"{field} must be a non-negative integer.")

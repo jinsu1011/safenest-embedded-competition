@@ -125,14 +125,16 @@ Thermal-90 sensor
 
 Sender는 D_READY event를 관찰하고 SPI로 5,040 uint16 word를 읽어 9개 MTU-safe datagram으로 전송한다. raw frame attempt 30회마다 별도 32-byte SNTR status packet으로 다음 관찰값을 보낸다.
 
-- `ready_signals_generated`
+- `d_ready_events_observed`
 - `dropped_ready_signals`
 - `transport_frames_attempted`
 - `transport_frames_emitted`
 - `send_failures`
 - `sender_uptime_ms`
 
-Pi는 수신 status를 `sender_telemetry.jsonl`에 기록하고 checksum으로 보호한다. status packet 자체가 Pi에 도달하지 않으면 `SENDER_SIDE_ACQUISITION_LOSS_NOT_FULLY_OBSERVABLE_FROM_PI_CAPTURE`를 유지한다. 관찰되지 않은 count를 발명하지 않는다.
+`d_ready_events_observed`는 ESP32 ISR이 관측한 D_READY rising edge 수일 뿐, 센서 내부에서 생성된 전체 frame 수와 같다고 검증된 값이 아니다. SNTR V2의 32-byte wire layout과 field position은 바뀌지 않았고 machine-readable JSON 이름과 firmware/receiver 용어만 의미에 맞게 고쳤다. 새 writer는 `safenest.thermal.sender_status.v2`를 쓰며 validator는 구형 v1의 `ready_signals_generated`도 `ESP32-observed D_READY events only`로 제한해 읽는다.
+
+Pi는 수신 status 원본 32-byte datagram을 `raw_chunks/`에 보존하고, 그 decoded view를 `sender_telemetry.jsonl`에 기록하며 둘 다 checksum으로 보호한다. status packet 자체가 Pi에 도달하지 않으면 `SENDER_SIDE_ACQUISITION_LOSS_NOT_FULLY_OBSERVABLE_FROM_PI_CAPTURE`를 유지한다. 관찰되지 않은 count를 발명하지 않는다.
 
 ## 10. Corrective Findings From Review
 
@@ -153,6 +155,8 @@ PR #22 sender/collector에서 word 0은 `SEMANTICS_UNVERIFIED`다. duplicate/rev
 
 ## 12. Correction B — raw_chunks Integrity Coverage
 
+`raw_chunks/`는 reassembly mode에서 Pi가 받은 모든 원본 datagram을 보존한다. 여기에는 (A) logical Thermal frame 재조립에 쓰는 SNTR frame-chunk datagram과 (B) SNTR sender status raw datagram이 모두 포함된다. `sender_telemetry.jsonl`은 (B)의 별도 원본이 아니라 decoded machine-readable view다. 원본 status bytes와 decoded JSONL은 모두 `checksums.sha256`에 등록된다.
+
 Validator는 `raw_chunks/` actual files와 `checksums.sha256` registered paths를 양방향 비교한다.
 
 - registered file missing: `RAW_CHUNK_FILE_MISSING`
@@ -161,23 +165,38 @@ Validator는 `raw_chunks/` actual files와 `checksums.sha256` registered paths�
 - actual unregistered file: `EXTRA_UNREGISTERED_RAW_CHUNK`
 - duplicate registry entry: `RAW_CHUNK_CHECKSUM_DUPLICATE`
 
-디렉터리 존재만으로 PASS하지 않는다. 모든 finalized datagram file이 등록되고 checksum-covered되어야 한다.
+디렉터리 존재만으로 PASS하지 않는다. 모든 finalized raw datagram file이 등록되고 checksum-covered되어야 하며, decoded `sender_telemetry.jsonl`도 별도 checksum coverage를 받는다.
 
 ## 13. Correction C — Sender-Side Loss Telemetry
 
 다음 단계는 서로 다른 관찰 층이다.
 
 ```text
-sensor-ready events generated
-  -> sensor frames actually acquired
-  -> logical frames handed to transport
-  -> UDP datagrams sent
-  -> frames received/reassembled by Pi
+sensor-internal frame generation                         [UNVERIFIED / not independently observed]
+  -> ESP32-observed D_READY events                       [OBSERVED]
+  -> SPI acquisition attempts / completed logical frame [partly OBSERVED; physical completeness UNVERIFIED]
+  -> SNTR transport frames attempted                     [OBSERVED sender counter]
+  -> SNTR transport frames emitted                       [DERIVED from sender send results]
+  -> UDP datagrams received by Pi                        [OBSERVED at receiver]
+  -> logical frames successfully reassembled             [DERIVED from SNTR identity/offset/length/CRC]
 ```
 
-현재 telemetry는 ready events, coalesced ready drops, transport attempted/emitted, send failures와 uptime을 제공한다. 센서 내부에서 실제 생성한 frame 수와 SPI acquisition 성공의 독립 hardware truth는 아직 검증되지 않았다. status가 없거나 Wi-Fi에서 함께 손실될 수 있으므로 Pi capture만으로 end-to-end completeness를 항상 증명할 수는 없다.
+현재 telemetry는 ESP32-observed D_READY activity, ready-event coalescing/drops, transport attempted/emitted, UDP send failures와 uptime을 제공한다. 센서 내부에서 실제 생성한 frame 수, 모든 내부 frame이 관측 가능한 D_READY를 발생시켰는지, 모든 physical acquisition이 완료됐는지는 독립적으로 증명하지 않는다. status가 없거나 Wi-Fi에서 함께 손실될 수 있으므로 Pi capture만으로 end-to-end completeness를 항상 증명할 수는 없다.
 
-낮은 observed FPS는 sensor generation rate, ESP32 acquisition latency, ready-signal drops, SPI read time, UDP send failures, Wi-Fi loss, Pi receive loss 또는 disk/write backlog에서 발생할 수 있다. 증거 없이 하나의 원인으로 귀속하지 않는다.
+낮은 observed FPS는 sensor generation, ESP32 acquisition latency, ready-signal drops, SPI read time, UDP send failures, Wi-Fi loss, Pi receive loss 또는 disk/write backlog 중 여러 층과 관련될 수 있다. D_READY N회를 관측했다는 사실만으로 센서가 N frame을 생성했다고 표현하거나 generation rate를 계산하지 않는다.
+
+### Evidence-layer authority
+
+| Evidence | Layer | Current authority |
+|---|---|---|
+| `transport_frame_id` | SNTR transport | logical transport frame identity에 authoritative |
+| chunk index/count/offset/length | transport | SNTR V2 내부 구조에 authoritative |
+| CRC32 | transport integrity | covered logical frame bytes에 authoritative |
+| Thermal header word 0 | sensor payload observation | `SEMANTICS_UNVERIFIED` |
+| `d_ready_events_observed` | ESP32 observation | observed interrupt/event count only |
+| `dropped_ready_signals` | sender runtime | ESP32-side observed/coalesced loss evidence |
+| `send_failures` | UDP sender runtime | sender-side transport attempt evidence |
+| Pi reassembled frame | receiver | complete transport frame가 Pi에 도달해 CRC-valid 재조립됐다는 evidence |
 
 ## 14. Correction D — Thermal-44 / Thermal-90 Role Separation
 
@@ -187,26 +206,53 @@ sensor-ready events generated
 
 두 경로의 shape, dtype, temperature unit/encoding, orientation, header semantics, FPS, invalid-pixel representation을 증거 없이 이전하지 않는다. 각각 독립 device contract evidence가 필요하다.
 
-## 15. Validation Performed
+### Thermal-90 known versus unknown hardware contract
+
+| Property | Status |
+|---|---|
+| Device identity | `PARTIALLY_KNOWN`; prototype path/name은 known, final hardware selection은 미동결 |
+| Native frame shape | `UNVERIFIED` on actual device |
+| Dtype / byte encoding | `UNVERIFIED` on actual device |
+| Temperature encoding | `UNVERIFIED` |
+| Physical unit | `UNVERIFIED` |
+| Orientation | `UNVERIFIED` |
+| Configured FPS | firmware configuration value only; physical behavior authority 없음 |
+| Effective FPS | measurement required |
+| Header word 0 semantics | `SEMANTICS_UNVERIFIED` |
+| Invalid-pixel semantics | `UNVERIFIED` |
+| Pi end-to-end latency | not measured |
+| FULL_INT8 device compatibility | not validated |
+
+## 15. Historical Pilot Report Review
+
+Branch의 Thermal capture 관련 문서와 session summary를 다시 검색했다. `20260816_Thermal_OnDevice_AI_Handoff_KO.md`의 `session_S000_004` 및 네 static session 표가 header word 0을 authoritative counter로 사용한 과거 해석을 포함했다. 해당 수치와 당시 판정은 역사 evidence로 삭제하지 않았다.
+
+- Earlier interpretation: header word 0 was treated as counter-like sensor evidence.
+- Corrected interpretation: header word 0 semantics remain unverified.
+- Therefore its discontinuity alone does not prove physical sensor-frame loss, duplicate, reversal, synthetic `MISSING`, or capture invalidity.
+- SNTR V2 `transport_frame_id`, chunk completeness, offset/length, CRC32 및 실제 수신 datagram에 독립적으로 근거한 transport findings는 그대로 유효하다.
+- 새 PASS를 소급 부여하지 않았고 `PREVIOUS_SENSOR_COUNTER_INTERPRETATION_REQUIRES_RECLASSIFICATION`을 유지했다.
+
+## 16. Validation Performed
 
 | Check | Result | Evidence |
 |---|---|---|
-| Focused UDP + real-capture validator tests | PASS | `pytest -q tests/test_thermal_udp_capture.py tests/test_thermal_real_capture_validator.py`: 59 passed |
+| Focused UDP + real-capture validator tests | PASS | `pytest -q tests/test_thermal_udp_capture.py tests/test_thermal_real_capture_validator.py`: 60 passed |
 | Corrective counter matrix | PASS | unverified duplicate/reversal/gap non-hard-fail; verified rules active |
 | raw_chunks tamper matrix | PASS | delete/modify/checksum removal/extra/valid inventory tests |
-| Sender telemetry | PASS | packet encode/decode, persisted status and absent-status limitation tests |
-| Thermal regression | PASS with environment note | 385 passed, 3 skipped; 7 TFLite setup errors only under non-ASCII Windows path |
-| TFLite interpreter rerun in ASCII temp path | PASS | 5 passed, 2 skipped |
-| XIAO ESP32-C6 compile | PASS | flash 1,001,502 bytes (76%); RAM 55,960 bytes (17%) |
+| Sender telemetry | PASS | v2 field rename, v1 semantic compatibility warning, raw status + decoded JSON checksum coverage, absent-status limitation tests |
+| Thermal broader spot run | PARTIAL / not claimed as full PASS | 202 passed, 3 skipped before an unrelated Windows `cp949` decode failure; the single failing test passed with `PYTHONUTF8=1` |
+| TFLite interpreter | NOT RUN in this final pass | runtime dependency was unavailable and additional installation was not authorized; no fabricated PASS |
+| XIAO ESP32-C6 compile | PASS | flash 1,001,510 bytes (76%); RAM 55,960 bytes (17%) |
 | Compile/import | PASS | Python syntax/import checks; existing unrelated warnings documented |
 | `git diff --check` | PASS | final audit |
-| Cross-track contamination | PASS | no corrective CO₂/mmWave/PIR/web/LCD/risk file changes; selected risk/CO₂/mmWave regression 34 passed |
+| Selected cross-track spot regression | PARTIAL with environment/data limits | 38 passed; 3 CO₂ tests could not complete because owner-local raw archive and `python3` executable alias were unavailable; no cross-track files changed |
 | Hardware validation | NOT PERFORMED | requires actual T-C hardware work |
 | T-C execution | `NO` | this PR is pre-T-C preparation |
 
-Skipped tests depend on owner-local Git-ignored SDT/NPZ data. They are not reported as PASS. The Windows TFLite loader cannot open the model through the Korean workspace path; the same interpreter tests pass from a temporary ASCII path.
+Final addendum validation was intentionally kept minimal at the owner's request. Missing owner-local data, unavailable executable/runtime dependencies, partial runs and skipped tests are not reported as PASS. Earlier corrective-head full regression evidence remains historical context, not a substitute for the final focused 60-test result.
 
-## 16. Known Limitations
+## 17. Known Limitations
 
 - actual Thermal hardware contract remains pending.
 - sensor header word 0 semantics remain unverified.
@@ -217,7 +263,7 @@ Skipped tests depend on owner-local Git-ignored SDT/NPZ data. They are not repor
 - Pi runtime load, long-run stability and latency remain unverified.
 - temporal fall-event behavior remains unverified; `LYING` proxy is not a verified fall event.
 
-## 17. What This PR Proves
+## 18. What This PR Proves
 
 - Latest tracked Thermal subsystem was synchronized into the team repository structure.
 - SNTR V2 logical frame transport and fail-closed chunk identity/offset/length/CRC checks are implemented and software-tested.
@@ -226,7 +272,7 @@ Skipped tests depend on owner-local Git-ignored SDT/NPZ data. They are not repor
 - raw datagram checksum exact inventory and machine-readable sender telemetry are implemented and tested.
 - offline model identity and non-production boundary are documented.
 
-## 18. What This PR Does NOT Prove
+## 19. What This PR Does NOT Prove
 
 | Claim | Status |
 |---|---|
@@ -240,18 +286,57 @@ Skipped tests depend on owner-local Git-ignored SDT/NPZ data. They are not repor
 | Actual fall detection validated | `NO` |
 | T-C completed | `NO` |
 
-## 19. T-C Readiness / Remaining Requirements
+## 20. T-C0 Entry Prerequisites
 
-실제 T-C 진입에는 최소한 real Thermal device capture, full-frame raw evidence, verified native shape/dtype, temperature encoding/unit, orientation, measured effective FPS, invalid-pixel semantics, transport integrity, sender/Pi observability, Pi receive/preprocess/inference behavior와 frozen offline candidate의 device-domain 적용이 필요하다.
+T-C0는 작은 controlled `DEVICE_CONTRACT_PILOT`이 다음 evidence를 제공하면 시작할 수 있다.
+
+- native/full-frame raw evidence
+- session/frame provenance
+- capture validator result
+- capture source, device path 및 transport를 식별할 충분한 metadata
+
+T-C0 시작 전에 native shape, dtype/byte encoding, temperature encoding/unit, orientation, effective FPS, invalid-pixel semantics, Pi latency 또는 device-domain model behavior가 이미 검증될 필요는 없다. 이것들은 T-C가 조사할 대상이다. Pilot evidence는 결론이 아니라 조사 가능한 진입 자료다.
 
 정확한 다음 hardware action은 owner 승인 후 XIAO에 corrective firmware를 업로드하고 Pi collector를 먼저 실행한 다음, 새 session ID로 짧은 controlled Thermal-90 capture를 수행해 sender status, `raw_chunks/` exact inventory와 device contract fields를 함께 검증하는 것이다. 이 보고서 작성 과정에서는 해당 실험을 시작하지 않았다.
 
-## 20. Final Git / PR State
+## 21. T-C Overall Validation Targets
+
+T-C 동안 다음을 실제 evidence로 확립하거나 특성화해야 한다.
+
+- actual native shape 및 dtype/byte encoding
+- physical temperature meaning/conversion 및 actual orientation
+- effective acquisition FPS, frame ordering 및 timing
+- invalid-pixel semantics
+- sensor → ESP32 → UDP → Pi transport integrity
+- sender-side loss와 receiver-side loss의 구분
+- Pi receive/decode/preprocess/inference behavior, latency 및 runtime load
+- actual-device data를 frozen P1/model input contract에 mapping하는 방법
+- FULL_INT8 device-domain behavior
+
+순서는 `pilot evidence → T-C0 시작 → physical/device contract 조사 → frozen candidate compatibility 조사 → 후속 T-C 결론`이다. PR #22는 이 순서의 도구 준비이며 T-C0 완료가 아니다.
+
+## 22. Lifecycle / Hard Boundary
+
+```text
+PR #22
+TEAM-THERMAL-INTEGRATION
+PRE-T-C DEVICE-CAPTURE PREPARATION
+  -> owner review / merge
+  -> DEVICE_CONTRACT_PILOT
+  -> capture validator
+  -> T-C0 actual device-contract investigation
+  -> T-C device-domain validation
+```
+
+현재 위치는 첫 단계이며 `T_C_EXECUTED = NO`다. 이 PR에서 pilot, T-C0, model replacement 또는 hardware claim을 수행하지 않는다.
+
+## 23. Final Git / PR State
 
 - Repository: `jinsu1011/safenest-embedded-competition`
 - Base SHA: `0fc2fd5be40f3a5714e738258183676f4adb1109`
 - Branch: `integration/update-latest-thermal`
 - Initial PR HEAD: `bc1802dee0348d8218a929d809d5a2fa1b593c06`
+- Previous corrective HEAD before this addendum: `ec41e8741ee9d6c7ea70397794c806ef77bfb071`
 - Corrective commit(s): listed in `git log origin/main..integration/update-latest-thermal` and PR #22 after publication
 - Final HEAD: authoritative PR head shown by GitHub after corrective push
 - PR: `#22`, retained as Draft pending owner review

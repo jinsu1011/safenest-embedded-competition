@@ -48,9 +48,9 @@ Thermal-90 → XIAO-ESP32C6 → UDP raw datagram → Raspberry Pi 수집기
 ├── collection.json
 └── subjects/<subject_id>/sessions/<session_id>/
     ├── raw/*.udp.bin
-    ├── raw_chunks/*.bin               # 조각 재조립 모드에서만 생성
+    ├── raw_chunks/*.bin               # 재조립 모드의 raw frame-chunk + sender-status datagram
     ├── decoded_native/*_pixels_u16le.bin
-    ├── sender_telemetry.jsonl        # 수신된 machine-readable sender status
+    ├── sender_telemetry.jsonl        # sender-status 원본의 decoded machine-readable view
     ├── frames.jsonl
     ├── annotations.jsonl
     ├── session.json
@@ -82,8 +82,9 @@ Thermal-90 → XIAO-ESP32C6 → UDP raw datagram → Raspberry Pi 수집기
   - 손실·중복 충돌·timeout·CRC 실패는 다음 frame bytes로 보충하지 않고 fail-closed metric으로 남긴다.
   - unexpected datagram과 header word 0의 counter-like pattern을 관찰값으로 기록하되 센서 loss로 판정하지 않는다.
   - header word 0 gap으로 `MISSING` sensor frame을 만들지 않는다.
-  - `raw_chunks/`와 checksum registry의 exact inventory를 양방향 검증한다.
-  - sender status packet을 `sender_telemetry.jsonl`로 보존하고, 없으면 sender-side loss observability 제한을 명시한다.
+  - frame chunk와 sender status 원본 datagram을 포함한 `raw_chunks/`와 checksum registry의 exact inventory를 양방향 검증한다.
+  - sender status 원본은 `raw_chunks/`, decoded view는 `sender_telemetry.jsonl`로 보존하고 둘 다 checksum-covered한다. status가 없으면 sender-side loss observability 제한을 명시한다.
+  - `d_ready_events_observed`는 ESP32가 관측한 D_READY event 수이며 sensor-internal generated-frame count가 아니다.
   - Pi host monotonic timestamp와 wall-clock을 기록한다.
   - 모델 입력을 만들거나 예측하지 않는다.
 - `ondevice_ai/scripts/validate_thermal_real_capture.py`

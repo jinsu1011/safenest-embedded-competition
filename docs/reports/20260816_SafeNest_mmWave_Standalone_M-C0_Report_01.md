@@ -1,13 +1,16 @@
-# SafeNest mmWave standalone M-C0 correspondence audit
+# SafeNest mmWave M-C0 correspondence audit
 
 - Repository: `jinsu1011/safenest-embedded-competition`
 - Branch: `codex/mmwave-m-c0-correspondence`
-- Head at audit: `98e1cdec5634c3da804b038506a88ce8a29ecccf`
+- Head at audit: `c1bbce1605672e0751abdc237aab670c12e6d87a`
 - Evidence-root used: `devices/mmwave/firmware`
 - Decision: **`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`**
 - Blocking reason: **`SIGNAL_CORRESPONDENCE_NOT_ESTABLISHED`**
 - Correspondence evaluated: `true`
 - Correspondence disproven: `false`
+- Semantic correspondence: `UNDETERMINED`
+- Temporal correspondence: `MEASURED_INSUFFICIENT`
+- Valid 300-fresh windows: `0`
 - Model scoring/inference: **not executed**
 - Raw modification/copy: **none**
 
@@ -25,37 +28,39 @@ Numeric conventions:
 
 ## Expected evidence and SHA-256
 
-| Expected item | Status | Evidence path (repo-relative, personal path component redacted) | Records | SHA-256 |
-|---|---|---|---:|---|
-| `S001_NORMAL_D06` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d06_v1_360s__S001_NORMAL_D06.csv` | 2998 | `8a2b8cb8aa017110672fd3045f0d2b0228dfc7da6e40f6ce30e03dbca9cfee98` |
-| `S001_NORMAL_D09` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d09_v1_360s__S001_NORMAL_D09.csv` | 2998 | `23c7eb303f679cd6134c84db8d735c756f70c39a21de8e41bca77b7e4889505b` |
-| `S001_NORMAL_D12` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d12_v1_360s__S001_NORMAL_D12.csv` | 2998 | `4b52b83367f67e6f317bb3178c641372eb9f5f81c4b9535dba3008c5aef04617` |
-| `S001_NORMAL_D15` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d15_v1_360s__S001_NORMAL_D15.csv` | 2999 | `cf98144314ba2e339a7dd660f2ce5e1296dc7d83bf81b994ba3e77d06245c60e` |
-| `S001_BREATH_PACED_12_01` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_breath_paced_12rpm__S001_BREATH_PACED_12_01.csv` | 2087 | `2502ff4d4f66613c062231ec3a3a2de8d3a045fdb1efe52731c87cff364478fb` |
-| `S001_BREATH_PACED_12_02` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-28_breath_paced_12rpm_explicit_v2_attempt03__S001_BREATH_PACED_12_02.csv` | 1774 | `6ea49a108e89c7b1627cb3f04009ea1ae0a05d13b82c54a92de5d3b72a799de1` |
-| `S001_BREATH_PACED_15_03` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-26_breath_paced_15rpm__S001_BREATH_PACED_15_03.csv` | 1779 | `5d630fd40a59a2b484581584ac311f85c507503bb5856eea6b84327b75b3c645` |
-| `S001_BREATH_PACED_20_04` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-26_breath_paced_20rpm__S001_BREATH_PACED_20_04.csv` | 1784 | `87e9292254cef55696f25d1550b295612f7f2721bb79dd61306e4c02650b88dd` |
-| `S001_BREATH_PACED_20_05` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-26_breath_paced_20rpm_deep__S001_BREATH_PACED_20_05.csv` | 1784 | `6bd13bd5de4242fc3147746031b236516947dfebb85923ef1421f88413444a06` |
-| `2026-08-01_occupied_d09_v120_31min_attempt02` | `PRESENT` | `devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl` | 18574 | `7f9e9ac65377c6dc217af92f9dee2401b6162540e2245fce97acf2ed49368a34` |
-| `M-C0-PILOT-DESKWORK-001` | `KNOWN_BUT_NOT_PROVIDED` | `['devices/mmwave/firmware/device_measurements/M-C0-PILOT-DESKWORK-001.jsonl', 'devices/mmwave/firmware/device_measurements/M-C0-PILOT-DESKWORK-001/records.jsonl']` | 1799 | `—` |
-| `M-C0-PILOT-STATIONARY-001` | `KNOWN_BUT_NOT_PROVIDED` | `['devices/mmwave/firmware/device_measurements/M-C0-PILOT-STATIONARY-001.jsonl', 'devices/mmwave/firmware/device_measurements/M-C0-PILOT-STATIONARY-001/records.jsonl']` | 1799 | `—` |
+| Expected item | Group | Status | Evidence path (repo-relative, personal path component redacted) | Records | SHA-256 |
+|---|---|---|---|---:|---|
+| `S001_NORMAL_D06` | `PRE_PR18_LEGACY_LOGS` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d06_v1_360s__S001_NORMAL_D06.csv` | 2998 | `8a2b8cb8aa017110672fd3045f0d2b0228dfc7da6e40f6ce30e03dbca9cfee98` |
+| `S001_NORMAL_D09` | `PRE_PR18_LEGACY_LOGS` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d09_v1_360s__S001_NORMAL_D09.csv` | 2998 | `23c7eb303f679cd6134c84db8d735c756f70c39a21de8e41bca77b7e4889505b` |
+| `S001_NORMAL_D12` | `PRE_PR18_LEGACY_LOGS` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d12_v1_360s__S001_NORMAL_D12.csv` | 2998 | `4b52b83367f67e6f317bb3178c641372eb9f5f81c4b9535dba3008c5aef04617` |
+| `S001_NORMAL_D15` | `PRE_PR18_LEGACY_LOGS` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_occupied_d15_v1_360s__S001_NORMAL_D15.csv` | 2999 | `cf98144314ba2e339a7dd660f2ce5e1296dc7d83bf81b994ba3e77d06245c60e` |
+| `S001_BREATH_PACED_12_01` | `PRE_PR18_LEGACY_LOGS` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-25_breath_paced_12rpm__S001_BREATH_PACED_12_01.csv` | 2087 | `2502ff4d4f66613c062231ec3a3a2de8d3a045fdb1efe52731c87cff364478fb` |
+| `S001_BREATH_PACED_12_02` | `PRE_PR18_LEGACY_LOGS` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-28_breath_paced_12rpm_explicit_v2_attempt03__S001_BREATH_PACED_12_02.csv` | 1774 | `6ea49a108e89c7b1627cb3f04009ea1ae0a05d13b82c54a92de5d3b72a799de1` |
+| `S001_BREATH_PACED_15_03` | `PRE_PR18_LEGACY_LOGS` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-26_breath_paced_15rpm__S001_BREATH_PACED_15_03.csv` | 1779 | `5d630fd40a59a2b484581584ac311f85c507503bb5856eea6b84327b75b3c645` |
+| `S001_BREATH_PACED_20_04` | `PRE_PR18_LEGACY_LOGS` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-26_breath_paced_20rpm__S001_BREATH_PACED_20_04.csv` | 1784 | `87e9292254cef55696f25d1550b295612f7f2721bb79dd61306e4c02650b88dd` |
+| `S001_BREATH_PACED_20_05` | `PRE_PR18_LEGACY_LOGS` | `PRESENT` | `devices/mmwave/firmware/csv/2026-07-26_delivery_v2/2026-07-26_breath_paced_20rpm_deep__S001_BREATH_PACED_20_05.csv` | 1784 | `6bd13bd5de4242fc3147746031b236516947dfebb85923ef1421f88413444a06` |
+| `2026-08-01_occupied_d09_v120_31min_attempt02` | `PRE_PR18_LEGACY_LOGS` | `PRESENT` | `devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl` | 18574 | `7f9e9ac65377c6dc217af92f9dee2401b6162540e2245fce97acf2ed49368a34` |
+| `M-C0-PILOT-DESKWORK-001` | `PR18_PILOT_CAPTURE` | `KNOWN_BUT_NOT_PROVIDED` | `['devices/mmwave/firmware/device_measurements/M-C0-PILOT-DESKWORK-001.jsonl', 'devices/mmwave/firmware/device_measurements/M-C0-PILOT-DESKWORK-001/records.jsonl']` | 1799 | `—` |
+| `M-C0-PILOT-STATIONARY-001` | `PR18_PILOT_CAPTURE` | `KNOWN_BUT_NOT_PROVIDED` | `['devices/mmwave/firmware/device_measurements/M-C0-PILOT-STATIONARY-001.jsonl', 'devices/mmwave/firmware/device_measurements/M-C0-PILOT-STATIONARY-001/records.jsonl']` | 1799 | `—` |
 
 Present expected files: `10` / `12`. Missing items were recorded as `KNOWN_BUT_NOT_PROVIDED`; they were not silently skipped.
 
+Evidence groups are kept separate: `PRE_PR18_LEGACY_LOGS` contains the nine legacy CSVs and the long JSONL; `PR18_PILOT_CAPTURE` contains the two 1799-record pilot expectations. Pilot cadence is never merged into legacy cadence.
+
 ## Per-session measured findings
 
-| Session | Records | Row Hz | Fresh 0x0A13 Hz | Phase rpm | Phase age min / median / p95 / max ms | >30 s | 300-fresh windows | Interp RMSE |
-|---|---:|---:|---:|---:|---|---:|---:|---:|
-| `S001_NORMAL_D06` | 2998 | 9.994964166 | N/A | 20.04468266 | None / None / None / None | None | 0 | N/A |
-| `S001_NORMAL_D09` | 2998 | 9.99613096 | N/A | 19.699214478 | None / None / None / None | None | 0 | N/A |
-| `S001_NORMAL_D12` | 2998 | 9.995797563 | N/A | 20.266696872 | None / None / None / None | None | 0 | N/A |
-| `S001_NORMAL_D15` | 2999 | 9.998365844 | N/A | None | None / None / None / None | None | 0 | N/A |
-| `S001_BREATH_PACED_12_01` | 2087 | 9.995304219 | N/A | 10.598330195 | None / None / None / None | None | 0 | N/A |
-| `S001_BREATH_PACED_12_02` | 1774 | 9.995433558 | N/A | 12.18605948 | None / None / None / None | None | 0 | N/A |
-| `S001_BREATH_PACED_15_03` | 1779 | 9.994097974 | N/A | 14.928893032 | None / None / None / None | None | 0 | N/A |
-| `S001_BREATH_PACED_20_04` | 1784 | 9.994226554 | N/A | 20.170279064 | None / None / None / None | None | 0 | N/A |
-| `S001_BREATH_PACED_20_05` | 1784 | 9.992994255 | N/A | 20.030636268 | None / None / None / None | None | 0 | N/A |
-| `2026-08-01_occupied_d09_v120_31min_attempt02` | 18574 | 9.986342911 | 4.30467137 | 19.264097775 | 0.0 / 12.0 / 195627.0 / 288530.0 | 0.139173038 | 0 | 0.008928878 |
+| Group | Session | Records | Row Hz | Fresh 0x0A13 Hz | Phase rpm | Phase age min / median / p95 / max ms | >30 s | 300-fresh windows | Interp RMSE |
+|---|---|---:|---:|---:|---:|---|---:|---:|---:|
+| `PRE_PR18_LEGACY_LOGS` | `S001_NORMAL_D06` | 2998 | 9.994964166 | N/A | 20.04468266 | None / None / None / None | None | 0 | N/A |
+| `PRE_PR18_LEGACY_LOGS` | `S001_NORMAL_D09` | 2998 | 9.99613096 | N/A | 19.699214478 | None / None / None / None | None | 0 | N/A |
+| `PRE_PR18_LEGACY_LOGS` | `S001_NORMAL_D12` | 2998 | 9.995797563 | N/A | 20.266696872 | None / None / None / None | None | 0 | N/A |
+| `PRE_PR18_LEGACY_LOGS` | `S001_NORMAL_D15` | 2999 | 9.998365844 | N/A | None | None / None / None / None | None | 0 | N/A |
+| `PRE_PR18_LEGACY_LOGS` | `S001_BREATH_PACED_12_01` | 2087 | 9.995304219 | N/A | 10.598330195 | None / None / None / None | None | 0 | N/A |
+| `PRE_PR18_LEGACY_LOGS` | `S001_BREATH_PACED_12_02` | 1774 | 9.995433558 | N/A | 12.18605948 | None / None / None / None | None | 0 | N/A |
+| `PRE_PR18_LEGACY_LOGS` | `S001_BREATH_PACED_15_03` | 1779 | 9.994097974 | N/A | 14.928893032 | None / None / None / None | None | 0 | N/A |
+| `PRE_PR18_LEGACY_LOGS` | `S001_BREATH_PACED_20_04` | 1784 | 9.994226554 | N/A | 20.170279064 | None / None / None / None | None | 0 | N/A |
+| `PRE_PR18_LEGACY_LOGS` | `S001_BREATH_PACED_20_05` | 1784 | 9.992994255 | N/A | 20.030636268 | None / None / None / None | None | 0 | N/A |
+| `PRE_PR18_LEGACY_LOGS` | `2026-08-01_occupied_d09_v120_31min_attempt02` | 18574 | 9.986342911 | 4.30467137 | 19.264097775 | 0.0 / 12.0 / 195627.0 / 288530.0 | 0.139173038 | 0 | 0.008928878 |
 
 ## Preserved measurement corrections
 
@@ -66,15 +71,15 @@ Present expected files: `10` / `12`. Missing items were recorded as `KNOWN_BUT_N
 
 ### Question 1 — signal-semantic correspondence
 
-`breath_phase`/`resp_phase` was present and periodic components were measurable in the supplied legacy captures. That establishes a phase-like telemetry signal, not equivalence to the frozen Phase-B `resp_phase_model_ready_bpf_zscore` semantic. No independent canonical reference waveform is present, so the measured assessment is `PHASE_LIKE_SIGNAL_OBSERVED_BUT_PHASE_B_EQUIVALENCE_NOT_ESTABLISHED`; `correspondence_disproven=false`.
+`breath_phase`/`resp_phase` was present and periodic components were measurable in the supplied captures. That establishes a phase-like telemetry signal, not equivalence to the frozen Phase-B `resp_phase_model_ready_bpf_zscore` semantic. No independent canonical reference waveform is present, so semantic correspondence is `UNDETERMINED`; this is not a semantic disproof (`correspondence_disproven=false`).
 
 ### Question 2 — `breath_rate_raw` as waveform input
 
-The measured answer is **no**. The static pipeline scan found waveform input paths `["devices/mmwave/firmware/export_mmwave_csv.py", "devices/mmwave/firmware/src/main.cpp", "devices/mmwave/src/mr60_esp_adapter.py", "ondevice_ai/adapters/mmwave_csv_adapter.py", "ondevice_ai/inference/mmwave_interpreter.py"]` and recorded `breath_rate_raw` only in telemetry/export/diagnostic matches. Per-session parsing also used `{"legacy_csv": "resp_phase", "long_jsonl": "breath_phase"}` as the waveform field.
+The measured answer is **no**. The static pipeline scan found waveform input paths `["devices/mmwave/firmware/export_mmwave_csv.py", "devices/mmwave/firmware/src/main.cpp", "devices/mmwave/src/mr60_esp_adapter.py", "ondevice_ai/adapters/mmwave_csv_adapter.py", "ondevice_ai/inference/mmwave_interpreter.py"]` and recorded `breath_rate_raw` only in telemetry/export/diagnostic matches. Per-session parsing also used `{"legacy_csv": "resp_phase", "long_jsonl": "breath_phase", "pr18_pilot": "breath_phase"}` as the waveform field.
 
 ### Question 3 — row cadence vs fresh cadence
 
-The table reports the two cadences separately. Legacy CSV has no `phase_age_ms`/0x0A13 freshness field, so its fresh cadence is `N/A`, not assumed to be the row cadence. The long log reports an inferred cadence from phase-age resets and labels it as a proxy.
+The table reports the two cadences separately and by evidence group. Legacy CSV has no `phase_age_ms`/0x0A13 freshness field, so its fresh cadence is `N/A`, not assumed to be the row cadence. The long log reports an inferred cadence from phase-age resets and labels it as a proxy; PR18 pilot cadence, if present, is reported only within `PR18_PILOT_CAPTURE`.
 
 ### Question 4 — timestamp integrity
 
@@ -86,7 +91,7 @@ The long JSONL's min/median/p95/max and fraction over 30 seconds are measured in
 
 ### Question 6 — 300 genuinely fresh samples
 
-The measured count is shown per session. A value of `0` means no fixed 30-second bin contained 300 phase-age reset-proxy events. CSV sessions are additionally marked not provable because freshness metadata is absent.
+The measured aggregate is `valid_300_fresh_windows=0`. A value of `0` means no fixed 30-second bin contained 300 reset-proxy events. CSV sessions are additionally marked not provable because freshness metadata is absent; this temporal result is `MEASURED_INSUFFICIENT`.
 
 ### Question 7 — interpolation
 
@@ -102,11 +107,12 @@ The JSON contains diagnostic before-INT8, after-INT8-dequantized, quantized inte
 
 ### Question 10 — 620/620 all-APNEA collapse stage
 
-No stage is assigned. This run did not replay inference, and the expected evidence set contains no stage-labeled 620/620 replay artifact. Inference remains prohibited until the correspondence gate authorizes it; the collapse stage therefore remains unresolved rather than guessed.
+The legacy adapter path `ondevice_ai/adapters/mmwave_csv_adapter.py` was replayed as input-side forensics only: 300 source rows per window, 30-row stride, and nominal 10 Hz `np.interp`. It reconstructs `620` windows, matching the historical 620 count. For every reconstructed window, genuinely fresh fraction is `UNKNOWN` (fresh samples proven: `0`) because the CSV has no phase_age_ms/0x0A13 field; the stale-repeat fraction is not asserted, with adjacent-equal `resp_phase` proxy stats `median=0.12`, `p95=0.996666667`, `max=0.996666667`. The reconstructed target-grid interpolated sample fraction has `median=0.946666667`, `p95=0.993333333`, `max=0.996666667`; the adapter's duration-based interpolation fraction has `median=0.000466667`, `p95=0.000768334`, `max=0.001`. The earliest measured divergence from the Phase-B freshness contract is `LEGACY_CSV_WINDOW_GENERATION_FRESHNESS_PROVENANCE`; no inference or scoring was run.
+The input-side result does not prove that any window was genuinely fresh, and it does not prove that the historical all-APNEA output was caused by BPF, z-score, INT8, or the model. The 620-window input artifact is therefore a measured pre-BPF divergence finding, not an inference result.
 
 ## Decision
 
-**`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`** with `correspondence_evaluated=true` and `correspondence_disproven=false`. The result is measured and successful as a block: phase-like telemetry is present, but the frozen Phase-B semantic, fresh 300-sample window, and exact preprocessing/INT8 distribution correspondence are not established. Exploratory inference is not authorized.
+**`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`** with `semantic_correspondence=UNDETERMINED`, `temporal_correspondence=MEASURED_INSUFFICIENT`, `valid_300_fresh_windows=0`, `correspondence_evaluated=true`, and `correspondence_disproven=false`. The result is measured and successful as a block: phase-like telemetry is present, but the frozen Phase-B semantic, fresh 300-sample window, and exact preprocessing/INT8 distribution correspondence are not established. Exploratory inference is not authorized.
 
 ## What remains unknown
 

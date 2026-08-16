@@ -359,6 +359,87 @@ def _series_checks(
     }
 
 
+def _verified_sensor_counter_checks(
+    frames: list[dict[str, Any]],
+    path_prefix: str,
+    errors: list[dict[str, str]],
+    warnings: list[dict[str, str]],
+) -> dict[str, Any]:
+    """Apply hard counter integrity checks only to explicitly verified semantics."""
+
+    verified_frames = [
+        frame
+        for frame in frames
+        if str(frame.get("sensor_frame_counter_status", "")).upper() == "VERIFIED"
+    ]
+    summary = _series_checks(verified_frames, "sensor_frame_counter", path_prefix, errors, warnings)
+    summary["semantics"] = "VERIFIED" if verified_frames else "UNAVAILABLE_OR_UNVERIFIED"
+    summary["unverified_frame_count"] = len(frames) - len(verified_frames)
+    return summary
+
+
+def _header_word0_observation_checks(
+    frames: list[dict[str, Any]],
+    path_prefix: str,
+    errors: list[dict[str, str]],
+    warnings: list[dict[str, str]],
+) -> dict[str, Any]:
+    """Report counter-like word-0 patterns without asserting sensor loss."""
+
+    values: list[tuple[int, int]] = []
+    for index, frame in enumerate(frames):
+        value = frame.get("sensor_header_word0_observed")
+        if value is None:
+            continue
+        if not isinstance(value, int) or isinstance(value, bool) or not 0 <= value <= 0xFFFF:
+            _error(
+                errors,
+                "SENSOR_HEADER_WORD0_OBSERVATION_INVALID",
+                f"{path_prefix}:{index}:sensor_header_word0_observed",
+                "Observed Thermal header word 0 must be uint16 or null.",
+            )
+            continue
+        if frame.get("sensor_header_word0_semantics") != "SEMANTICS_UNVERIFIED":
+            _error(
+                errors,
+                "SENSOR_HEADER_WORD0_SEMANTICS_INVALID",
+                f"{path_prefix}:{index}:sensor_header_word0_semantics",
+                "PR #22 capture must retain header word 0 as SEMANTICS_UNVERIFIED.",
+            )
+        values.append((index, value))
+
+    duplicates = 0
+    gaps = 0
+    reversals = 0
+    for (_, previous), (index, current) in zip(values, values[1:]):
+        if current == previous:
+            duplicates += 1
+            code = "SENSOR_HEADER_WORD0_DUPLICATE_OBSERVED_SEMANTICS_UNVERIFIED"
+        elif current < previous:
+            reversals += 1
+            code = "SENSOR_HEADER_WORD0_REVERSAL_OBSERVED_SEMANTICS_UNVERIFIED"
+        elif current > previous + 1:
+            gaps += current - previous - 1
+            code = "SENSOR_HEADER_WORD0_GAP_OBSERVED_SEMANTICS_UNVERIFIED"
+        else:
+            continue
+        _warning(
+            warnings,
+            code,
+            f"{path_prefix}:{index}:sensor_header_word0_observed",
+            f"Observed word-0 pattern {previous} -> {current}; this is descriptive only and does not establish sensor acquisition loss.",
+        )
+    return {
+        "field": "sensor_header_word0_observed",
+        "semantics": "SEMANTICS_UNVERIFIED",
+        "observed_count": len(values),
+        "duplicate_like_count": duplicates,
+        "gap_like_count": gaps,
+        "reversal_like_count": reversals,
+        "authoritative_sensor_loss_count": None,
+    }
+
+
 def _timestamp_checks(
     frames: list[dict[str, Any]],
     field: str,
@@ -437,11 +518,19 @@ def _validate_checksums(
     checksum_path: Path | None,
     required_paths: set[str],
     errors: list[dict[str, str]],
+    raw_chunks_root: Path | None = None,
 ) -> str:
+    starting_error_count = len(errors)
     if checksum_path is None or not checksum_path.is_file():
         _error(errors, "CHECKSUM_REGISTRY_MISSING", "checksums.sha256", "A session checksum registry is required.")
         return "FAIL"
     entries: dict[str, str] = {}
+    raw_chunks_prefix: str | None = None
+    if raw_chunks_root is not None:
+        try:
+            raw_chunks_prefix = raw_chunks_root.resolve().relative_to(session_dir.resolve()).as_posix().rstrip("/") + "/"
+        except ValueError:
+            raw_chunks_prefix = None
     previous = ""
     try:
         lines = checksum_path.read_text(encoding="utf-8").splitlines()
@@ -462,16 +551,92 @@ def _validate_checksums(
         previous = relative
         if relative in entries:
             _error(errors, "CHECKSUM_DUPLICATE_PATH", f"checksums.sha256:{line_number}", f"Duplicate checksum entry for {relative}.")
+            if raw_chunks_prefix and relative.startswith(raw_chunks_prefix):
+                _error(errors, "RAW_CHUNK_CHECKSUM_DUPLICATE", f"checksums.sha256:{line_number}", f"Duplicate raw chunk checksum entry for {relative}.")
         entries[relative] = digest.lower()
         resolved = _safe_join(session_dir, relative)
         if resolved is None or not resolved.is_file():
             _error(errors, "CHECKSUM_TARGET_MISSING", f"checksums.sha256:{line_number}", f"Checksum target does not exist: {relative}.")
+            if raw_chunks_prefix and relative.startswith(raw_chunks_prefix):
+                _error(errors, "RAW_CHUNK_FILE_MISSING", relative, "Registered raw chunk file does not exist.")
         elif _sha256(resolved) != digest.lower():
             _error(errors, "CHECKSUM_MISMATCH", relative, "Measured SHA-256 differs from the registry.")
+            if raw_chunks_prefix and relative.startswith(raw_chunks_prefix):
+                _error(errors, "RAW_CHUNK_CHECKSUM_MISMATCH", relative, "Raw chunk SHA-256 differs from the registry.")
     for relative in sorted(required_paths):
         if relative not in entries:
             _error(errors, "CHECKSUM_COVERAGE_MISSING", relative, "Required finalized artifact has no checksum entry.")
-    return "FAIL" if any(item["code"].startswith("CHECKSUM_") for item in errors) else "PASS"
+    if raw_chunks_root is not None and raw_chunks_root.is_dir() and raw_chunks_prefix:
+        actual_raw_chunks = {
+            path.relative_to(session_dir.resolve()).as_posix()
+            for path in raw_chunks_root.rglob("*")
+            if path.is_file()
+        }
+        registered_raw_chunks = {relative for relative in entries if relative.startswith(raw_chunks_prefix)}
+        for relative in sorted(actual_raw_chunks - registered_raw_chunks):
+            _error(errors, "RAW_CHUNK_CHECKSUM_MISSING", relative, "Raw chunk has no checksum registry entry.")
+            _error(errors, "EXTRA_UNREGISTERED_RAW_CHUNK", relative, "Raw chunk exists outside the authoritative checksum inventory.")
+        for relative in sorted(registered_raw_chunks - actual_raw_chunks):
+            if not any(item["code"] == "RAW_CHUNK_FILE_MISSING" and item["path"] == relative for item in errors):
+                _error(errors, "RAW_CHUNK_FILE_MISSING", relative, "Registered raw chunk file does not exist.")
+    return "FAIL" if len(errors) > starting_error_count else "PASS"
+
+
+def _validate_sender_telemetry(
+    path: Path | None,
+    framed_udp_v2: bool,
+    errors: list[dict[str, str]],
+    warnings: list[dict[str, str]],
+) -> dict[str, Any]:
+    if not framed_udp_v2:
+        return {"status": "NOT_APPLICABLE", "record_count": 0, "latest": None}
+    limitation = "SENDER_SIDE_ACQUISITION_LOSS_NOT_FULLY_OBSERVABLE_FROM_PI_CAPTURE"
+    if path is None or not path.is_file():
+        _warning(warnings, limitation, "session.json:storage:sender_telemetry_file", "No persisted machine-readable sender telemetry is available.")
+        return {"status": limitation, "record_count": 0, "latest": None}
+    records = _load_jsonl(path, errors, "sender_telemetry.jsonl")
+    if not records:
+        _warning(warnings, limitation, _display_path(path), "Sender telemetry file is empty; sender-side acquisition loss remains unobservable.")
+        return {"status": limitation, "record_count": 0, "latest": None}
+    common_required = (
+        "sender_uptime_ms",
+        "dropped_ready_signals",
+        "transport_frames_attempted",
+        "transport_frames_emitted",
+        "send_failures",
+    )
+    previous: dict[str, int] = {}
+    for index, record in enumerate(records):
+        item_path = f"sender_telemetry.jsonl:{index}"
+        schema_version = record.get("schema_version")
+        if schema_version == "safenest.thermal.sender_status.v2":
+            observation_field = "d_ready_events_observed"
+        elif schema_version == "safenest.thermal.sender_status.v1":
+            observation_field = "ready_signals_generated"
+            _warning(
+                warnings,
+                "LEGACY_D_READY_FIELD_NAME",
+                f"{item_path}:{observation_field}",
+                "Legacy field name means ESP32-observed D_READY events only, not independently verified sensor-internal frame generation.",
+            )
+        else:
+            _error(errors, "SENDER_TELEMETRY_SCHEMA_INVALID", item_path, "Unexpected sender telemetry schema version.")
+            observation_field = "d_ready_events_observed"
+        for field in ("sender_uptime_ms", observation_field, *common_required[1:]):
+            value = record.get(field)
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                _error(errors, "SENDER_TELEMETRY_VALUE_INVALID", f"{item_path}:{field}", f"{field} must be a non-negative integer.")
+                continue
+            if field in previous and value < previous[field]:
+                _warning(warnings, "SENDER_TELEMETRY_COUNTER_RESET_OR_WRAP", f"{item_path}:{field}", f"{field} decreased; reset or uint32 wrap requires operator review.")
+            previous[field] = value
+        attempted = record.get("transport_frames_attempted")
+        emitted = record.get("transport_frames_emitted")
+        failures = record.get("send_failures")
+        if all(isinstance(value, int) and not isinstance(value, bool) for value in (attempted, emitted, failures)):
+            if emitted > attempted or failures > attempted:
+                _error(errors, "SENDER_TELEMETRY_COUNT_INCONSISTENT", item_path, "Emitted/failure counts cannot exceed attempted frames.")
+    return {"status": "MACHINE_READABLE_STATUS_RECEIVED", "record_count": len(records), "latest": records[-1]}
 
 
 def _raw_classification(representations: list[str]) -> str:
@@ -787,6 +952,37 @@ def _validate_session(
         safety = session["safety"]
         if safety.get("uncontrolled_free_fall_experiment") is True or safety.get("safety_control_status") == "UNCONTROLLED":
             _error(errors, "UNCONTROLLED_FALL_EXPERIMENT", "session.json:safety", "Unprotected free-fall experiments are prohibited.")
+    transport = session.get("transport") if isinstance(session.get("transport"), dict) else {}
+    framed_udp_v2 = transport.get("protocol") == "SAFENEST_THERMAL_RAW_UDP_V2"
+    legacy_stream = transport.get("udp_datagram_mode") == "UNSAFE_LEGACY_STREAM_REASSEMBLY"
+    if framed_udp_v2:
+        expected_transport = {
+            "protocol_version": "2",
+            "udp_datagram_mode": "FRAME_ID_CHUNKED_REASSEMBLY",
+            "full_frame_status": "PRESERVED",
+            "raw_packet_bytes_preserved": True,
+            "raw_udp_chunks_preserved": True,
+            "chunk_header_bytes": 32,
+            "chunk_payload_bytes": 1168,
+            "expected_chunks_per_frame": 9,
+            "frame_crc_status": "WHOLE_FRAME_CRC32_REQUIRED",
+            "reassembly_safety": "FRAME_BOUNDARY_EXPLICIT_FAIL_CLOSED",
+        }
+        for field, expected in expected_transport.items():
+            if transport.get(field) != expected:
+                _error(
+                    errors,
+                    "FRAMED_UDP_V2_CONTRACT_INVALID",
+                    f"session.json:transport:{field}",
+                    f"Expected {expected!r}, got {transport.get(field)!r}.",
+                )
+    elif legacy_stream:
+        _warning(
+            warnings,
+            "UNSAFE_LEGACY_STREAM_REASSEMBLY",
+            "session.json:transport:udp_datagram_mode",
+            "Blind byte-stream chunk concatenation cannot prove frame boundaries after UDP loss; retain only as diagnostic evidence.",
+        )
     storage = session.get("storage") if isinstance(session.get("storage"), dict) else {}
     storage_paths: dict[str, Path | None] = {}
     for field in ("frames_file", "annotations_file", "checksums_file", "raw_root", "decoded_native_root"):
@@ -796,6 +992,32 @@ def _validate_session(
     checksums_path = storage_paths.get("checksums_file")
     raw_root = storage_paths.get("raw_root")
     decoded_root = storage_paths.get("decoded_native_root")
+    sender_telemetry_path = None
+    if storage.get("sender_telemetry_file") is not None:
+        sender_telemetry_path = _check_relative_manifest_path(
+            storage.get("sender_telemetry_file"),
+            "sender_telemetry_file",
+            session_dir,
+            "session.json:storage",
+            errors,
+        )
+    sensor = session.get("sensor") if isinstance(session.get("sensor"), dict) else {}
+    raw_chunks_root = None
+    if storage.get("raw_chunks_root") is not None:
+        raw_chunks_root = _check_relative_manifest_path(
+            storage.get("raw_chunks_root"),
+            "raw_chunks_root",
+            session_dir,
+            "session.json:storage",
+            errors,
+        )
+    if framed_udp_v2 and (raw_chunks_root is None or not raw_chunks_root.is_dir()):
+        _error(
+            errors,
+            "RAW_CHUNKS_ROOT_MISSING",
+            "session.json:storage:raw_chunks_root",
+            "Framed UDP V2 capture must preserve every received datagram in raw_chunks/.",
+        )
     frames = _load_jsonl(frames_path, errors, "frames.jsonl") if frames_path else []
     annotations = _load_jsonl(annotations_path, errors, "annotations.jsonl") if annotations_path else []
     frame_ids: set[str] = set()
@@ -846,7 +1068,10 @@ def _validate_session(
         representation = frame.get("raw_representation")
         if representation not in FULL_FRAME_REPRESENTATIONS | LIMITED_REPRESENTATIONS | PREPROCESSED_REPRESENTATIONS | {"UNKNOWN"}:
             _error(errors, "RAW_REPRESENTATION_INVALID", f"{item_path}:raw_representation", f"Unsupported raw representation {representation!r}.")
-        else:
+        elif frame.get("validity_status") == "VALID":
+            # Missing, corrupt, partial, and duplicate markers must stay in the
+            # manifest as transport evidence. They do not, however, change the
+            # collection's successful raw-frame representation classification.
             representations.append(representation)
         raw_file = frame.get("raw_file")
         decoded_file = frame.get("decoded_native_file")
@@ -877,7 +1102,6 @@ def _validate_session(
                 elif frame.get("decoded_native_sha256") and _sha256(resolved) != str(frame["decoded_native_sha256"]).lower():
                     _error(errors, "DECODED_FRAME_CHECKSUM_MISMATCH", f"{item_path}:decoded_native_sha256", "Frame decoded_native_sha256 does not match the referenced file.")
         native_shape = frame.get("native_shape")
-        sensor = session.get("sensor") if isinstance(session.get("sensor"), dict) else {}
         expected_shape = [sensor.get("native_height"), sensor.get("native_width")]
         if isinstance(native_shape, list) and expected_shape[0] is not None and expected_shape[1] is not None and native_shape != expected_shape:
             _error(errors, "NATIVE_SHAPE_MISMATCH", f"{item_path}:native_shape", f"Frame shape {native_shape!r} differs from session native shape {expected_shape!r}.")
@@ -905,8 +1129,35 @@ def _validate_session(
     expected_count = quality.get("expected_frame_count")
     if isinstance(expected_count, int) and expected_count != len(frames):
         _warning(warnings, "EXPECTED_FRAME_COUNT_DIFFERENCE", "session.json:quality:expected_frame_count", f"Expected {expected_count} frame(s), received {len(frames)}; the discrepancy is retained as evidence.")
+    transport_metrics = quality.get("transport_metrics") if isinstance(quality.get("transport_metrics"), dict) else {}
+    if framed_udp_v2:
+        integrity_failures = {
+            field: int(transport_metrics.get(field, 0) or 0)
+            for field in (
+                "invalid_datagrams",
+                "incomplete_frames",
+                "conflicting_duplicates",
+                "reconstruction_timeouts",
+                "pending_limit_evictions",
+                "checksum_failures",
+            )
+        }
+        nonzero_failures = {field: value for field, value in integrity_failures.items() if value != 0}
+        if nonzero_failures:
+            _error(
+                errors,
+                "FRAMED_UDP_V2_INTEGRITY_FAILED",
+                "session.json:quality:transport_metrics",
+                f"Framed UDP V2 fail-closed metrics contain errors: {nonzero_failures!r}.",
+            )
+        if int(transport_metrics.get("duplicate_chunks", 0) or 0) > 0:
+            _warning(warnings, "UDP_DUPLICATE_CHUNKS", "session.json:quality:transport_metrics", "Duplicate chunks were ignored without corrupting a frame.")
+        if int(transport_metrics.get("out_of_order_chunks", 0) or 0) > 0:
+            _warning(warnings, "UDP_OUT_OF_ORDER_CHUNKS", "session.json:quality:transport_metrics", "Out-of-order chunks were reassembled by explicit chunk index.")
     sequence_summary = _series_checks(frames, "sequence_index", "frames.jsonl", errors, warnings)
-    counter_summary = _series_checks(frames, "sensor_frame_counter", "frames.jsonl", errors, warnings)
+    counter_summary = _verified_sensor_counter_checks(frames, "frames.jsonl", errors, warnings)
+    header_word0_summary = _header_word0_observation_checks(frames, "frames.jsonl", errors, warnings)
+    sender_telemetry_summary = _validate_sender_telemetry(sender_telemetry_path, framed_udp_v2, errors, warnings)
     timing_summaries = {
         "sensor_timestamp": _timestamp_checks(frames, "sensor_timestamp", "sensor_timestamp_unit", "frames.jsonl", errors, warnings),
         "device_monotonic_timestamp_ns": _timestamp_checks(frames, "device_monotonic_timestamp_ns", None, "frames.jsonl", errors, warnings),
@@ -921,6 +1172,13 @@ def _validate_session(
     valid_frames = [frame for frame in frames if frame.get("validity_status") == "VALID"]
     valid_count = len(valid_frames)
     invalid_count = len(frames) - valid_count
+    if framed_udp_v2 and int(transport_metrics.get("completed_frames", -1)) != valid_count:
+        _error(
+            errors,
+            "FRAMED_UDP_V2_COMPLETED_COUNT_MISMATCH",
+            "session.json:quality:transport_metrics:completed_frames",
+            "Completed transport frame count must equal the number of valid persisted frames.",
+        )
     sequence_verified = bool(valid_frames) and all(
         frame.get("sequence_index") is not None and frame.get("sequence_index_status") == "VERIFIED" for frame in valid_frames
     )
@@ -936,7 +1194,9 @@ def _validate_session(
         or (frame.get("sensor_timestamp") is not None and str(frame.get("sensor_timestamp_status", "")).upper() == "VERIFIED")
         for frame in valid_frames
     )
-    no_sequence_gaps = sequence_summary["gap_count"] == 0 and counter_summary["gap_count"] == 0
+    no_sequence_gaps = sequence_summary["gap_count"] == 0 and (
+        not counter_verified or counter_summary["gap_count"] == 0
+    )
     continuous_session = (session.get("timing") or {}).get("continuous_session") is True
     complete_event = bool(annotation_summary["complete_temporal_event_ids"])
     if (
@@ -965,11 +1225,18 @@ def _validate_session(
         "session.json",
         frames_path.relative_to(session_root).as_posix() if frames_path else "frames.jsonl",
         annotations_path.relative_to(session_root).as_posix() if annotations_path else "annotations.jsonl",
+        sender_telemetry_path.relative_to(session_root).as_posix() if sender_telemetry_path else "",
         *raw_references,
         *decoded_references,
     }
     required_checksum_paths.discard("")
-    checksum_status = _validate_checksums(session_dir, checksums_path, required_checksum_paths, errors)
+    checksum_status = _validate_checksums(
+        session_dir,
+        checksums_path,
+        required_checksum_paths,
+        errors,
+        raw_chunks_root=raw_chunks_root if framed_udp_v2 else None,
+    )
     raw_errors = {
         "MISSING_RAW_FRAME",
         "RAW_FRAME_REFERENCE_MISSING",
@@ -982,6 +1249,11 @@ def _validate_session(
         "DECODED_NATIVE_FILE_NOT_ALLOWED_FOR_REPRESENTATION",
         "EXTRA_UNREGISTERED_DECODED_FILE",
         "DECODED_FRAME_CHECKSUM_MISMATCH",
+        "RAW_CHUNK_FILE_MISSING",
+        "RAW_CHUNK_CHECKSUM_MISSING",
+        "RAW_CHUNK_CHECKSUM_MISMATCH",
+        "EXTRA_UNREGISTERED_RAW_CHUNK",
+        "RAW_CHUNK_CHECKSUM_DUPLICATE",
     }
     raw_integrity_status = "FAIL" if any(item["code"] in raw_errors for item in errors) else "PASS_WITH_LIMITATIONS" if warnings else "PASS"
     raw_class = _raw_classification(representations)
@@ -1014,6 +1286,10 @@ def _validate_session(
         limitations.append("PHYSICAL_UNIT_NOT_VERIFIED")
     if fps_status != "VERIFIED":
         limitations.append("EFFECTIVE_FPS_NOT_VERIFIED")
+    if counter_summary["semantics"] != "VERIFIED":
+        limitations.append("SENSOR_COUNTER_SEMANTICS_UNVERIFIED")
+    if sender_telemetry_summary["status"] != "MACHINE_READABLE_STATUS_RECEIVED" and framed_udp_v2:
+        limitations.append("SENDER_SIDE_ACQUISITION_LOSS_NOT_FULLY_OBSERVABLE_FROM_PI_CAPTURE")
     if temporal_status != "TEMPORAL_PROVENANCE_VERIFIED":
         limitations.append(temporal_status)
     if raw_class in {"SCALAR_ONLY_LIMITED", "MIXED_FULL_FRAME_AND_LIMITED", "PREPROCESSED_ONLY_INSUFFICIENT"}:
@@ -1036,6 +1312,7 @@ def _validate_session(
         "timing_coverage": {
             "sequence_index": sequence_summary,
             "sensor_frame_counter": counter_summary,
+            "sensor_header_word0_observed": header_word0_summary,
             "clocks": timing_summaries,
             "effective_fps": measured_fps,
             "effective_fps_source": fps_source,
@@ -1046,8 +1323,11 @@ def _validate_session(
             "sequence_gap_count": sequence_summary["gap_count"],
             "sensor_counter_gap_count": counter_summary["gap_count"],
             "duplicate_sensor_counter_count": counter_summary["duplicate_count"],
+            "sensor_counter_semantics": counter_summary["semantics"],
+            "header_word0_observations": header_word0_summary,
             "invalid_frame_count": invalid_count,
         },
+        "sender_telemetry": sender_telemetry_summary,
         "annotation_coverage": annotation_summary,
         "raw_integrity_status": raw_integrity_status,
         "checksum_status": checksum_status,

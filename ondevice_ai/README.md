@@ -13,6 +13,7 @@
 | 실기기 드라이버도 여기 있나요? | **아니요.** 실하드웨어 드라이버는 팀 저장소의 `devices/<device>/src/` 쪽입니다. |
 | 지금 배포해도 되나요? | **안 됩니다.** Mock 통과 ≠ 실배포 승인입니다. |
 | 최신 동기화 기준은? | 스탠드얼론 소스 `https://github.com/sheepmeat/test` 커밋 `efc7e2eb61a49e221ce0ebf6057b0c1617525ad1` (B-complete offline baseline) |
+| 최신 Thermal 기준은? | 전체 `https://github.com/yuname121/safenest-thermal-ai` merged PR #1 / `main` `db51112` (source head `71c6d08`, SNTR UDP V2 pre-T-C tooling 포함) |
 
 ## 이번 동기화에서 바뀐 점 (요약)
 
@@ -31,8 +32,9 @@
 3. **Thermal**
    - `T-A0`~`T-A6` 및 `T-B0`~`T-B5` offline lock 증거 추가
    - T-B5 FULL_INT8 바이너리는 git에 없고 외부 SSD identity만 기록됨
+   - Thermal-90 raw frame 수집은 `devices/thermal/xiao_esp32c6_thermal90_udp_capture/`와 `scripts/thermal_udp_capture.py`의 SNTR UDP V2 계약을 사용
    - `HUMAN_FALL`/`LYING` ≠ verified `FALL_EVENT`
-   - Thermal-44 실기기 검증은 **미완**
+   - Thermal-90/44 실기기 검증은 **미완**
 4. **통합 규칙**
    - 팀 전용 파일(`integrated_node/competition_runtime/`, `esp32_sensor_node.ino`, 구버전 모델/스크립트)은 **삭제하지 않고 보존**
    - 기본 runtime `config/models.yaml` / `models/model_manifest.json`은 여전히 역사적 v0.1.0을 가리킴. B-complete 후보는 `docs/integration/20260816_b_complete_active_offline_candidates.json`
@@ -56,7 +58,10 @@
 
 ### Thermal
 - 완료: T-A0..T-A6, T-B0..T-B5 (offline lock, limitations 포함)
-- 미완: T-C device-domain, git-tracked T-B5 INT8 binary intake, Thermal-44 validation
+- 현재 분류: `TEAM-THERMAL-INTEGRATION / PRE-T-C DEVICE-CAPTURE PREPARATION`
+- 준비 완료: Thermal-90 SNTR UDP V2 수집기·validator·XIAO compile-only 확인. transport identity와 unverified header word 0을 분리하고 raw chunk exact inventory 및 sender telemetry를 지원
+- 미완: T-C device-domain, git-tracked T-B5 INT8 binary intake, 실제 XIAO/Pi 수신, Thermal-90/44 validation
+- `T_C_EXECUTED = NO`, `T_C_DEVICE_CONTRACT_VERIFIED = NO`, `FINAL_THERMAL_HARDWARE_SELECTION = NOT_YET_FROZEN`
 - `LYING`/`HUMAN_FALL` ≠ verified fall-event onset label
 
 ### 통합/배포

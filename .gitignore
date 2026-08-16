@@ -23,6 +23,7 @@
 
 # ESP32 Wi-Fi/host credentials. secrets.example.h만 커밋한다.
 **/secrets.h
+**/wifi_secrets.h
 
 # Node (integration/web)
 node_modules/
@@ -40,4 +41,3 @@ tmp/
 
 # Local terminal artifacts
 *.log
-

@@ -101,6 +101,13 @@
           "enum": ["PRESENT", "ABSENT", "UNKNOWN"]
         },
         "raw_packet_bytes_preserved": { "type": ["boolean", "null"] },
+        "raw_udp_chunks_preserved": { "type": ["boolean", "null"] },
+        "udp_datagram_mode": { "type": ["string", "null"] },
+        "chunk_header_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "chunk_payload_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "expected_chunks_per_frame": { "type": ["integer", "null"], "minimum": 1 },
+        "frame_crc_status": { "type": ["string", "null"] },
+        "reassembly_safety": { "type": ["string", "null"] },
         "transport_latency_status": { "type": ["string", "null"] }
       }
     },
@@ -151,6 +158,10 @@
         "checksums_file": { "type": "string", "minLength": 1 },
         "raw_root": { "type": "string", "minLength": 1 },
         "decoded_native_root": { "type": "string", "minLength": 1 },
+        "raw_chunks_root": { "type": ["string", "null"] },
+        "raw_chunks_scope": { "type": ["string", "null"] },
+        "sender_status_raw_datagrams_retained": { "type": ["boolean", "null"] },
+        "sender_telemetry_file": { "type": ["string", "null"] },
         "model_input_root": { "type": ["string", "null"] }
       }
     },
@@ -164,7 +175,10 @@
         "sequence_gap_count": { "type": ["integer", "null"], "minimum": 0 },
         "duplicate_counter_count": { "type": ["integer", "null"], "minimum": 0 },
         "decode_failure_count": { "type": ["integer", "null"], "minimum": 0 },
-        "packet_loss_count": { "type": ["integer", "null"], "minimum": 0 }
+        "packet_loss_count": { "type": ["integer", "null"], "minimum": 0 },
+        "sensor_header_word0_observations": { "type": "object" },
+        "sender_telemetry": { "type": "object" },
+        "transport_metrics": { "type": "object" }
       }
     },
     "role_governance": {

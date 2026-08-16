@@ -45,6 +45,14 @@
       "type": "string",
       "enum": ["VERIFIED", "RECEIVED_ONLY", "UNKNOWN", "NOT_APPLICABLE"]
     },
+    "sensor_header_word0_observed": { "type": ["integer", "null"], "minimum": 0, "maximum": 65535 },
+    "sensor_header_word0_previous": { "type": ["integer", "null"], "minimum": 0, "maximum": 65535 },
+    "sensor_header_word0_observed_delta": { "type": ["integer", "null"], "minimum": -65535, "maximum": 65535 },
+    "sensor_header_word0_semantics": {
+      "type": "string",
+      "enum": ["SEMANTICS_UNVERIFIED"]
+    },
+    "sensor_header_word0_observation_status": { "type": "string" },
     "sensor_timestamp": { "type": ["number", "string", "null"] },
     "sensor_timestamp_unit": { "type": ["string", "null"] },
     "sensor_clock_domain": { "type": ["string", "null"] },
@@ -96,6 +104,11 @@
     "decoded_native_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-fA-F]{64}$" },
     "scalar_thermal_max_c": { "type": ["number", "null"] },
     "capture_error_code": { "type": ["string", "null"] },
+    "transport_protocol": { "type": ["string", "null"] },
+    "transport_frame_id": { "type": ["integer", "null"], "minimum": 0 },
+    "transport_chunk_count": { "type": ["integer", "null"], "minimum": 1 },
+    "transport_frame_crc32": { "type": ["string", "null"] },
+    "transport_reassembly_seconds": { "type": ["number", "null"], "minimum": 0 },
     "notes": { "type": "string" }
   },
   "allOf": [

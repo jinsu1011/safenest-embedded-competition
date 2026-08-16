@@ -1,38 +1,377 @@
 {
-  "schema_version": "M-C0_SUMMARY_V1",
-  "phase": "M-C0",
-  "target_repository": "jinsu1011/safenest-embedded-competition",
+  "blocking_reason": "SIGNAL_CORRESPONDENCE_NOT_ESTABLISHED",
   "branch": "codex/mmwave-m-c0-correspondence",
-  "base_commit": "0e8538c75354691fccf5f223029b0e633c1260af",
-  "decision": "BLOCKED_PENDING_SIGNAL_CORRESPONDENCE",
-  "blocking_reason": "EVIDENCE_NOT_ACCESSIBLE_IN_STANDALONE",
-  "correspondence_evaluated": false,
   "correspondence_disproven": false,
-  "evidence_root_supplied": false,
-  "preflight_gate": "PASS_INHERITED_FROM_PREVIOUS_STANDALONE_RUN",
+  "correspondence_evaluated": true,
+  "decision": "BLOCKED_PENDING_SIGNAL_CORRESPONDENCE",
+  "decision_is_successful_blocked_outcome": true,
+  "evidence_root": "devices/mmwave/firmware",
+  "evidence_root_file_count": 2528,
   "execution": {
-    "m_c0_executed": false,
-    "model_scoring_executed": false,
+    "locked_test_reopened": false,
+    "m_c0_executed": true,
     "m_c0b_inference_executed": false,
     "m_c1_capture_executed": false,
     "m_c2_metrics_executed": false,
-    "locked_test_reopened": false,
+    "model_scoring_executed": false,
+    "raw_files_copied": false,
     "raw_files_modified": false
   },
-  "decision_is_successful_blocked_outcome": true,
-  "what_remains_unknown": [
-    "MR60 breath_phase semantic and numeric correspondence to the frozen Phase-B input.",
-    "Fresh 0x0A13 cadence separately from telemetry row cadence.",
-    "Per-session phase_age_ms distributions and timestamp integrity from raw evidence.",
-    "Any 300 genuinely fresh sample window over approximately 30 seconds.",
-    "Interpolation/resampling method and measured distortion.",
-    "MR60 pre-INT8 and post-INT8 distributions against the frozen training distribution.",
-    "The transform stage responsible for the historical 620/620 APNEA exploratory collapse.",
-    "Independent reference hardware, formal M-C1 sample size, and paced-rpm label mapping."
-  ],
+  "expected_input_file_count": 12,
+  "expected_input_files_hashed_count": 10,
+  "expected_input_present_count": 10,
+  "head_at_run": "b88d1a597839b7bb803dc2590e0de55e187c959e",
+  "known_but_not_provided_count": 2,
+  "phase": "M-C0",
+  "pipeline_breath_rate_raw_used_as_waveform": false,
+  "preflight_gate": "PASS_INHERITED_FROM_PREVIOUS_STANDALONE_RUN",
   "provenance": {
+    "evidence_files_hashed_read_only": true,
+    "expected_long_log_sha256": "7f9e9ac65377c6dc217af92f9dee2401b6162540e2245fce97acf2ed49368a34",
     "raw_mr60_jsonl_csv_committed": false,
-    "raw_mr60_jsonl_csv_modified": false,
-    "note": "This is the reproducible before-state. The audit was not evaluated because no evidence-root was supplied to the standalone workflow."
-  }
+    "raw_mr60_jsonl_csv_modified": false
+  },
+  "raw_expected_files_analyzed_count": 10,
+  "schema_version": "M-C0_SUMMARY_V2",
+  "session_results": [
+    {
+      "distance_or_range": {
+        "computation": "population stats plus sample standard deviation over finite distance telemetry values; legacy CSV range_m is in metres",
+        "field": "range_m",
+        "finite_sample_count": 2998,
+        "sample_std": 0.020855161,
+        "sample_std_cm": 2.08551608,
+        "stats": {
+          "count": 2998,
+          "max": 0.7462,
+          "mean": 0.73722048,
+          "median": 0.7462,
+          "min": 0.6888,
+          "p05": 0.6888,
+          "p95": 0.7462,
+          "std": 0.020851682
+        },
+        "unit": "m"
+      },
+      "fresh_0x0A13_cadence_hz": null,
+      "phase_age_ms": {
+        "fraction_over_30000_ms": null,
+        "max": null,
+        "median": null,
+        "min": null,
+        "p95": null
+      },
+      "phase_rpm": 20.04468266,
+      "record_count": 2998,
+      "session_id": "S001_NORMAL_D06",
+      "telemetry_row_cadence_hz": 9.994964166,
+      "windows_with_300_genuinely_fresh_samples": 0
+    },
+    {
+      "distance_or_range": {
+        "computation": "population stats plus sample standard deviation over finite distance telemetry values; legacy CSV range_m is in metres",
+        "field": "range_m",
+        "finite_sample_count": 2998,
+        "sample_std": 0.026971503,
+        "sample_std_cm": 2.697150324,
+        "stats": {
+          "count": 2998,
+          "max": 0.9758,
+          "mean": 0.956921948,
+          "median": 0.9758,
+          "min": 0.9184,
+          "p05": 0.9184,
+          "p95": 0.9758,
+          "std": 0.026967005
+        },
+        "unit": "m"
+      },
+      "fresh_0x0A13_cadence_hz": null,
+      "phase_age_ms": {
+        "fraction_over_30000_ms": null,
+        "max": null,
+        "median": null,
+        "min": null,
+        "p95": null
+      },
+      "phase_rpm": 19.699214478,
+      "record_count": 2998,
+      "session_id": "S001_NORMAL_D09",
+      "telemetry_row_cadence_hz": 9.99613096,
+      "windows_with_300_genuinely_fresh_samples": 0
+    },
+    {
+      "distance_or_range": {
+        "computation": "population stats plus sample standard deviation over finite distance telemetry values; legacy CSV range_m is in metres",
+        "field": "range_m",
+        "finite_sample_count": 2441,
+        "sample_std": 0.021990244,
+        "sample_std_cm": 2.199024384,
+        "stats": {
+          "count": 2441,
+          "max": 1.3776,
+          "mean": 1.324973535,
+          "median": 1.3202,
+          "min": 1.2054,
+          "p05": 1.3202,
+          "p95": 1.3776,
+          "std": 0.021985739
+        },
+        "unit": "m"
+      },
+      "fresh_0x0A13_cadence_hz": null,
+      "phase_age_ms": {
+        "fraction_over_30000_ms": null,
+        "max": null,
+        "median": null,
+        "min": null,
+        "p95": null
+      },
+      "phase_rpm": 20.266696872,
+      "record_count": 2998,
+      "session_id": "S001_NORMAL_D12",
+      "telemetry_row_cadence_hz": 9.995797563,
+      "windows_with_300_genuinely_fresh_samples": 0
+    },
+    {
+      "distance_or_range": {
+        "computation": "population stats plus sample standard deviation over finite distance telemetry values; legacy CSV range_m is in metres",
+        "field": "range_m",
+        "finite_sample_count": 2639,
+        "sample_std": 0.029375969,
+        "sample_std_cm": 2.93759692,
+        "stats": {
+          "count": 2639,
+          "max": 1.8368,
+          "mean": 1.818268435,
+          "median": 1.8368,
+          "min": 1.722,
+          "p05": 1.7794,
+          "p95": 1.8368,
+          "std": 0.029370403
+        },
+        "unit": "m"
+      },
+      "fresh_0x0A13_cadence_hz": null,
+      "phase_age_ms": {
+        "fraction_over_30000_ms": null,
+        "max": null,
+        "median": null,
+        "min": null,
+        "p95": null
+      },
+      "phase_rpm": null,
+      "record_count": 2999,
+      "session_id": "S001_NORMAL_D15",
+      "telemetry_row_cadence_hz": 9.998365844,
+      "windows_with_300_genuinely_fresh_samples": 0
+    },
+    {
+      "distance_or_range": {
+        "computation": "population stats plus sample standard deviation over finite distance telemetry values; legacy CSV range_m is in metres",
+        "field": "range_m",
+        "finite_sample_count": 2087,
+        "sample_std": 0.029971485,
+        "sample_std_cm": 2.997148522,
+        "stats": {
+          "count": 2087,
+          "max": 1.0332,
+          "mean": 0.9620207,
+          "median": 0.9758,
+          "min": 0.9184,
+          "p05": 0.9184,
+          "p95": 0.9758,
+          "std": 0.029964304
+        },
+        "unit": "m"
+      },
+      "fresh_0x0A13_cadence_hz": null,
+      "phase_age_ms": {
+        "fraction_over_30000_ms": null,
+        "max": null,
+        "median": null,
+        "min": null,
+        "p95": null
+      },
+      "phase_rpm": 10.598330195,
+      "record_count": 2087,
+      "session_id": "S001_BREATH_PACED_12_01",
+      "telemetry_row_cadence_hz": 9.995304219,
+      "windows_with_300_genuinely_fresh_samples": 0
+    },
+    {
+      "distance_or_range": {
+        "computation": "population stats plus sample standard deviation over finite distance telemetry values; legacy CSV range_m is in metres",
+        "field": "range_m",
+        "finite_sample_count": 1774,
+        "sample_std": 0.020241382,
+        "sample_std_cm": 2.024138244,
+        "stats": {
+          "count": 1774,
+          "max": 0.861,
+          "mean": 0.811947914,
+          "median": 0.8036,
+          "min": 0.8036,
+          "p05": 0.8036,
+          "p95": 0.861,
+          "std": 0.020235677
+        },
+        "unit": "m"
+      },
+      "fresh_0x0A13_cadence_hz": null,
+      "phase_age_ms": {
+        "fraction_over_30000_ms": null,
+        "max": null,
+        "median": null,
+        "min": null,
+        "p95": null
+      },
+      "phase_rpm": 12.18605948,
+      "record_count": 1774,
+      "session_id": "S001_BREATH_PACED_12_02",
+      "telemetry_row_cadence_hz": 9.995433558,
+      "windows_with_300_genuinely_fresh_samples": 0
+    },
+    {
+      "distance_or_range": {
+        "computation": "population stats plus sample standard deviation over finite distance telemetry values; legacy CSV range_m is in metres",
+        "field": "range_m",
+        "finite_sample_count": 1779,
+        "sample_std": 0.0,
+        "sample_std_cm": 0.0,
+        "stats": {
+          "count": 1779,
+          "max": 0.861,
+          "mean": 0.861,
+          "median": 0.861,
+          "min": 0.861,
+          "p05": 0.861,
+          "p95": 0.861,
+          "std": 0.0
+        },
+        "unit": "m"
+      },
+      "fresh_0x0A13_cadence_hz": null,
+      "phase_age_ms": {
+        "fraction_over_30000_ms": null,
+        "max": null,
+        "median": null,
+        "min": null,
+        "p95": null
+      },
+      "phase_rpm": 14.928893032,
+      "record_count": 1779,
+      "session_id": "S001_BREATH_PACED_15_03",
+      "telemetry_row_cadence_hz": 9.994097974,
+      "windows_with_300_genuinely_fresh_samples": 0
+    },
+    {
+      "distance_or_range": {
+        "computation": "population stats plus sample standard deviation over finite distance telemetry values; legacy CSV range_m is in metres",
+        "field": "range_m",
+        "finite_sample_count": 1735,
+        "sample_std": 0.0,
+        "sample_std_cm": 0.0,
+        "stats": {
+          "count": 1735,
+          "max": 0.861,
+          "mean": 0.861,
+          "median": 0.861,
+          "min": 0.861,
+          "p05": 0.861,
+          "p95": 0.861,
+          "std": 0.0
+        },
+        "unit": "m"
+      },
+      "fresh_0x0A13_cadence_hz": null,
+      "phase_age_ms": {
+        "fraction_over_30000_ms": null,
+        "max": null,
+        "median": null,
+        "min": null,
+        "p95": null
+      },
+      "phase_rpm": 20.170279064,
+      "record_count": 1784,
+      "session_id": "S001_BREATH_PACED_20_04",
+      "telemetry_row_cadence_hz": 9.994226554,
+      "windows_with_300_genuinely_fresh_samples": 0
+    },
+    {
+      "distance_or_range": {
+        "computation": "population stats plus sample standard deviation over finite distance telemetry values; legacy CSV range_m is in metres",
+        "field": "range_m",
+        "finite_sample_count": 1784,
+        "sample_std": 0.025986429,
+        "sample_std_cm": 2.598642918,
+        "stats": {
+          "count": 1784,
+          "max": 0.9184,
+          "mean": 0.903728251,
+          "median": 0.9184,
+          "min": 0.8036,
+          "p05": 0.861,
+          "p95": 0.9184,
+          "std": 0.025979145
+        },
+        "unit": "m"
+      },
+      "fresh_0x0A13_cadence_hz": null,
+      "phase_age_ms": {
+        "fraction_over_30000_ms": null,
+        "max": null,
+        "median": null,
+        "min": null,
+        "p95": null
+      },
+      "phase_rpm": 20.030636268,
+      "record_count": 1784,
+      "session_id": "S001_BREATH_PACED_20_05",
+      "telemetry_row_cadence_hz": 9.992994255,
+      "windows_with_300_genuinely_fresh_samples": 0
+    },
+    {
+      "distance_or_range": {
+        "computation": "population stats plus sample standard deviation over finite distance telemetry values; legacy CSV range_m is in metres",
+        "field": "distance_cm_raw",
+        "finite_sample_count": 18354,
+        "sample_std": 25.355997063,
+        "sample_std_cm": null,
+        "stats": {
+          "count": 18354,
+          "max": 166.46,
+          "mean": 108.035469108,
+          "median": 97.58,
+          "min": 86.1,
+          "p05": 91.84,
+          "p95": 166.46,
+          "std": 25.355306305
+        },
+        "unit": "cm"
+      },
+      "fresh_0x0A13_cadence_hz": 4.30467137,
+      "phase_age_ms": {
+        "fraction_over_30000_ms": 0.139173038,
+        "max": 288530.0,
+        "median": 12.0,
+        "min": 0.0,
+        "p95": 195627.0
+      },
+      "phase_rpm": 19.264097775,
+      "record_count": 18574,
+      "session_id": "2026-08-01_occupied_d09_v120_31min_attempt02",
+      "telemetry_row_cadence_hz": 9.986342911,
+      "windows_with_300_genuinely_fresh_samples": 0
+    }
+  ],
+  "what_remains_unknown": [
+    "Exact physical/numeric semantic mapping from MR60 breath_phase to the frozen Phase-B input.",
+    "Official phase-age failure threshold and direct 0x0A13 packet identity/update cadence.",
+    "Approved interpolation/resampling method and acceptable distortion.",
+    "Formal pre-BPF/post-BPF training-distribution comparison for MR60.",
+    "Stage responsible for the historical all-APNEA collapse.",
+    "Independent M-C1 reference hardware, sample size, and paced-rpm-to-label mapping.",
+    "Official measurement distances."
+  ]
 }

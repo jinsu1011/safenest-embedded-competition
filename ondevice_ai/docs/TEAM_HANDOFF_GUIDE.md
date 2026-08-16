@@ -4,8 +4,8 @@
 하드웨어·라즈베리파이·웹 UI 담당자가 안전하게 연동하기 위한 **최신 인수인계 기준**입니다.
 
 - 컴포넌트 루트: `ondevice_ai/`
-- 동기화 소스: `https://github.com/sheepmeat/test` @ `9a66a3b`
-- 상태: **개발 동기화 완료 / 배포 미승인 (NOT_READY)**
+- 동기화 소스: `https://github.com/sheepmeat/test` @ `efc7e2eb61a49e221ce0ebf6057b0c1617525ad1`
+- 상태: **B-complete offline baseline 동기화 / 배포 미승인 (NOT_READY)**
 
 ## 0. 모든 팀원·에이전트 공통 준수사항
 
@@ -19,25 +19,25 @@
 
 ---
 
-## 1. 현재 센서 트랙 상태 (2026-08-10 동기화)
+## 1. 현재 센서 트랙 상태 (2026-08-16 B-complete 중간 동기화)
 
 ### mmWave
-- 완료: M-A0..M-A6, M-B0..M-B5
-- M-B5 선택 calibration profile: `M-B5_CAL_CLASS_BALANCED_120` (TRAIN-only)
-- 미완: M-B6+ formal Float/TFLite/INT8 stage equivalence, locked evaluation
+- 완료: M-A0..M-A6, M-B0..M-B12 (offline candidate, 경고/조건 포함)
+- 활성 offline INT8: `M-B3_CONV1D_GAP_BASELINE_seed42_M-B5_CAL_CLASS_BALANCED_120`
+- 미완: standalone M-C0 correspondence, M-C1/M-C2, MR60/Pi 실측
 - LOCKED_TEST 모델선택 접근: 0
-- MR60/Pi 실측: 미완
 - APNEA = voluntary breath-hold proxy (임상 apnea 아님)
 
 ### CO₂
-- 완료: C-A0..C-A6 (raw→canonical integrity lock)
-- 미완: C-B 모델 재학습/비교, SCD40 device-domain validation
-- 기존 CO₂ 모델의 실데이터 재학습 완료를 의미하지 않음
+- 완료: C-A0..C-A6, C-B0..C-B6 reduced-feature occupancy candidate
+- 미완: SCD40 device-domain validation, formal C-C2
+- C-C1 측정 안내/도구는 문서일 뿐 실기기 검증 완료가 아님
+- 기존 v0.1.0 CO₂ runtime 모델을 C-B6가 자동 대체하지 않음
 
 ### Thermal
-- 완료: T-A0..T-A4 (제한사항 포함)
-- 미완: T-A5 split, T-A6 full conversion, T-B training
-- `LYING`은 frame-level post-fall posture proxy이며 verified fall-onset label이 아님
+- 완료: T-A0..T-A6, T-B0..T-B5 offline lock (limitations 포함)
+- 미완: T-C, git-tracked T-B5 INT8 binary, Thermal-44 device validation
+- `LYING`/`HUMAN_FALL`은 posture proxy이며 verified fall-onset label이 아님
 
 ---
 

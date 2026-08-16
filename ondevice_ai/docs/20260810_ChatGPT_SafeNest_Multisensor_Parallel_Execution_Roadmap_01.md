@@ -1,19 +1,25 @@
 # SafeNest 멀티센서 병렬 A–E 실행 로드맵
 
-- 문서 버전: `02`
-- 기준일: `2026-08-13`
+- 문서 버전: `06`
+- 기준일: `2026-08-15`
+- 이전 기준일: `2026-08-15` (`05`)
 - canonical component root: 이 문서의 상위 저장소에서 `AGENTS.md`가 위치한 디렉터리
 - 적용 대상: mmWave, CO₂, Thermal 온디바이스 AI 데이터·모델·runtime 검증
 - 후속 통합 대상: PIR 보조 신호 및 멀티센서 risk fusion
 - 상태: `ACTIVE_MASTER_ROADMAP`
+- 2026-08-14 개정: mmWave `M-C`를 기존 팀 MR60 forensic audit → correspondence gate → 선택적 탐색 추론 → 프로토콜 실측 → 정식 평가로 세분. Phase A/B 역사는 유지한다.
+- 2026-08-14 CO₂ 개정: `C-C`를 기존 팀 SCD40 legacy audit(`C-C0`) → measurement protocol freeze/operator handoff(`C-C1`) → 외부 protocol-controlled acquisition → later controlled intake/formal validation(`C-C2`)로 분리한다. logger/transport/sensor freshness, frozen feature-vector completeness, unit과 feature semantics, calibration 필드를 분리한다. Phase A/B 역사와 frozen C-B5는 변경하지 않는다.
+- 2026-08-15 CO₂ 개정: PR #78의 T/RH feature-necessity 결과(`T_RH_FEATURE_DEPENDENCE_INCONCLUSIVE`)를 후속 5-seed·paired-bootstrap pre-acquisition decision audit로 재평가했다. 네 feature arm의 modest/repeatable predictive benefit은 관측됐지만 reduced-feature predictive superiority는 확립되지 않았다. 시스템 contract burden of proof가 충족되지 않아 최종 방향은 `ADOPT_REDUCED_FEATURE_DIRECTION`이며, `C-B6` reduced-feature candidate development/lock을 별도 model phase로 둔다. 현재 four-feature C-C1 protocol/B5는 historical evidence로 보존하고 formal protocol-controlled physical acquisition과 formal operator handoff를 C-B6 lock 전까지 `HOLD`한다. exploratory real-device observation은 별도 evidence class로 관리한다. B5와 LOCKED_TEST는 변경하지 않는다.
+- 2026-08-15 C-B6 실행: `C_B6_REDUCED_CO2_SLOPE_CANDIDATE_001`을 새 TRAIN-only scaler, TRAIN-internal-only threshold policy, Float/TFLite/full-integer INT8 artifact, validation evidence, checksum, lock으로 생성했다. 최종 threshold는 `0.43`이며 B5 `0.58`은 상속하지 않았다. C-B6 focused validator와 INT8 equivalence gate는 PASS지만 CO2_slope INT8 input saturation이 관측되어 phase 상태는 `C_B6_PASS_WITH_LIMITATIONS`다. 다음은 limitation review를 포함한 `C-C1R` protocol revision/hand-off authorization이며 physical acquisition은 계속 `HOLD`한다.
+- 2026-08-15 C-C1R 실행: `CO2_C_C1R_REDUCED_MEASUREMENT_PROTOCOL_001`을 C-B6 lock에 결속해 동결했다. `CO2 + Pi-derived CO2_slope`, nominal 60초 effective model-input/export cadence, transport/sensor freshness 분리, `ENDPOINT_H150` 150초·90초 초과 gap reset, 독립 VACANT/OCCUPIED GT, raw JSONL/session/checksum 계약을 정의했다. 다만 team main `3d86bf2a...`의 현재 capture path는 fresh SCD40 event marker/chronology와 protocol/session/candidate manifest를 제공하지 않아 `OPERATOR_HANDOFF_BLOCKED_BY_ACQUISITION_TOOLING`이다. 따라서 `C_C1R_BLOCKED`, protocol은 `FROZEN`, physical acquisition은 `HOLD`, C-C2는 `NOT_STARTED`다.
 
-이 문서는 기존 mmWave A–E 실행 문서를 원문 그대로 포함하면서 CO₂와 Thermal을 독립 트랙으로 병렬 실행하기 위한 상위 제어 문서다. 기존 mmWave 문서는 역사·세부 실행 근거로 계속 유효하지만, 신규 작업의 센서 간 순서와 공통 gate는 이 문서를 우선한다.
+이 문서는 기존 mmWave A–E 실행 문서를 포함하면서 CO₂와 Thermal을 독립 트랙으로 병렬 실행하기 위한 상위 제어 문서다. 기존 mmWave 문서는 역사·세부 실행 근거로 계속 유효하지만, 신규 작업의 센서 간 순서와 공통 gate는 이 문서를 우선한다. 2026-08-14에 mmWave Phase C(`M-C`) 구조가 개정되었으며, Part II의 해당 절은 `docs/20260806_ChatGPT_SafeNest_mmWave_Execution_Sequence_01.md`와 동기화한다. CO₂ 트랙은 legacy evidence audit, historical four-feature protocol freeze, final model-input decision, 별도 model phase `C-B6` reduced-feature candidate development/lock, revised protocol handoff, external controlled acquisition, authorized formal intake로 분리한다. Phase A/B 원문 역사와 기존 C-C1 four-feature evidence는 유지한다.
 
 ## 0. 문서 우선순위와 해석 규칙
 
 1. 최상위 `AGENTS.md`가 경로·안전·provenance·팀 이관 규칙의 최우선 기준이다.
 2. 이 문서는 세 센서의 병렬 순서, 합류 gate, 공용 파일 변경 규칙을 정한다.
-3. 아래에 원문 그대로 이관된 mmWave 문서는 mmWave 세부 실행 기준이다.
+3. 아래에 이관된 mmWave 문서는 mmWave 세부 실행 기준이다. 2026-08-14 이후 Phase C는 두 문서에서 동일한 세분 구조를 따른다.
 4. 각 센서 phase 보고서와 machine-readable manifest가 완료 수치의 근거다.
 5. 문서와 artifact가 충돌하면 validator가 통과한 machine-readable evidence를 우선하고 문서 불일치를 별도 수정한다.
 
@@ -28,9 +34,9 @@
 
 기존 mmWave 문서의 `A0`, `B0` 등은 각각 `M-A0`, `M-B0`와 같은 의미다. 기존 본문은 evidence 보존을 위해 이름을 일괄 치환하지 않는다.
 
-## 0.1 팀 저장소 PR·브랜치 증거 오버레이 (2026-08-13 검토)
+## 0.1 팀 저장소 PR·브랜치 증거 오버레이 (2026-08-14 live-main refresh)
 
-이 절은 팀 저장소의 실제 센서 구현·실측 자료와 현재 로드맵의 연결점을 기록하기 위한 보강 규칙이다. 검토 기준은 팀 저장소 `main`의 `f3bd342eabcad27dc2c3ecdc16f035b8b13cb153`과 그 시점에 존재한 원격 branch·PR이다. 팀 저장소의 구버전 `ondevice_ai/` 트리는 이번 방향성 판정과 phase evidence의 근거에서 **제외**한다. 이 절은 파일을 자동 이관하라는 지시가 아니며, 미병합 자료를 standalone 학습 데이터로 자동 편입하지 않는다.
+이 절은 팀 저장소의 실제 센서 구현·실측 자료와 현재 로드맵의 연결점을 기록하기 위한 보강 규칙이다. 2026-08-13 검토 기준은 당시 팀 `main` `f3bd342eabcad27dc2c3ecdc16f035b8b13cb153`과 그 시점 원격 branch·PR이다. 2026-08-14 M-C 개정은 팀 `main` `fdf34b804f35e5868356f0ed6f804a248aa69131`에서 기존 MR60 실측을 재확인한 후속 지식이며, 13일 검토 이력을 지우고 다시 쓰지 않는다. 이번 CO₂ audit도 같은 team `main` SHA를 기준으로 raw SCD40 evidence를 재검산했다. 팀 저장소의 구버전 `ondevice_ai/` 트리는 이번 방향성 판정과 phase evidence의 근거에서 **제외**한다. 이 절은 파일을 자동 이관하라는 지시가 아니며, 미병합 자료를 standalone 학습 데이터로 자동 편입하지 않는다.
 
 ### 0.1.1 증거 층위와 병합 상태 해석
 
@@ -39,40 +45,71 @@
 | 증거 층위 | 대표 경로/자료 | 로드맵에서의 용도 | 금지 해석 |
 |---|---|---|---|
 | standalone offline evidence | 이 저장소의 `datasets/`, `models/`, A/B manifest·validator | 재현 가능한 전처리·split·모델 비교·locked test | 팀 실센서 로그를 근거 없이 A/B에 섞기 |
-| device-domain evidence | 팀 `devices/<sensor>/`의 firmware, raw log, calibration, 분석 보고서 | M-C/C-C/T-C의 실제 입력·장치 결함·domain gap 검증 | public dataset 성능이나 모델 일반화 성능으로 승격 |
+| device-domain evidence | 팀 `devices/<sensor>/`의 firmware, raw log, calibration, 분석 보고서 | `M-C0`의 기존 실측 forensic 입력, `M-C1` 이후 정식 평가 입력, C-C/T-C의 실제 입력·장치 결함·domain gap 검증 | public dataset 성능이나 모델 일반화 성능으로 승격. 기존 팀 로그만으로 `FORMAL_DEVICE_VALIDATION_SET` 또는 `REAL_SENSOR_VALIDATION` 주장 |
 | integration evidence | 팀 `devices/esp32_node/`, `integration/`, 통신 규격·LCD/Pi 자료 | I-0/I-1/I-2의 packet·timestamp·provider·fail-closed 계약 검증 | 통합 노드 동작을 개별 AI 정확도로 주장 |
 
 PR이 `open`이거나 branch에만 존재하면 **후보 evidence**일 뿐 팀 `main`의 승인된 기준이 아니다. 에이전트는 PR/branch 자료를 사용할 때 source branch, head SHA, base SHA, 병합 상태, 원본 checksum, 제한사항을 report에 남긴다. 병합되지 않은 자료는 원본을 보존한 채 C/I 검증 입력으로만 참조하고, standalone A/B artifact를 덮어쓰지 않는다.
 
-### 0.1.2 2026-08-13 원격 PR·branch 확인 결과
+### 0.1.2 2026-08-13 원격 PR·branch 확인 결과; CO₂ live-main refresh 2026-08-14
 
 다음 목록은 팀 저장소의 `ondevice_ai/` 변경을 제외하고 센서·실행·통합 방향에 영향을 주는 원격 자료만 요약한 것이다.
 
 | 상태 | 대상 | 확인된 사실 | 이 로드맵에서의 인지·처리 |
 |---|---|---|---|
-| `OPEN` | PR #14 `feature/co2-scd40-verification` (`ea925e4`) | SCD40 preflight 30/30 valid, 재시도 baseline 300/300 valid, 호기 상승·복귀 329/360 valid, 결측률 8.61%. 센서 분리 60초 원시 시험은 `NOT VERIFIED`; 보고서 판정은 `PARTIAL` | C-C의 실제 입력·결측·재연결 evidence로 참조한다. 분리·stale·reconnect 계약이 끝나기 전 C-C 완료나 최종 CO₂ 증거로 승격하지 않는다 |
+| `MERGED` | PR #14 `feature/co2-scd40-verification` (`ea925e4`) → team `main` (`fdf34b8`) | Git-tracked CSV 4개, 총 990 capture rows / 936 capture-valid rows. 초기 baseline 23개, breath-rise/recovery 31개의 transport-invalid row가 보존되어 있다. 센서 분리 60초 원시 시험은 `NOT VERIFIED`; report 판정은 `PARTIAL` | C-C0 legacy device evidence로만 참조한다. raw CSV의 현재 SHA-256을 다시 계산하고 committed summary/report SHA mismatch를 별도 기록한다. 분리·stale·reconnect·sensor-freshness 계약이 protocol-controlled evidence로 확인되기 전 formal C-C2 evidence로 승격하지 않는다 |
 | `OPEN` | PR #15 `feature/thermal-v5-real-validation` (`e4cb7d8`) | 실제 열화상 raw frame 수신·62×80 parse·TFLite·fail-closed·UDP 경로 검증 자료가 있다. TCP 단계의 brownout/655.3°C 오류와 UDP 전환이 기록되어 있다. 문서에는 Thermal-90/MI48 계열과 Thermal-44 명칭이 혼재한다 | T-C의 runtime/domain-gap 입력으로 보존한다. `ALL PASS` 문구만으로 T-B 학습 성능·낙상 일반화·T-C 완료를 인정하지 않는다. 센서 모델명, 원시 frame 단위·calibration·orientation·프로토콜을 먼저 reconcile한다 |
 | `OPEN` | PR #12 `feature/esp32-lcd-integration` (`c9f4583`) | ESP32 4센서 수집과 Pi/LCD 상태 전달을 실제 장치에서 확인했다. 다만 Thermal은 약 70% 고정/무효 pixel 때문에 full-frame stream을 끄고 `thermal_max_c`만 전송하며, 호흡수 noise와 통신 조건도 기록되어 있다 | I-0/I-1 packet·validity·timestamp·runtime evidence로 참조한다. 이 경로의 scalar thermal telemetry를 full-frame T-A/T-B 입력과 동일시하지 않는다 |
 | `OPEN` | PR #11 `agent/add-competition-package` (`4ac9878`) | ESP32/Pi 실행 패키지와 통신·설치 문서를 추가한다. 새로운 학습 데이터나 센서 정확도 evidence는 추가하지 않는다 | I-6 handoff/운용 참고로만 사용한다. A/B/C 성능 근거로 사용하지 않는다 |
-| `NO PR` | `codex/mmwave-20rpm-root-cause` (`0e8538c`), `codex/mmwave-phase-integration` (`b0d3c95`) | MR60 실제 로그·phase·presence·window 자료와 20 rpm 저-SNR 원인 분석이 있다. 20 rpm 오차의 직접 원인은 TFLite보다 입력 품질과 estimator validity gate로 분석되었다 | M-C domain/gap 분석 및 M-D 수집 설계의 근거로 보존한다. production 변경이나 A/B 학습 편입은 별도 review·회귀검증 후 결정한다 |
+| `NO PR` | `codex/mmwave-20rpm-root-cause` (`0e8538c`), `codex/mmwave-phase-integration` (`b0d3c95`) | 2026-08-13: MR60 실제 로그·phase·presence·window 자료와 20 rpm 저-SNR 원인 분석이 있다. 당시 해석은 20 rpm 오차의 직접 원인이 TFLite보다 입력 품질과 estimator validity gate라는 것이었다 | 미병합 branch는 후보 evidence로 보존한다. 2026-08-14 후속 재확인은 아래 0.1.5. production 변경이나 A/B 학습 편입은 별도 review·회귀검증 후 결정한다 |
 
 PR #13의 `ondevice_ai` 동기화 변경은 이 오버레이의 범위에서 제외한다. PR 설명에 언급된 `feature/pir-verification`은 이 검토 시점 원격 branch 목록에서 확인되지 않았으므로 승인된 PIR evidence로 간주하지 않는다.
 
 ### 0.1.3 센서별 필수 인지 사항
 
-- **mmWave**: 팀 MR60 자료는 presence·distance·raw phase·timestamp가 있는 장치 domain 자료다. 단일 피험자·제한된 조건, 저진폭/phase stale·presence loss·퇴실 hysteresis가 존재한다. `breath_phase`의 단위·sampling·window·gap·quality gate를 standalone canonical signal과 먼저 매핑하고, 실측 로그는 무작위로 학습에 섞지 않는다. A4의 voluntary breath-hold label은 SafeNest proxy이며 clinical apnea가 아니다.
-- **CO₂**: PR #14의 SCD40 ppm 시계열은 실제 장치 증거지만 occupancy/환경 변화 자료이지 질식·유해가스 ground truth가 아니다. UCI occupancy target과 SCD40 safety rule을 분리한다. 첫 baseline 실패와 호기 시험의 결측을 숨기지 않고, 센서 분리·stale·reconnect를 완료한 뒤 C-C를 잠근다.
+- **mmWave**: 팀 MR60 자료는 이미 timestamped JSONL·CSV·paced/거리/장시간 세션이 있는 장치 domain 자료다. `breath_phase`(firmware `0x0A13`)와 `breath_rate_raw`(firmware `0x0A14`)는 다른 신호다. 전자는 장치가 노출하는 최저 수준 위상형/중간 신호이고, 후자는 vendor 파생 호흡수다. true radar ADC/IQ/range-bin raw는 확인되지 않았다. 다수 세션의 timestamp-측정 cadence는 ≈10 Hz이지만, 이것이 Phase-B `BPF_ZSCORE` 입력 대응의 증명은 아니다. 단일 피험자(`S001`)·독립 호흡 참조 부재·저진폭/phase stale·presence loss·lock-loss·실패한 paced 시험이 있다. 기존 실측은 `M-C0` forensic 입력이며 정식 검증셋이 아니다. 실측 로그는 무작위로 학습에 섞지 않는다. A4의 voluntary breath-hold label은 SafeNest proxy이며 clinical apnea가 아니다.
+- **CO₂**: PR #14의 SCD40 ppm 시계열은 실제 장치 증거지만 occupancy/환경 변화 자료이지 질식·유해가스 ground truth가 아니다. UCI occupancy target과 SCD40 safety rule을 분리한다. 팀 `capture_scd40.py`는 SCD40 I²C logger가 아니라 Pi `/health` HTTP polling이다. `fresh`/`age_seconds`는 transport freshness이며 SCD40 신규 measurement freshness가 아니다. CSV 독립 column과 990개 nested `raw_response_json` 모두 `co2_ppm`만 보존하고 Temperature/Humidity는 보존하지 않는다. ESP32 producer는 SCD4x `readMeasurement`에서 T/RH를 읽지만 telemetry JSON에는 버린다. H150 재구성만으로 B5 추론을 허가하지 않는다. UCI T/RH와 SCD40 on-chip T/RH는 단위가 같아도 동일 feature domain이 아니다. `read_measurement` 출력은 `TRUE_SENSOR_RAW_SIGNAL`이 아니다. 기존 실측은 `C-C0` forensic 입력이며 정식 검증셋이 아니다.
 - **Thermal**: PR #15의 full-frame path와 PR #12의 `thermal_max_c` scalar path는 서로 다른 runtime contract다. Thermal-90/MI48/Thermal-44 명칭, 62×80 geometry, raw uint16→°C 변환, calibration, orientation, invalid pixel 정책을 하나의 provenance로 reconcile하기 전에는 서로의 결과를 합치지 않는다. 자세/`LYING` proxy는 실제 낙상 사건이나 임상 성능을 의미하지 않는다.
 - **PIR**: 독립 AI 재학습 트랙이 아니라 mmWave 재실·퇴실과 위험 rule을 보조하는 binary evidence다. 별도 branch/실측이 승인되기 전에는 I-0 계약·fault/replay 대상으로만 다룬다.
 - **통합**: ESP32 `safenest.telemetry.v1`, TCP 9000, thermal frame type 2, `thermal_max_c` scalar, `valid`/`SensorState`/stale semantics를 I-0 inventory에 함께 기록한다. 센서별 offline candidate가 고정되기 전에 learned fusion을 최적화하지 않는다.
 
 ### 0.1.4 PR·branch 자료를 phase에 연결하는 추가 gate
 
-1. `M-C`, `C-C`, `T-C`는 팀 PR의 “실제 동작 확인”을 그대로 완료로 복사하지 않고, raw source·checksum·unit·timestamp·calibration·failure registry를 standalone canonical contract와 대조한다.
+1. `M-C`, `C-C`, `T-C`는 팀 PR의 “실제 동작 확인”을 그대로 완료로 복사하지 않고, raw source·checksum·unit·timestamp·calibration·failure registry를 standalone canonical contract와 대조한다. mmWave는 이 대조를 단일 단계로 수행하지 않고 `M-C0` forensic → correspondence gate → (선택) 탐색 추론 → `M-C1` 프로토콜 실측 → `M-C2` 정식 평가 순서를 따른다. CO₂도 단일 단계로 수행하지 않고 `C-C0` legacy forensic → logger/transport/sensor freshness → feature completeness → semantic/H150/B5 identity/pre-inference gate → (선택) 탐색 추론 → `C-C1` protocol freeze/operator handoff → external acquisition → authorized `C-C2` intake/validation 순서를 따른다.
 2. 실제 하드웨어 log는 immutable raw evidence로 보존하고, 재생(replay)용 파생 파일을 별도 namespace로 만든다. 원본을 relabel하거나 overwrite하지 않는다.
 3. C phase에서 발견한 통신 결측, dead pixel, stale phase, low-SNR, sensor identity mismatch가 모델 문제인지 입력/장치 문제인지 분리하여 기록한다. 입력 문제를 곧바로 재학습 사유로 쓰지 않는다.
 4. 팀 PR이 병합되었더라도 `devices/`의 device-domain evidence와 standalone `datasets/`의 A/B evidence를 자동으로 합치지 않는다. 병합은 source/base SHA와 충돌·ownership 검토가 끝난 뒤 별도 handoff에서 수행한다.
-5. 최종 흐름은 변경하지 않는다: **standalone A/B 재현성 확보 → 실제 장치 C 검증 → 측정된 gap만 D에서 보완 → I에서 replay·rule fusion·Pi 검증**.
+5. 최종 흐름: **standalone A/B 재현성 확보 → 기존 장치 evidence M-C0/C-C0 → 대응 판정 → protocol freeze/handoff(C-C1; mmWave는 M-C1) → sensor-specific final input decision → 별도 model phase C-B6 candidate development/lock → revised protocol handoff → 외부 controlled acquisition → authorized formal intake(M-C2/C-C2) → 측정·승인된 gap만 D에서 보완 → I에서 replay·rule fusion·Pi 검증**. M-C/C-C 불일치가 자동으로 M-D/C-D를 허가하지 않는다.
+
+### 0.1.5 2026-08-14 M-C 기존 실측 증거 재검토 (후속 지식)
+
+재확인 기준: 팀 저장소 `https://github.com/jinsu1011/safenest-embedded-competition` `main` `fdf34b804f35e5868356f0ed6f804a248aa69131`. standalone `main` `4260119cb5274d6cffacf1a40934bc81f86c46ee`의 M-B11/M-B12 lock은 `REAL_DATA_OFFLINE_CANDIDATE`이며 장치 검증으로 승격하지 않는다. 세부 수치·필드 lineage는 mmWave 실행 문서 §5를 따른다.
+
+확인된 상태:
+
+| 항목 | 상태 |
+|---|---|
+| timestamped JSONL / 세션 CSV / delivery_v2 manifest | `AVAILABLE` |
+| 측정 ≈10 Hz cadence (다수 세션) | `AVAILABLE` |
+| `breath_phase` (0x0A13) | 최저 노출 위상형/중간 신호 |
+| `breath_rate_raw` (0x0A14) | vendor 파생 출력 |
+| paced 12/15/20 rpm, 거리 조건, ≈31 min 로그 | `AVAILABLE` |
+| 독립 호흡 참조 / 다피험자 / true radar raw | `NOT ESTABLISHED` |
+| Phase-B 신호-의미 대응 / 정식 device validation | `NOT YET ESTABLISHED` / `NOT YET PERFORMED` |
+
+~20 rpm: 15 rpm paced 조건에서 vendor `breath_rate_raw` mean/median ≈ 18.80 / 19.0 rpm, phase 주기 추정 ≈ 15.01 rpm. 조건 의존 vendor bias를 시사하는 탐색적 증거이며 보편 보정 규칙이 아니다. vendor 호흡수, phase 주기, AI 분류를 한 현상으로 합치지 않는다.
+
+Track M의 현재 개념 순서는 다음과 같다.
+
+```text
+M-B locked offline candidate
+→ M-C0 existing-team MR60 forensic audit
+→ signal/cadence/offline-contract correspondence gate
+→ optional exploratory legacy-device inference
+→ independent review
+→ M-C1 protocolized physical measurement
+→ M-C2 formal device-domain evaluation
+→ only measured and separately authorized gaps may start M-D
+```
 
 ## 1. 현재 출발 상태
 
@@ -88,9 +125,22 @@ Phase A 완료는 실센서 성능이나 배포 준비 완료를 뜻하지 않�
 ## 2. 병렬 실행 구조
 
 ```text
-Track M  M-A 완료 ──> M-B offline model ──> M-C MR60 domain ──> M-D gap data ──┐
+Track M  M-A 완료 ──> M-B locked offline ──> M-C0 existing MR60 forensic
+                                           ──> correspondence gate
+                                           ──> (optional) exploratory inference
+                                           ──> M-C1 protocolized capture
+                                           ──> M-C2 formal eval
+                                           ──> M-D gap data (승인된 측정 gap만) ──┐
                                                                                 │
-Track C  C-A real-data reconstruction ──> C-B model ──> C-C SCD40 domain ──────┤
+Track C  C-A real-data reconstruction ──> C-B locked offline ──> C-C0 legacy SCD40 audit
+                                           ──> C-C1 four-feature protocol freeze (historical)
+                                           ──> final model-input decision ──> HOLD
+                                           ──> C-B6 reduced-feature candidate development / lock
+                                               (`C_B6_PASS_WITH_LIMITATIONS`, threshold `0.43`)
+                                           ──> C-C1R reduced-feature protocol revision / handoff authorization
+                                           ──> external controlled acquisition
+                                           ──> authorized C-C2 intake / validation
+                                           ──> C-D gap data (별도 승인만) ─┤
                                                                                 ├─> I-0~I-6 integration
 Track T  T-A dataset reconstruction ──> T-B model ──> T-C Thermal-44 domain ───┤
                                                                                 │
@@ -114,7 +164,7 @@ Track I  contract inventory only ───────────────�
 - LOCKED_TEST는 architecture, preprocessing, imbalance, threshold, representative dataset 선택에 사용하지 않는다.
 - `I-2` replay integration은 최소 한 센서의 locked offline candidate와 나머지 센서의 명시적 unavailable/mock 상태가 있어야 시작할 수 있다.
 - `I-3` fusion 최적화는 M/C/T 세 트랙의 validation contract가 고정된 후 시작한다.
-- 실센서 성능 주장은 해당 센서의 C phase와 Pi 측정이 완료된 뒤에만 가능하다.
+- 실센서 성능 주장은 해당 센서의 정식 C 평가(mmWave는 `M-C2`)와 Pi 측정이 완료된 뒤에만 가능하다. 기존 팀 로그만으로는 주장하지 않는다.
 
 ## 3. 공용 파일과 branch 충돌 방지
 
@@ -145,8 +195,8 @@ refactor/integration-provider-contract
 |---|---|---|
 | A | 실제 원본에서 canonical dataset과 immutable split을 만드는 단계 | reader, label, grouping unit가 modality별로 다름 |
 | B | 실제 데이터 offline 학습·비교·locked candidate 고정 | metric과 architecture가 modality별로 다름 |
-| C | 실제 기기 출력과 학습 입력 사이의 domain·runtime 검증 | MR60, SCD40, Thermal-44 각각 별도 |
-| D | C에서 측정된 gap을 메우는 추가 dataset 확장 | gap 없는 무목적 수집 금지 |
+| C | 실제 기기 출력과 학습 입력 사이의 domain·runtime 검증. mmWave는 기존 실측 forensic(`M-C0`), 대응 판정, 선택적 탐색 추론, 프로토콜 실측(`M-C1`), 정식 평가(`M-C2`)를 분리하고, CO₂는 legacy audit(`C-C0`) → historical four-feature protocol(`C-C1`) → final model-input decision → model phase `C-B6` reduced-feature candidate lock → revised protocol → later controlled intake/formal validation(`C-C2`)을 분리한다 | MR60, SCD40, Thermal-44 각각 별도. SCD40는 logger/transport/sensor freshness와 frozen feature completeness를 혼동하지 않는다. 현재 four-feature C-C1/B5는 변경하지 않고, C-B6 candidate lock 전 acquisition을 HOLD한다. MR60 하드웨어 부재는 `M-C1`만 `BLOCKED_HARDWARE`로 두고 `M-C0`을 공백으로 되돌리지 않는다 |
+| D | C에서 측정·승인된 gap을 메우는 추가 dataset/model 확장. C 불일치가 자동 재학습을 허가하지 않음 | gap 없는 무목적 수집 금지 |
 | E | sensor-local artifact·contract·report lock | 기존 mmWave 원문의 E는 상위 `I` fusion 단계로 재해석 |
 
 각 센서의 A 종료물에는 최소한 source identity, license, checksum, inventory, label contract, group split, canonical data, sample provenance, quality audit, duplicate/leakage audit, standalone validator가 있어야 한다.
@@ -175,9 +225,14 @@ refactor/integration-provider-contract
 
 ### Gate P3 — device-domain 검증
 
-- MR60, SCD40, Thermal-44 실제 출력 contract와 offline 입력 contract 비교
-- domain gap, missingness, latency, warming-up, stale 정책 측정
-- 필요할 때만 M/C/T-D 진입
+- mmWave: `M-C0` 기존 팀 MR60 forensic → signal/cadence/offline-contract correspondence → 대응이 방어 가능할 때만 탐색적 레거시 추론 → 독립 검토 → `M-C1` 프로토콜 실측 → `M-C2` frozen Phase-B candidate 정식 평가
+- SCD40: `C-C0` 기존 팀 실측 forensic → logger vs transport vs sensor freshness → frozen feature-vector completeness → semantic correspondence → `ENDPOINT_H150` → frozen C-B5 identity → pre-inference gate → 대응이 방어 가능할 때만 탐색적 레거시 추론 → historical four-feature `C-C1` protocol freeze → final model-input decision → `C-B6` reduced-feature candidate development/lock → revised protocol/handoff → external acquisition → authorized `C-C2` intake/formal validation
+- `TRANSPORT_FRESHNESS != SCD40_FRESH_MEASUREMENT_FRESHNESS`. `/health`의 `fresh == true`만으로 신규 SCD40 measurement로 보지 않는다. H150 재구성만으로 B5 추론을 허가하지 않는다. UCI T/RH 단위와 SCD40 on-chip T/RH 단위가 같아도 동일 feature domain으로 보지 않는다
+- Thermal-44: 실제 출력 contract와 offline 입력 contract 비교 (T-C 단계 규칙)
+- domain gap, missingness, latency, warming-up, stale 정책을 측정한다
+- mmWave `breath_phase`와 `breath_rate_raw`를 동일 신호로 취급하지 않는다
+- 기존 팀 실측을 정식 validation set으로 승격하지 않는다
+- C-C0/C-C1의 gap과 final model-input decision은 측정 protocol·candidate lock을 설계하는 근거이지 C-B5 재튜닝이나 자동 C-D 허가가 아니다. 현재 reduced 방향은 four-feature predictive superiority를 뜻하지 않으며, C-B6가 `C_B6_PASS_WITH_LIMITATIONS`로 닫혔고 C-C1R protocol이 동결됐어도 team acquisition tooling correction과 precollection validator PASS 전까지 formal protocol-controlled physical acquisition을 HOLD한다. Exploratory pre-deployment real-device observation은 별도 evidence class로 허용할 수 있지만 자동으로 C-C2 evidence가 되지 않는다. C-C2 formal validation 결과와 별도 decision gate 뒤에만 측정·승인된 gap에 한해 M/C/T-D 진입한다. mmWave `DEVICE_DOMAIN_GAP_OBSERVED`도 Phase-B 수정이나 자동 M-D를 허가하지 않는다
 
 ### Gate P4 — integration readiness
 
@@ -203,7 +258,7 @@ phase ID 없이 “모델 개선”, “데이터 전처리”, “성능 향상
 
 # Part II — 기존 mmWave 실행 로드맵 원문 이관
 
-아래 내용은 `docs/20260806_ChatGPT_SafeNest_mmWave_Execution_Sequence_01.md`의 전체 내용을 원문 그대로 이관한 것이다. mmWave의 세부 수치·Priority 7–18·A–E 판단 근거는 이 부분을 따른다. 상위 병렬 운용에서 기존 `A~E`는 `M-A~M-E`로 식별하며, 기존 Phase E의 fusion 작업은 세 센서가 준비된 뒤 `I` 트랙에서 실행한다.
+아래 내용은 `docs/20260806_ChatGPT_SafeNest_mmWave_Execution_Sequence_01.md`를 이관한 것이다. mmWave의 세부 수치·Priority 7–18·A–E 판단 근거는 이 부분을 따른다. 상위 병렬 운용에서 기존 `A~E`는 `M-A~M-E`로 식별하며, 기존 Phase E의 fusion 작업은 세 센서가 준비된 뒤 `I` 트랙에서 실행한다. 2026-08-14에 Phase C만 기존 팀 MR60 증거에 맞게 세분했으며, 그 절은 상세 실행 문서와 동기화한다.
 
 ---
 
@@ -284,6 +339,8 @@ python3 -c 'from integrated_node.run_node import SafeNestIntegratedNode as N; n=
 # SafeNest mmWave Priority 7–18 및 A–E 상세 실행 순서
 
 - 작성일: 2026-08-06
+- Phase C 개정일: 2026-08-14
+- Phase C 개정 근거: 팀 저장소 `main` `fdf34b804f35e5868356f0ed6f804a248aa69131`에서 확인한 기존 MR60 실측 증거. Phase A/B 역사와 locked offline candidate는 변경하지 않는다.
 - 문서 목적: Priority 6 이후 mmWave 데이터·학습·양자화·장치 도메인·멀티모달 융합 작업의 선행관계와 실행 순서를 구체화
 - 대상: Zenodo 60 GHz radar 원본 재가공, SafeNest mmWave 실데이터 모델, MR60BHA2 장치 도메인, 후속 데이터 확장, 멀티모달 융합
 - 내용: 최상단 Section 0에 로컬 디렉터리 맵, 실측 해시, 스크립트 실행 명령 포함. 이하 본문은 실행 순서 및 방법론 기술.
@@ -303,10 +360,17 @@ Priority 6 자산·gap 분석
 → A. Zenodo raw-to-NPZ 복원·무결성 감사
 → B. 실데이터 모델 실험·학습·비교
 → Priority 7–18을 실데이터 기준으로 재구성해 수행
-→ C. MR60BHA2 실측 domain 검증·적응
-→ D. 남은 gap을 보완할 추가 dataset 확장
+→ C0. 기존 팀 MR60 실측 forensic audit
+→ C0A. signal/cadence/offline-contract correspondence gate
+→ C0B. 대응이 방어 가능할 때만 exploratory legacy-device inference
+→ 독립 검토
+→ C1. 프로토콜 기반 신규 MR60 실측
+→ C2. frozen Phase-B candidate의 정식 device-domain 평가
+→ D. 측정된 domain gap이 별도 승인된 경우에만 dataset/model 확장
 → E. 멀티모달 model·risk fusion 개선
 ```
+
+C 단계는 단일 “MR60 수집 후 모델 검증”이 아니다. 기존 비공식 실측, Phase-B 대응 판정, 탐색적 추론, 프로토콜 실측, 정식 장치 평가를 분리한다. C에서 발견한 domain mismatch는 재학습을 자동 허가하지 않으며, 그 작업은 D의 별도 승인 대상이다.
 
 ---
 
@@ -321,7 +385,7 @@ Priority 6 자산·gap 분석
 | Historical v0.1.0 | 기존 외부 실데이터 개발 이력의 역사적 모델 | 사용자 확정 이력은 인정하되 exact raw-file-to-model mapping 부족은 별도 표시 |
 | V6 v0.2.0 candidate | 합성 NPZ 기반 smoke·재현성 모델 | 실세계 성능 근거로 사용 금지 |
 | 신규 real-data offline candidate | Zenodo 110명 계보 복원 이후 학습할 신규 모델 | real-subject offline 성능 대상 |
-| MR60-adapted candidate | MR60BHA2 실측 domain을 반영한 모델 | 실제 deployment candidate. offline candidate와 분리 |
+| MR60-adapted candidate | 측정된 domain gap이 **별도 승인된 M-D**에서만 만들 수 있는 후속 모델 | M-C 산출물이 아니다. offline candidate와 분리. M-C는 frozen Phase-B 후보를 평가할 뿐 이 lineage를 생성·교체하지 않는다 |
 
 ### 2.2 불가역 산출물 분리
 
@@ -342,7 +406,8 @@ Priority 6 자산·gap 분석
 ### 2.4 일반 성능과 배포 성능 분리
 
 - Zenodo offline 성능은 `OFFLINE_REAL_DATA` 또는 `REAL_SUBJECT_GENERALIZATION`으로 표시한다.
-- MR60 실측 전에 `REAL_SENSOR_VALIDATION`을 주장하지 않는다.
+- 팀 저장소에 기존 MR60 실측이 있어도, C2 정식 device-domain 평가 전에는 `REAL_SENSOR_VALIDATION`을 주장하지 않는다.
+- 기존 팀 로그·CSV는 `LEGACY_OR_INFORMAL_DEVICE_EVIDENCE`이며 `FORMAL_DEVICE_VALIDATION_SET`이 아니다.
 - Mac latency를 Raspberry Pi latency 또는 sensor-to-alarm latency로 해석하지 않는다.
 - 임상 apnea와 voluntary breath hold를 동일한 것으로 표현하지 않는다.
 
@@ -763,7 +828,7 @@ class-balanced calibration을 즉시 “개선된 정답”으로 고정하지 �
 
 #### 실행 시점
 
-INT8 finalist에 수행하되, MR60 실측 후 C 단계에서 device-realistic perturbation으로 반복한다.
+INT8 finalist에 수행한다. 이후 M-C2는 **frozen candidate**에 대해 device-realistic perturbation을 재평가할 수 있다. 이 반복은 모델·scaler·preprocessing 변경, fine-tuning, 후보 교체를 허가하지 않는다.
 
 #### 세부 작업
 
@@ -920,50 +985,307 @@ candidate 선정 방법을 최종 test를 보기 전에 고정한다. 다음을 
 7. robustness·latency·Mock E2E
 8. 선정·제외 candidate 이유
 9. `REAL_SUBJECT_GENERALIZATION`, `REAL_SENSOR_VALIDATION`, `BLOCKED_HARDWARE`, `NOT_VERIFIABLE` 범위 분리
-10. C 단계 MR60 인수인계 조건
+10. C 단계 MR60 인수인계 조건: 기존 팀 실측 forensic(C0) → correspondence gate → 선택적 탐색 추론 → 프로토콜 실측(C1) → 정식 평가(C2). 재학습은 D.
 
 #### 완료 판단
 
 - 합성 smoke 성과와 실데이터 성과가 분리된다.
 - 실제 실행·실측한 수치만 포함한다.
 - 외부 검토자가 최종 candidate의 source-to-runtime chain을 확인할 수 있다.
-- C 단계에서 재검증할 항목이 명시된다.
+- C2에서 frozen candidate의 device-domain 재평가 항목이 명시된다. 재학습·adaptation은 D.
 
 ---
 
 ## 5. Phase C — MR60BHA2 실측 device-domain 검증
 
-### C0. 하드웨어 가용성 gate
+Phase C의 질문은 더 이상 “offline radar classifier를 학습할 수 있는가”가 아니다. 질문은 다음과 같다.
 
-- MR60BHA2, data capture 경로, 전원, timestamp 기준, 안정적 recording 환경이 없으면 `BLOCKED_HARDWARE`로 표시한다.
-- hardware가 없다고 Mac 가능 작업을 중단하지 않고 D의 gap-driven dataset 조사·adapter 설계를 병행할 수 있다.
+> 물리 MR60BHA2가 내보내는 신호의 물리·시간 의미가, 고정된 Phase-B 모델이 사용한 신호 domain과 충분히 대응하는가?
 
-### C1. MR60 canonical signal contract 확정
+C 단계는 하드웨어가 새로 도착해야만 시작하는 공백 상태가 아니다. 팀 저장소 `main`에는 이미 timestamped JSONL, 세션 CSV, paced-breathing·거리 조건 실측, 장시간 로그, 진단/delivery manifest가 있다. 이 증거는 2026-08-14에 팀 `main` `fdf34b804f35e5868356f0ed6f804a248aa69131`에서 재확인한 **후속 device-domain 지식**이며, Phase A/B 개발 당시 존재했던 것처럼 A/B 역사를 다시 쓰지 않는다.
 
-1. 장치가 제공하는 total phase, breath phase, heart phase, breath rate, distance, presence 중 실제 사용 가능한 필드를 확인한다.
-2. API update timeout과 실제 sample interval을 동일하게 가정하지 않고 timestamp로 실측한다.
-3. breath phase의 단위, scale, firmware filter, clipping, smoothing, missing value, reset behavior을 확인한다.
-4. Zenodo의 range-bin-derived phase와 MR60 firmware-derived breath phase가 같은 semantics인지 평가한다.
-5. shape·10 Hz·30초가 같아도 semantics가 다르면 source-specific preprocessing/adaptation을 적용한다.
+Phase C는 다음을 하나의 단계로 합치지 않는다.
 
-### C2. 제어된 MR60 수집
+1. 기존 비공식·레거시 실측
+2. Phase-B 입력 대응 판정
+3. 탐색적 레거시 추론
+4. 이후 프로토콜 제어 실측
+5. 정식 device-domain 평가
 
-최소한 다음 변수를 분리할 수 있는 수집 계획을 세운다.
+하드웨어 가용성 gate는 Phase C의 개념적 시작점이 아니다. 신규 프로토콜 수집(C1)의 선행조건이다. 기존 로그가 있으면 C0은 하드웨어 부재로 차단되지 않는다.
 
-- subject/session
-- distance
-- sensor angle·height
-- posture: lying/sitting 등
-- normal breathing·rapid breathing·breath hold
-- body movement·position change·background movement
-- blanket/clothing·environment clutter
-- firmware/device version
+### 5.0 Frozen Phase-B 경계와 과학적 한계
 
-사람 대상 수집은 동의·개인정보·보관 정책을 프로젝트 운영 기준에 맞게 적용한다. voluntary breath hold를 임상 apnea 데이터로 표현하지 않는다.
+C는 Phase B를 재개하지 않는다. 현재 후보는 `REAL_DATA_OFFLINE_CANDIDATE`로 남으며 다음으로 승격하지 않는다.
 
-### C3. domain gap 계량
+- 선택 후보: `M-B3_CONV1D_GAP_BASELINE_seed42_M-B5_CAL_CLASS_BALANCED_120`
+- 엄격 INT8 runtime: `M-B3_CONV1D_GAP_BASELINE_seed42_M-B6_STRICT_INT8`
+- 입력 계약: `int8 [1, 300, 1]`, 명목 10 Hz · 30초 · 300 sample
+- 전처리: `M-B1_D0_B1_Z1` / `BPF_ZSCORE` (약 0.1–0.5 Hz 호흡대역 강조)
+- artifact SHA-256: `6dff6aaa72c79d76715d40cf7e32bb1e6cd9b2c2e3ac78eaf2fda737561430c5`
 
-Zenodo train/validation/test와 MR60 수집 데이터에서 다음을 비교한다.
+300개의 숫자를 `[1,300,1]`로 reshape할 수 있다는 사실만으로 Phase-B 입력이 성립하지 않는다. 신호 의미와 시간 의미가 대응해야 한다.
+
+최종 offline recovery-evaluation 한계는 C가 침묵 속에 수리하는 대상이 아니다.
+
+- Accuracy ≈ 0.560
+- Macro F1 ≈ 0.494836
+- NORMAL recall ≈ 0.20
+- RAPID_OR_ABNORMAL recall ≈ 0.421053
+- APNEA-proxy recall ≈ 0.935484
+- APNEA-proxy FPR ≈ 0.522727
+- initialization-seed 민감성 확인됨
+
+재학습·전처리 변경·seed 재선택·INT8 재교정·class/threshold 변경은 C가 아니라, 측정된 gap이 별도 승인된 뒤의 D다.
+
+팀 저장소의 구버전 `ondevice_ai/`는 이 locked candidate의 검증이 아니다. 역사적 구현·호환 맥락으로만 참조하고, 탐색적 추론을 한다면 standalone M-B11 artifact SHA에 묶는다.
+
+### 5.1 2026-08-14 확인된 기존 팀 증거 상태
+
+아래는 C0 실행 결과가 아니라, 로드맵이 더 이상 “실측 없음/cadence 미지”를 전제하지 않도록 고정한 **후속 증거 상태**다. 정식 검증 완료를 뜻하지 않는다.
+
+| 항목 | 상태 |
+|---|---|
+| 기존 물리 MR60 측정 | `AVAILABLE` |
+| timestamped JSONL | `AVAILABLE` |
+| 측정된 ≈10 Hz cadence | 다수 세션에서 `AVAILABLE` |
+| phase-like 호흡 신호 | MR60이 노출하는 중간/위상형 신호로 `AVAILABLE` |
+| vendor 호흡수 출력 | `AVAILABLE` |
+| paced 12/15/20 rpm 시험 | `AVAILABLE` |
+| 거리 조건 세션 | `AVAILABLE` |
+| 장시간(≈31 min) 세션 | `AVAILABLE` |
+| 독립 호흡 참조(벨트/spirometer 등) | `NOT ESTABLISHED` |
+| 다피험자 정식 검증 집단 | `NOT ESTABLISHED` (delivery 식별자는 `S001`) |
+| true radar ADC/IQ/range-bin raw | `NOT ESTABLISHED` |
+| Phase-B 신호-의미 대응 | `NOT YET ESTABLISHED` |
+| 정식 device validation | `NOT YET PERFORMED` |
+
+대표 경로(팀 저장소, 확인 시점 `main`):
+
+- `devices/mmwave/firmware/`
+- `devices/mmwave/firmware/csv/2026-07-26_han_junwoo_delivery_v2/`
+- `devices/mmwave/firmware/logs/final/`
+- `docs/mmwave/`
+- `docs/operations/PROJECT_PROGRESS.md`
+
+Provenance는 세 층으로 분리한다. 현재 경로 ownership, 원 측정 생성, 이후 재현 분석을 한 사람의 “jinsu data”로 합치지 않는다.
+
+- 원 측정/CSV delivery 적재: `41af82b89ef8b47a15e380583ea0eac37384406e`
+- 경로 재배치(PR #2)와 문서 재배치(PR #7)는 소유권/문서 정리이며 원 측정 생성 사건이 아니다.
+- 이후 재현 분석 예: `3b44e505490811b640ed9200b2fd6ed27846edc3` — schema 1.2 약 31분 로그에서 ESP C++와 Python 호흡 계산 18,276건 비교, gate-decision 불일치 51/18,276 (0.279%), phase dropout 및 `breath_phase` 2소수 양자화 관찰.
+
+### 5.2 신호 rawness 분류와 호흡 개념 분리
+
+필드/아티팩트는 파일명이 아니라 producer-code lineage로 분류한다.
+
+| 분류 | 의미 |
+|---|---|
+| `TRUE_RADAR_RAW_SIGNAL` | ADC / IQ / complex range-bin / raw rFFT |
+| `SENSOR_LOWEST_EXPOSED_PHASE_LIKE_SIGNAL` | 장치가 외부로 내보내는 최저 수준 위상형 신호 |
+| `PHYSICAL_INTERMEDIATE_SIGNAL` | 센서 내부 처리 후의 중간 물리 신호 |
+| `VENDOR_DERIVED_OUTPUT` | 벤더 알고리즘이 만든 파생값 |
+| `TEAM_DERIVED_OUTPUT` | 팀 펌웨어/분석이 계산한 파생값 |
+| `MODEL_READY_OR_PROCESSED` | Phase-B 전처리까지 적용된 입력 |
+| `UNKNOWN` | producer lineage 미확인 |
+
+현재 확인된 해석(C0에서 producer code로 재확인):
+
+- firmware `0x0A13` → `totalPhase` / `breathPhase` / `heartPhase`. JSONL 키 `breath_phase`는 `SENSOR_LOWEST_EXPOSED_PHASE_LIKE_SIGNAL` 또는 `PHYSICAL_INTERMEDIATE_SIGNAL`. true radar raw가 아니다.
+- firmware `0x0A14` → `breathRaw`. JSONL 키 `breath_rate_raw`는 `VENDOR_DERIVED_OUTPUT`.
+- 팀 필터 호흡수는 `TEAM_DERIVED_OUTPUT`.
+
+세 호흡 개념을 혼동하지 않는다.
+
+```text
+물리 흉곽/레이더 상호작용
+→ MR60 내부 레이더 처리
+→ MR60-exposed breath_phase
+→ (선택) 팀 신호처리
+→ 가능한 30 s 모델 입력 구성
+→ frozen Phase-B classifier
+→ NORMAL / RAPID_OR_ABNORMAL / APNEA-proxy
+```
+
+별도 계보:
+
+```text
+MR60 내부 vendor algorithm
+→ breath_rate_raw
+→ vendor 호흡수 추정 (rpm)
+```
+
+후자는 명시적으로 증명되기 전에는 모델 입력이 아니다. vendor 호흡수 스트림을 raw radar data로 취급하지 않는다.
+
+### 5.3 세 종류의 “10 Hz” 주장
+
+| 층 | 의미 | 현재 상태 |
+|---|---|---|
+| A. Model contract | Phase-B 명목 표현 = 10 Hz, 30 s, 300 sample | locked |
+| B. Acquisition intent | 소스코드의 명목/목표 수집 주파수 | 구현 intent일 뿐 C의 증거가 아님 |
+| C. Measured cadence | timestamp에서 구한 유효 sampling frequency | delivery_v2 다수 세션에서 ≈9.99 Hz로 측정됨 |
+
+B를 C의 증명으로 쓰지 않는다. 확인된 예(팀 `devices/mmwave/firmware/csv/2026-07-26_han_junwoo_delivery_v2/manifest.json`, CSV timestamp 재계산과 일치):
+
+- `S001_NORMAL_D06` 9.99496 Hz, `D09` 9.99613 Hz, `D12` 9.99580 Hz, `D15` 9.99837 Hz
+- `S001_BREATH_PACED_12_02` 9.99543 Hz, `15_03` 9.99410 Hz, `20_04` 9.99423 Hz, `20_05` 9.99299 Hz
+- 선택 세션의 최대 샘플 간격 ≈101–103 ms, duplicate/backwards timestamp 없음
+
+이 수치는 일부 세션의 시간 의미가 명목 10 Hz에 가깝다는 C0 자산이다. 그 자체로 Phase-B 입력 대응의 증명이 아니다.
+
+Export producer `devices/mmwave/firmware/export_mmwave_csv.py`는 timestamp와 `breath_phase`를 보존하고, 정규화·평활·재샘플·세션 병합을 하지 않으며, presence 부재 구간에 phase를 합성하지 않는다. 이 CSV는 임의 수작업 CSV보다 가치가 크지만 정식 검증셋이 아니다.
+
+### 5.4 역사적 “~20 rpm” 관측의 현재 해석
+
+“센서가 대략 20 rpm을 출력한다”는 모호한 문장은 폐기한다. 팀 분석(`devices/mmwave/firmware/analysis/breath/2026-07-28_vitals_measured_vs_reference.json`, `docs/operations/PROJECT_PROGRESS.md`)은 다음을 구분한다.
+
+- vendor 호흡수 estimator의 조건 의존 행동
+- phase 파형 주기성
+- AI 분류 출력
+
+확인된 탐색적 수치(paced cue 참조, 독립 생리 센서 아님):
+
+| 참조 | phase 주기 추정 | vendor mean | vendor median | vendor MAE |
+|---|---:|---:|---:|---:|
+| 12 rpm | 12.34 | 14.52 | 14.0 | 2.61 |
+| 15 rpm | 15.01 | 18.80 | 19.0 | 3.80 |
+| 20 rpm | 20.01 | 19.40 | 22.0 | 5.02 |
+
+15 rpm paced 조건에서 vendor 필드는 약 19 rpm, phase-like 주기 추정은 약 15 rpm이었다. 이는 조건 의존 양의 vendor bias를 시사하는 **exploratory evidence**다. 보편 bias 모델이나 고정 보정 offset을 선언하지 않는다.
+
+실패/약세 세션은 삭제하지 않고 device-domain QA 증거로 보존한다.
+
+- `S001_BREATH_PACED_12_01`: 파일명은 12 rpm이나 실제 약 6.06 rpm (한 호흡 약 10초). 12 rpm 정답으로 쓰지 않는다.
+- `S001_NORMAL_D15`: lock-loss. `breath_rate_raw`가 15.0에 고정되고 std=0인 구간이 있다. 전체 distance 표본 std가 0인 것은 아니며, vitals freeze와 긴 동일-거리 streak로 해석한다.
+- `S001_BREATH_PACED_20_04` 얕은 호흡 실패 vs `20_05` deep 성공.
+
+Paced cue는 탐색적 참조일 뿐 정식 생리 ground truth가 아니다. 자연 호흡 기록에는 독립 호흡 참조가 없다.
+
+### C0. 기존 팀 MR60 증거 forensic audit (`M-C0`)
+
+상태 라벨: `EXPLORATORY_EXISTING_TEAM_MEASUREMENT` / `LEGACY_OR_INFORMAL_DEVICE_EVIDENCE`. `FORMAL_DEVICE_VALIDATION_SET`이 아니다.
+
+목적: 신규 수집 전에 이미 있는 물리 증거를 특성화한다.
+
+답해야 할 질문:
+
+- 어떤 측정이 있는가, 무엇이 생성했는가, 필드 의미는 무엇인가
+- 어떤 값이 raw / intermediate / vendor / team-derived인가
+- timing·metadata·누락은 무엇인가
+- 30 s / 300 sample 창을 구성할 수 있는가
+- 신호 의미가 Phase-B와 대응하는가
+- 역사적 ~20 rpm 관측이 실제로 무엇을 가리키는가
+
+C0는 producer-code lineage와 Git 이력을 포함한다. 성공한 C0가 모델 예측을 만들 필요는 없다. 과학적으로 유효한 종료 예:
+
+```text
+USABLE_FOR_DEVICE_DOMAIN_EXPLORATION = true
+FORMAL_MODEL_VALIDATION_READY = false
+```
+
+또는:
+
+```text
+EXPLORATORY_INFERENCE_ALLOWED = false
+CAUSE_UNRESOLVED = true
+```
+
+계획된 machine-readable 산출물(이 로드맵 개정 작업에서 생성하지 않음):
+
+```text
+existing_measurement_inventory.json
+signal_field_inventory.json
+producer_code_lineage.json
+timing_characterization.json
+measurement_metadata_completeness.json
+offline_contract_correspondence.json
+legacy_device_data_quality.json
+twenty_rpm_evidence_inventory.json
+exploratory_inference_eligibility.json
+m_c0_summary.json
+validation_result.json
+checksums.sha256
+```
+
+기존 증거의 한계를 유지한다: 피험자 다양성 부족(`S001`), 독립 호흡 참조 부재, 일부 기하/자세/방향 metadata 불완전, 실패·오라벨 시험, phase dropout, lock-loss, true radar raw 부재, 세션 간 수집 버전 차이.
+
+### C0A. Signal / cadence / offline-contract correspondence gate
+
+frozen-model inference **이전**에 기계 판독 가능한 결정을 요구한다. 배열 shape 호환만으로 추론하지 않는다.
+
+독립 평가 항목과 값(`YES` / `NO` / `UNKNOWN`):
+
+```text
+signal_semantic_correspondence
+cadence_correspondence
+thirty_second_window_correspondence
+bpf_zscore_input_compatibility
+tensor_construction_reproducible
+```
+
+결정:
+
+```text
+AUTHORIZED_FOR_EXPLORATORY_INFERENCE
+또는
+BLOCKED_PENDING_SIGNAL_CORRESPONDENCE
+```
+
+reason code 예: `SIGNAL_SEMANTICS_UNVERIFIED`, `CADENCE_NOT_VERIFIABLE`, `UNIT_SEMANTICS_UNKNOWN`, `SESSION_BOUNDARY_UNCLEAR`, `PHASE_DROPOUT_UNRESOLVED`, `INSUFFICIENT_METADATA`.
+
+거리/자세 메타 부재는 tensor-level blocker가 아니라 제한사항일 수 있다. blocking과 non-blocking limitation을 구분한다. 탐색 추론은 필수가 아니다. 다음도 과학적으로 유효한 M-C0 결과다.
+
+```text
+cadence_correspondence = YES
+signal_semantic_correspondence = UNKNOWN
+exploratory inference = BLOCKED_PENDING_SIGNAL_CORRESPONDENCE
+```
+
+### C0B. Exploratory legacy-device inference (선택)
+
+C0A가 기술적으로 방어 가능할 때만 수행한다. 필수 성공 조건이 아니다. 라벨은 `EXPLORATORY_LEGACY_DEVICE_INFERENCE`.
+
+모든 예측은 다음을 묶는다: source measurement, checksum, session, timestamp/window 경계, signal field, 변환, preprocessing identity, model identity, model SHA, tensor 구성, metadata 한계.
+
+신뢰할 수 있는 독립 라벨이 없으면 정식 accuracy/F1을 계산·홍보하지 않는다. pacing 파일명이나 팀 기억만으로 정식 ground truth가 되지 않는다. 올바른 결과로 `BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`를 허용한다.
+
+독립 검토 후에만 C1으로 진행한다.
+
+### C1. 프로토콜 기반 물리 MR60 측정 캠페인 (`M-C1`)
+
+C1은 레거시 분석과 분리된 **신규** 수집이다. C0에서 발견한 gap이 프로토콜을 정한다.
+
+하드웨어 가용성·capture 경로·전원·timestamp 기준·안정 환경은 **C1의 선행조건**이다. 없으면 C1만 `BLOCKED_HARDWARE`로 표시한다. C0는 기존 로그로 계속할 수 있다. 하드웨어가 없다고 Mac에서 C0/C0A와 D의 gap 조사를 병행할 수 있으나, 그 병행이 C2 정식 평가나 재학습을 허가하지는 않는다.
+
+기술적으로 적용 가능한 최소 메타:
+
+```text
+subject pseudonym, session ID, trial ID, timestamps, effective cadence,
+sensor distance, posture, sensor orientation, presence/motion state,
+raw vs derived signal identity, acquisition code commit/SHA,
+firmware version, sensor/firmware identity, trial duration,
+reference breathing condition, independent respiration reference where needed,
+QA/exclusion criteria, signal-lock status, environmental/context metadata
+```
+
+사람 대상 수집은 동의·개인정보·보관 정책을 따른다. voluntary breath hold를 임상 apnea로 표현하지 않는다. 실패·약세 세션은 삭제하지 않고 QA·exclusion 정책 설계에 쓴다.
+
+### C2. Frozen candidate의 정식 device-domain 평가 (`M-C2`)
+
+정식 metric은 여기에 속한다. C0/C0B가 아니다.
+
+요구:
+
+- 프로토콜 제어 세션
+- 검증된 신호 대응
+- 재현 가능한 tensor 구성
+- frozen Phase-B 모델
+- 불변 평가 정책
+- 신뢰할 수 있는 참조 라벨/상태
+- 명시적 subject/session 분리
+- 최종 평가 전 exclusion 규칙 고정
+- 평가 데이터에 대한 침묵의 모델 튜닝 금지
+
+비교 대상은 Zenodo canonical 입력과, C1에서 구성한 MR60 입력이다.
 
 - sample interval·gap·jitter
 - amplitude·phase range·percentile
@@ -971,11 +1293,41 @@ Zenodo train/validation/test와 MR60 수집 데이터에서 다음을 비교한�
 - SNR·motion artifact·dropout
 - distance·angle·posture별 분포
 - preprocessing 후 scaler range·clipping·INT8 saturation
-- existing candidate의 confidence·class distribution·recall·false alarm
+- frozen candidate의 confidence·class distribution. 정식 recall/F1은 신뢰 가능한 독립 라벨이 있을 때만
 
-### C4. adaptation 전략 선택
+C2는 domain gap을 **식별**할 수 있다. 식별 라벨은 `DEVICE_DOMAIN_GAP_OBSERVED`다. 이는 Phase B 수정을 허가하지 않는다.
 
-가장 작은 변경으로 시작한다.
+```text
+poor device behavior
+!=
+authorization to modify Phase B
+```
+
+다음을 C 안에서 하지 않는다.
+
+```text
+팀 측정을 TRAIN에 병합
+Phase-B 모델 fine-tune
+architecture 재선택
+preprocessing 변경
+selected seed 변경
+INT8 재교정
+class semantics/threshold 변경
+```
+
+`MR60_REAL_SENSOR_VALIDATED`는 **frozen Phase-B candidate**의 정식 C2 평가가 요구를 충족하고 한계를 정직하게 보고한 뒤에만 사용한다. 기존 팀 CSV에 모델을 한 번 돌리거나, M-C 안에서 후보를 교체·adaptation한 것으로 이 상태를 주지 않는다.
+
+확인된 실패 조건만이 D 진입 후보가 된다. D 자체는 별도 승인 없이 시작하지 않는다.
+
+---
+
+## 6. Phase D — gap-driven 추가 dataset 확장
+
+### 시작 조건
+
+A/B의 real-subject 결과와 C2에서 측정된 MR60 domain 결과를 먼저 본다. C0/C0B의 탐색적 관찰만으로 D를 시작하지 않는다. “좋아 보이는 공개 호흡 dataset”이 아니라 확인된 실패 조건을 채우는 dataset만 선정한다.
+
+C에서 발견한 device-domain mismatch는 재학습을 자동 허가하지 않는다. D는 gap-driven dataset/model 확장 트랙이며 별도 승인 후에만 다음을 검토한다. 아래 목록은 **M-D 전용**이며 M-C0/M-C1/M-C2 작업 단위가 아니다.
 
 1. external test only
 2. MR60-specific input adapter
@@ -985,30 +1337,7 @@ Zenodo train/validation/test와 MR60 수집 데이터에서 다음을 비교한�
 6. joint retraining
 7. domain adaptation·multi-stage training
 
-MR60 sample이 적거나 subject diversity가 부족하면 최종 test를 학습에 사용하지 않고 calibration/fine-tuning/evaluation 세트를 분리한다.
-
-### C5. MR60 candidate 재검증·고정
-
-adaptation으로 model·scaler·preprocessor·contract이 바뀌었다면 최소한 다음을 반복한다.
-
-- multi-seed 안정성
-- Float/TFLite/INT8 equivalence
-- representative calibration
-- MR60-realistic robustness
-- target runtime latency
-- Mock/real adapter E2E
-- candidate quality check
-- artifact lock·report
-
-C 종료 전에만 `MR60_REAL_SENSOR_VALIDATED` 또는 해당하는 deployment candidate 상태를 사용한다.
-
----
-
-## 6. Phase D — gap-driven 추가 dataset 확장
-
-### 시작 조건
-
-A/B의 real-subject 결과와 가능하면 C의 MR60 domain 결과를 먼저 본다. “좋아 보이는 공개 호흡 dataset”이 아니라 확인된 실패 조건을 채우는 dataset만 선정한다.
+adaptation으로 model·scaler·preprocessor·contract이 바뀌었다면 최소한 multi-seed, Float/TFLite/INT8 equivalence, representative calibration, device-realistic robustness, runtime latency, E2E, quality check, artifact lock·report를 반복한다. MR60 sample이 적거나 subject diversity가 부족하면 최종 test를 학습에 사용하지 않는다.
 
 ### gap 예시
 
@@ -1099,9 +1428,11 @@ A/B의 real-subject 결과와 가능하면 C의 MR60 domain 결과를 먼저 본
 | G1 | pilot rFFT decoding·phase 타당성 | A3–A6 | reader·bin·phase rule 수정 |
 | G2 | full NPZ provenance·split·integrity | B0 | model 탐색 중단, dataset 문제 수정 |
 | G3 | validation 기반 finalist | Priority 12·11·14·15 | preprocessing/loss/architecture 후보 재검토 |
-| G4 | Real-Data Offline Candidate | C | offline 한계를 보고하고 실험 cycle 재정의 |
-| G5 | MR60 domain 실측 | adaptation 또는 D | device contract·capture 수정 |
-| G6 | MR60-adapted candidate | D/E | 실센서 한계 유지 |
+| G4 | Real-Data Offline Candidate | C0 existing-evidence audit | offline 한계를 보고하고 실험 cycle 재정의 |
+| G5a | C0A correspondence gate | C0B exploratory inference 또는 C1 | `BLOCKED_PENDING_SIGNAL_CORRESPONDENCE` |
+| G5b | C1 protocolized capture | C2 formal device-domain eval | device contract·capture 수정 |
+| G5c | C2 frozen-candidate device eval | 측정된 gap이 승인된 경우만 D | 실센서 한계 유지, 자동 재학습 금지 |
+| G6 | M-D 이후 MR60-adapted candidate (있을 때만) | E | 실센서 한계 유지. M-C가 이 후보를 만들지 않음 |
 
 다음은 별도 승인·결정 지점으로 본다.
 
@@ -1109,9 +1440,12 @@ A/B의 real-subject 결과와 가능하면 C의 MR60 domain 결과를 먼저 본
 - subject split 고정
 - locked test 최초 평가
 - offline candidate 선정·manifest 등록
-- MR60 사람 대상 수집
+- 기존 팀 MR60 로그의 C0 forensic audit
+- C0A correspondence 판정 후 탐색적 추론 여부
+- MR60 사람 대상 신규 프로토콜 수집
+- C2 결과로 D 진입을 승인할지
 - 추가 외부 dataset 다운로드
-- offline candidate를 deployment candidate로 승격
+- offline candidate를 deployment candidate로 승격할지 (M-C 자동 승격 아님. adapted candidate는 승인된 M-D만)
 - learned multimodal fusion 도입
 
 ---
@@ -1140,13 +1474,14 @@ A/B의 real-subject 결과와 가능하면 C의 MR60 domain 결과를 먼저 본
 18. Priority 16 selection
 19. Priority 17 artifact lock
 20. Priority 18 report
-21. C1 MR60 contract·capture design
-22. C2 MR60 capture
-23. C3 domain analysis
-24. C4 adaptation
-25. C5 deployment candidate 재검증
-26. D dataset gap 확장
-27. E fusion baseline·개선
+21. C0 existing team MR60 forensic audit
+22. C0A signal/cadence/offline-contract correspondence gate
+23. C0B exploratory legacy-device inference (optional)
+24. independent review
+25. C1 protocolized MR60 capture
+26. C2 formal device-domain evaluation of frozen candidate
+27. D dataset/model gap 확장 (승인된 측정 gap만)
+28. E fusion baseline·개선
 
 각 작업 프롬프트는 최소한 다음을 포함하도록 구체화한다.
 
@@ -1193,19 +1528,20 @@ A/B의 real-subject 결과와 가능하면 C의 MR60 domain 결과를 먼저 본
 
 ### Phase C
 
-- [ ] MR60 hardware gate
-- [ ] MR60 canonical signal contract
-- [ ] controlled MR60 capture
-- [ ] Zenodo↔MR60 domain-gap analysis
-- [ ] adaptation strategy
-- [ ] MR60 candidate rerun·lock·report
+- [ ] C0 existing team MR60 forensic audit
+- [ ] C0A signal/cadence/offline-contract correspondence gate
+- [ ] C0B exploratory legacy inference (optional; correspondence 통과 시에만)
+- [ ] independent review
+- [ ] C1 protocolized MR60 capture (신규 수집 시에만 하드웨어 가용성 gate)
+- [ ] C2 formal device-domain evaluation of frozen Phase-B candidate
+- [ ] measured domain gap registry (D 진입은 별도 승인)
 
 ### Phase D
 
 - [ ] residual gap ranking
 - [ ] gap-driven external dataset selection
 - [ ] approval·acquisition·source audit
-- [ ] external test/adaptation/retraining
+- [ ] external test/adaptation/retraining (승인된 M-D만; M-C 금지)
 
 ### Phase E
 
@@ -1225,8 +1561,8 @@ A/B의 real-subject 결과와 가능하면 C의 MR60 domain 결과를 먼저 본
 2. real-subject locked test에서 v0.1.0, v0.2.0, 신규 model이 동일 계약으로 비교된다.
 3. preprocessing, imbalance, architecture, seed, calibration, conversion 선택의 근거가 validation 실측으로 남아 있다.
 4. 최종 INT8 model의 quantization equivalence, robustness, latency, runtime 연결이 검증된다.
-5. offline candidate와 MR60 deployment candidate가 분리되어 있다.
-6. MR60 실측 결과나 `BLOCKED_HARDWARE`가 정직하게 보고된다.
+5. offline candidate와 가능한 이후 MR60-adapted/deployment candidate가 분리되어 있다. M-C는 frozen offline candidate를 평가하며, 그 안에서 adapted candidate로 교체하지 않는다.
+6. 기존 팀 실측은 legacy/informal evidence로, C1 신규 실측과 C2 정식 평가가 정직하게 구분되어 보고된다. C1 하드웨어 부재는 `BLOCKED_HARDWARE`로 표시하되 C0을 공백 상태로 되돌리지 않는다.
 7. 추가 dataset이 실제 gap을 보완하는 용도로만 통합된다.
 8. multimodal fusion이 개별 sensor 오류를 숨기지 않고 실제 holdout에서 개선을 보인다.
 
@@ -1399,16 +1735,608 @@ A/B의 real-subject 결과와 가능하면 C의 MR60 domain 결과를 먼저 본
 - 최종 locked-test 평가는 model·threshold·artifact 확정 뒤 한 번 수행
 - offline candidate와 SCD40 deployment candidate를 분리
 
-## C-C. SCD40 device-domain validation
+### C-B6. Reduced-Feature Candidate Development and Lock
 
-1. 실제 출력 column, unit, sampling interval, warm-up, self-calibration 상태를 기록한다.
-2. 공개 dataset feature와 SCD40 feature의 범위·분포·drift 차이를 측정한다.
-3. controlled empty/occupied/ventilation scenario를 안전하게 수집한다.
-4. missing, stale, disconnect, out-of-range를 fail-closed로 검증한다.
-5. Pi 5에서 history build·inference latency와 장시간 안정성을 측정한다.
-6. domain gap이 크면 C-D에 구체적 gap hypothesis를 전달한다.
+`C-B6` is a separate offline model-development phase created by the 2026-08-15 final input decision. It is not a C-C device-domain phase, does not authorize physical acquisition, and does not modify the current B5 artifact.
+
+#### C-B6 entry and interpretation boundary
+
+The decision that leads to C-B6 is a **system-contract burden-of-proof decision**, not a claim that the reduced-feature model outperformed the four-feature model:
+
+```text
+FOUR_FEATURE_PREDICTIVE_BENEFIT_OBSERVED: YES
+REDUCED_FEATURE_PREDICTIVE_SUPERIORITY: NO
+OCCUPIED_RECALL_ADVANTAGE_AT_0_58: YES
+OCCUPIED_RECALL_ADVANTAGE_THRESHOLD_CONDITIONED: YES
+DECISION_BASIS: SYSTEM_CONTRACT_BURDEN_OF_PROOF
+```
+
+The four-feature arm showed modest, repeatable offline predictive advantages across most aggregate and probability-quality metrics. The reduced arm showed higher occupied recall at the inherited `0.58` threshold, but that comparison is threshold-conditioned. The threshold came from the current four-feature B5 lineage; it does not establish inherent reduced-feature recall superiority.
+
+#### C-B6 required candidate contract
+
+| Item | C-B6 requirement |
+|---|---|
+| Input | `CO2`, `CO2_slope` |
+| Slope | existing `ENDPOINT_H150`; no slope redesign in C-B6 unless separately authorized |
+| Scaler | new scaler fit on TRAIN-only rows for the two-feature subset |
+| Model | newly trained two-feature candidate with new coefficients |
+| Metadata | new feature/model/threshold/quantization metadata |
+| Artifact identity | new Float, TFLite, INT8 artifacts and checksum coverage |
+| Quantization | new INT8 calibration and Float→TFLite→INT8 equivalence evidence |
+| Threshold | own predeclared threshold-selection procedure before final evaluation |
+| Validation | new candidate validation evidence with prior VALIDATION use acknowledged |
+| Lock | new candidate lock binding model, scaler, feature order, threshold, metadata, and checksums |
+
+The following inheritance is forbidden:
+
+```text
+B5_THRESHOLD_0_58_INHERITANCE_TO_REDUCED_MODEL = FORBIDDEN
+```
+
+The future threshold must not be copied from B5 automatically. A permitted development procedure may use TRAIN-only internal cross-validation or an internal development split. The existing VALIDATION population may continue to provide development-validation evidence, but it is not an untouched final test after prior feature/model decisions. The old `LOCKED_TEST` must not be reused for feature selection, threshold selection, model selection, or a new unbiased held-out claim.
+
+#### C-B6 prohibitions and exit gate
+
+C-B6 must not:
+
+- remove columns from B5 in place;
+- reuse the four-feature scaler;
+- reuse B5 threshold `0.58` automatically;
+- overwrite B5 model, scaler, metadata, or lock artifacts;
+- use `LOCKED_TEST` for feature, threshold, or model selection;
+- start physical acquisition or C-C2.
+
+C-B6 exits only when the new two-feature candidate, its TRAIN-only scaler, own threshold policy, conversion/quantization evidence, validation evidence, metadata, checksums, and candidate lock all pass a focused validator. Only then may a revised C-C1 protocol and operator prompt be authored.
+
+#### C-B6 execution result (2026-08-15)
+
+The executed candidate is:
+
+```text
+CANDIDATE_ID: C_B6_REDUCED_CO2_SLOPE_CANDIDATE_001
+FEATURE_ORDER: CO2 + CO2_slope
+FINAL_THRESHOLD: 0.43
+THRESHOLD_SOURCE: TRAIN_INTERNAL_ONLY
+B5_THRESHOLD_0_58_INHERITED: NO
+C_B6_STATUS: C_B6_PASS_WITH_LIMITATIONS
+INT8_EQUIVALENCE_GATE: PASS
+CO2_SLOPE_INT8_SATURATION: OBSERVED_LIMITATION
+B5_MODIFIED: NO
+LOCKED_TEST_PREDICTIVE_ACCESS: NO
+PHYSICAL_ACQUISITION: HOLD
+```
+
+The C-B6 focused validator passes and the new candidate lock is complete, but
+the observed CO2_slope INT8 input saturation must be carried into C-C2. C-C1R
+has frozen the successor protocol, but the operator guide is not distributable
+until the current acquisition tooling supplies the required fresh-event and
+session evidence. C-B6 and C-C1R do not authorize physical acquisition or
+`C-C2` while that tooling blocker remains.
+
+## C-C. SCD40 legacy evidence → final input decision → controlled device-domain validation
+
+C-C는 단일 “SCD40 로그에 모델 실행” 단계가 아니다. 실제 팀 evidence audit(`C-C0`), historical four-feature protocol freeze(`C-C1`), final model-input decision, 별도 model phase(`C-B6`) reduced-feature candidate lock, revised protocol/operator handoff, 외부 protocol-controlled acquisition, later controlled intake/formal validation(`C-C2`)을 분리한다. C-C0/C-C1과 final decision audit에서 현재 frozen C-B5 후보는 변경하지 않는다. C-C에서 발견한 domain mismatch나 입력 방향성 결과는 threshold 재튜닝·C-D 자동 진입을 허가하지 않는다.
+
+현재 locked offline 정체성의 권위는 프롬프트 숫자나 이 문서의 관측 예시가 아니다. 실행 에이전트는 live origin/main의 machine-readable C-B5 lock을 읽고 checksum을 검증한 뒤에만 `FROZEN_B5_IDENTITY_VERIFIED = PASS`를 줄 수 있다. 아래에 적힌 candidate ID·threshold·scale 등은 작성 시점 관측 예시일 뿐이다.
+
+#### Verified C-C0 input snapshot (read-only team evidence)
+
+이번 roadmap revision의 legacy 입력은 team repository `main` `fdf34b804f35e5868356f0ed6f804a248aa69131`에 병합된 PR #14 (`ea925e4f3fae244d8ef4c5bd312b8e6619242767`)의 Git-tracked files다. 아래 SHA-256은 raw CSV 현재 bytes를 다시 계산한 값이며, team이 함께 커밋한 summary JSON과 report에 적힌 이전 SHA-256과 일치하지 않는다. C-C0는 raw bytes를 source of truth로 삼고 derived summary를 재검산 대상으로 남긴다.
+
+| raw source (team repository-relative) | rows | capture-valid | invalid state | current raw SHA-256 |
+|---|---:|---:|---|---|
+| `devices/co2/firmware/logs/2026-08-12_preflight_30s.csv` | 30 | 30 | none | `e414be88d5b246411143b7353493565f8fea95bd6fd7f8120804c478f89c41fb` |
+| `devices/co2/firmware/logs/2026-08-12_baseline_5min.csv` | 300 | 277 | `14 NOT_CONNECTED`, `9 STALE` | `f9fee44ef154bc03ff2c3e0704b3b2c9732841b8510656585b4e7ed9226b6357` |
+| `devices/co2/firmware/logs/2026-08-12_baseline_attempt02_5min.csv` | 300 | 300 | none | `741e9a48b77bd8c8a4bbff31f795b1b66f748e8e3dcb36efa2b3470ef60e4d4f` |
+| `devices/co2/firmware/logs/2026-08-12_breath-rise-recovery_6min.csv` | 360 | 329 | `16 NOT_CONNECTED`, `15 STALE` | `b9d01bb96aedd0df68e4f13a8ae2d4512f67e64d359a44a1c4c8c2642d110b32` |
+
+Verified aggregate: `990` capture rows, `936` capture-valid rows, `54` transport-invalid rows. Valid CO₂ ranges are `495–1493 ppm` across the selected files. All 990 nested `raw_response_json` objects parse, contain a numeric cached `co2_ppm`, and report `valid.co2=true`; the 54 CSV-invalid rows are invalid because the capture contract also requires Pi transport `connected=true` and `fresh=true`. This is direct evidence that a cached CO₂ value can remain present while transport freshness has failed.
+
+The trace confirms a real SCD40/SCD4x I²C producer path and a real ESP32→Pi→`/health` path, but the physical SCD40 serial/unique identity is not recorded. The captured `/health` payload and CSV have no Temperature or Humidity fields, including no nested T/RH fields. The ESP32 producer reads T/RH into local variables and then drops them from `TelemetrySnapshot` and telemetry JSON; `SensorStore` and `capture_scd40.py` therefore cannot recover them. Scenario names (`preflight`, `baseline`, `breath-rise-recovery`) are collection context, not independent VACANT/OCCUPIED ground truth.
+
+The lineage source set is `devices/co2/firmware/capture_scd40.py`, `display-test2/esp32_sensor_node/esp32_sensor_node.ino`, `display-test2/raspberry_pi_lcd/server.py`, `display-test2/docs/COMMUNICATION_PROTOCOL.md`, the four CSVs, and `devices/co2/docs/VERIFICATION_REPORT_2026-08-12.md`. The producer's `co2Valid` is a 15-second last-successful-read freshness flag; the Pi server's `fresh` is a five-second last-telemetry-receipt flag. Neither is a per-measurement event timestamp.
+
+### C-C0. Existing team SCD40 evidence forensic audit
+
+상태 라벨: `EXPLORATORY_EXISTING_TEAM_MEASUREMENT` / `LEGACY_OR_INFORMAL_DEVICE_EVIDENCE`. `FORMAL_DEVICE_VALIDATION_SET`이 아니다.
+
+개념 순서:
+
+```
+1. LEGACY PAYLOAD DISCOVERY
+        ↓
+2. SCD40 DEVICE IDENTITY
+        ↓
+3. ACQUISITION / PRODUCER LINEAGE
+        ↓
+4. LOGGER vs TRANSPORT vs SENSOR FRESHNESS AUDIT
+        ↓
+5. SCHEMA / UNIT AUDIT
+        ↓
+6. FROZEN FEATURE VECTOR COMPLETENESS
+   CO2 / Temperature / Humidity availability
+        ↓
+7. FEATURE SEMANTIC CORRESPONDENCE
+        ↓
+8. ENDPOINT_H150 RECONSTRUCTION
+        ↓
+9. FROZEN_B5_IDENTITY_VERIFIED
+        ↓
+10. PRE-INFERENCE CORRESPONDENCE GATE
+        ↓
+11. 가능한 경우에만
+    EXPLORATORY_LEGACY_DEVICE_INFERENCE
+        ↓
+12. scaler/domain/INT8/output diagnostics
+        ↓
+13. GROUND-TRUTH GATE
+        ↓
+14. C-C1 measurement-gap → protocol specification
+        ↓
+STOP
+```
+
+#### Fail-closed: logger code ≠ 측정 데이터
+
+로거/캡처 코드가 있어도 실제 측정 payload가 없으면 `NOT_AVAILABLE`이다. 코드를 근거로 실측이 있다고 추정하지 않는다. 원본 payload를 읽을 수 없으면 C-C0는 fail-closed로 해당 세션을 차단한다.
+
+#### Logger vs transport vs sensor freshness (필수)
+
+팀 수집기는 SCD40에 직접 I²C 접근하는 logger가 아니다. `devices/co2/firmware/capture_scd40.py`는 Raspberry Pi `/health` HTTP endpoint를 기본 1초마다 polling한다. 현재 ESP32 producer는 `startPeriodicMeasurement()`를 사용하고 약 5초 첫 측정을 예상하는 코드 주석을 갖지만, legacy payload에는 SCD40 data-ready event나 measurement timestamp가 없다. low-power mode, configured interval, and actual sensor-refresh cadence는 이 evidence에서 주장하지 않는다.
+
+세 분류로는 부족하다. 네 층을 분리한다.
+
+```
+LOGGER_POLL_CADENCE
+        ↓
+Pi capture_scd40.py의 HTTP polling 주기
+
+TRANSPORT_TELEMETRY_CADENCE
+        ↓
+ESP32 → Pi telemetry update 주기
+
+TRANSPORT_FRESHNESS
+        ↓
+/health의 fresh / age_seconds semantics
+
+SCD40_FRESH_MEASUREMENT_CADENCE
+        ↓
+센서 자체에서 새로운 CO2/T/RH measurement가 생성된 시점
+```
+
+`TRANSPORT_FRESHNESS != SCD40_FRESH_MEASUREMENT_FRESHNESS`
+
+capture code의 `fresh = sensors.get("fresh") is True`는 Pi가 ESP32 telemetry를 얼마나 최근에 받았는지의 runtime/transport freshness다. Pi `SensorStore`는 마지막 telemetry packet 수신 시각으로 `age_seconds`/`fresh`를 계산한다. `fresh == true`만으로 `NEW_SCD40_MEASUREMENT == true`라고 하지 않는다. `seq`나 `uptime_ms`가 변해도 ESP packet이 새롭다는 뜻일 뿐, 그 안의 SCD40 측정값 자체가 새로 갱신됐는지는 증명하지 않는다. 반대로 ESP `valid.co2`는 마지막 성공한 SCD4x read가 15초 stale limit 안에 있다는 flag이지 신규 measurement marker가 아니다.
+
+The C-C0 agent must trace the ESP32 SCD40 producer implementation and classify each telemetry packet as a packet event, not automatically as a newly completed SCD40 measurement. The current producer stores only the latest CO₂ value, so repeated/cache behavior remains possible and must be preserved in the evidence interpretation.
+
+`ENDPOINT_H150` 재구성은 logged row 개수나 `fresh == true` row 개수가 아니라 chronological **SCD40 fresh measurement** semantics를 사용한다. 현재 legacy data에는 그 semantics가 없으므로 host-clock/CO₂ endpoint 계산은 `NOMINAL_CADENCE_DIAGNOSTIC_ONLY`로 분류한다. stale/disconnect boundary를 넘지 않고 계산한 diagnostic slope도 frozen B5-compatible `CO2_slope`로 승격하지 않는다.
+
+#### Rawness taxonomy
+
+인간적으로 “SCD40 raw data”라고 불러도, machine-readable evidence에서는 `TRUE_SENSOR_RAW_SIGNAL`을 쓰지 않는다. `read_measurement`가 주는 CO2 ppm / Temperature / Relative Humidity는 센서 내부 처리와 conversion을 거친 device output이다. ADC/photoacoustic 내부 원시 신호를 팀이 받지 않는다.
+
+| 분류 | 의미 |
+|---|---|
+| `IMMUTABLE_ACQUISITION_PAYLOAD` | 수집 직후 보존된 불변 payload |
+| `LOWEST_EXPOSED_SCD40_MEASUREMENT` | 장치가 외부로 내보내는 최저 수준 측정값 |
+| `TEAM_DERIVED_OR_CACHED_OUTPUT` | 팀 필터, 반복 전달, 캐시, 파생값 |
+| `MODEL_READY_FEATURE` | C-B5 feature 계약까지 변환된 입력 |
+| `UNKNOWN` | producer lineage 미확인 |
+
+SCD40 `readMeasurement`가 반환한 CO₂/T/RH는 센서 내부 처리와 conversion을 거친 device output이다. 현재 team CSV의 `raw_response_json`은 transport payload를 보존하지만, producer가 T/RH를 telemetry에 넣지 않았으므로 실제 captured evidence의 exposed sensor measurement는 cached/transported `co2_ppm`뿐이다. Git-tracked raw CSV는 `IMMUTABLE_ACQUISITION_PAYLOAD` 후보로 보존하되, derived-summary SHA mismatch 때문에 C-C0 provenance status는 raw bytes `VERIFIED`, derived summaries `STALE_OR_MISMATCHED`로 분리한다.
+
+#### Frozen feature-vector completeness gate (필수)
+
+Frozen B5 입력 계약은 네 feature다.
+
+```
+CO2
+Temperature
+Humidity
+CO2_slope
+```
+
+팀 `capture_scd40.py` CSV의 독립 sensor column은 `co2_ppm` 하나다. 나머지 필드는 host/transport 메타와 `raw_response_json`이다. C-C0는 `/health` producer code와 실제 raw JSON을 모두 추적한 뒤, 이 legacy set에 T/RH가 없음을 `NO`로 판정한다. producer source에 T/RH local variables가 있다는 사실은 captured T/RH evidence가 아니다.
+
+H150 reconstruction 가능과 B5 feature vector construction 가능은 다른 판정이다.
+
+```
+B5 inference requires reproducible availability of all frozen input
+features; H150 reconstructability alone does not authorize inference.
+```
+
+`FROZEN_FEATURE_VECTOR_COMPLETENESS` gate:
+
+```
+CO2 available:
+YES / NO
+
+Temperature available:
+YES / NO / ONLY_IN_RAW_RESPONSE / UNKNOWN
+
+Humidity available:
+YES / NO / ONLY_IN_RAW_RESPONSE / UNKNOWN
+
+CO2_slope reconstructable:
+YES / NO / UNKNOWN
+
+All four frozen features reproducibly constructable:
+YES / NO
+
+Decision:
+FULL_B5_INPUT_AVAILABLE
+또는
+B5_INFERENCE_BLOCKED_FEATURE_INCOMPLETE
+```
+
+`ONLY_IN_RAW_RESPONSE`는 존재 단서일 뿐, 재현 가능한 B5 입력으로 승격된 상태가 아니다. 네 feature가 재현 가능하게 구성되지 않으면 H150이 되어도 레거시 B5 추론은 `B5_INFERENCE_BLOCKED_FEATURE_INCOMPLETE`다.
+
+이번 verified legacy set에 대한 C-C0 feature outcome은 `CO2=YES`, `Temperature=NO`, `Humidity=NO`, `CO2_slope=DIAGNOSTIC_ONLY`, `ALL_FOUR_FROZEN_FEATURES_REPRODUCIBLY_CONSTRUCTABLE=NO`; 따라서 `B5_INFERENCE_BLOCKED_FEATURE_INCOMPLETE`다. C-C0는 이 blocked result를 성공적인 evidence-audit result로 보존하고, missing T/RH·sensor freshness marker·session/ground-truth metadata를 C-C1 protocol gap으로 전달한다.
+
+#### Unit audit와 semantic correspondence는 별개
+
+단위 감사(ppm, °C, %RH)는 필요하지만, 단위가 같다고 B5 feature correspondence가 성립하지 않는다.
+
+`same unit != same sensor semantics`
+
+UCI Temperature/Humidity는 공개 occupancy dataset의 실내 온습도 계열이다. SCD40 T/RH는 센서 on-chip 측정/보정 출력이며, enclosure self-heating·airflow에 따라 temperature offset 설정이 T/RH 품질을 바꾼다. scaler 이탈의 원인이 장소 domain shift일 수도 있고, 센서 source semantics 차이일 수도 있다.
+
+별도 gate (`YES` / `NO` / `UNKNOWN`):
+
+```
+CO2 semantic correspondence
+Temperature semantic correspondence
+Humidity semantic correspondence
+CO2_slope temporal correspondence
+```
+
+이번 legacy evidence의 pre-inference outcome은 `CO2=PARTIAL` (same quantity/unit, device-domain behavior unvalidated), `Temperature=UNKNOWN`, `Humidity=UNKNOWN`, `CO2_slope=UNKNOWN`이다. T/RH capture availability는 `NO`지만, payload가 없으므로 semantic correspondence는 `UNKNOWN`/`NOT_ASSESSABLE`로 분리한다. `GROUND_TRUTH_ABSENT`이므로 occupancy performance metric은 차단한다. `baseline` 또는 `breath-rise-recovery` filename, CO₂ concentration, CO₂ slope, PIR motion, or a model output을 VACANT/OCCUPIED ground truth로 재해석하지 않는다.
+
+#### Frozen B5 identity gate
+
+프롬프트 값과 이 로드맵의 관측 예시는 authority가 아니다. 실제 실행은 다음만 따른다.
+
+```
+live origin/main
+→ current machine-readable B5 lock
+→ checksum verification
+→ FROZEN_B5_IDENTITY_VERIFIED = PASS
+```
+
+The current authority is the live C-B5 lock under `datasets/co2/manifests/c_b5_robustness_final_lock/` plus `models/co2/candidates/c_b5/final_candidate_metadata.json`; the historical three-input `models/model_manifest.json` entry is not the C-B5 lock. Verify the candidate metadata, scaler evidence, TFLite bytes, feature order, slope profile, threshold, and input/output quantization as one identity set.
+
+실행 전 live lock에서 고정할 필드:
+
+```
+candidate ID
+TFLite path
+TFLite SHA-256
+scaler path
+scaler SHA-256
+feature-order contract
+threshold
+input quantization scale
+input quantization zero-point
+predecessor evidence IDs
+```
+
+작성 시점 관측 예시(authority 아님): `CO2_B5_FINAL_OFFLINE_UCI_CANDIDATE_001`, threshold `0.58`, INT8 input scale `0.03529411926865578`, zero-point `0`. `FROZEN_B5_IDENTITY_VERIFIED != PASS`이면 레거시 추론을 차단한다. C-C0는 B5 재튜닝, architecture 재선택, threshold 변경, scaler 재적합을 하지 않는다.
+
+#### Pre-inference device correspondence gate
+
+`ENDPOINT_H150`이 만들어졌다고 바로 모델 실행으로 넘어가지 않는다. feature completeness와 B5 identity를 포함한 명시적 판정이 필요하다.
+
+```
+feature_vector_completeness: FULL_B5_INPUT_AVAILABLE / B5_INFERENCE_BLOCKED_FEATURE_INCOMPLETE
+signal_or_feature_semantic_correspondence: YES / NO / UNKNOWN
+fresh_cadence_correspondence: YES / NO / UNKNOWN
+h150_reconstruction_correspondence: YES / NO / UNKNOWN
+tensor_construction_reproducible: YES / NO / UNKNOWN
+frozen_b5_identity_verified: PASS / FAIL
+decision:
+AUTHORIZED_FOR_EXPLORATORY_INFERENCE
+또는
+BLOCKED_PENDING_SIGNAL_CORRESPONDENCE
+또는
+B5_INFERENCE_BLOCKED_FEATURE_INCOMPLETE
+```
+
+#### Exploratory inference와 ground-truth gate
+
+탐색 추론은 optional이다. 신뢰할 수 있는 독립 occupancy/presence 라벨이 없으면 정식 accuracy/F1을 계산·홍보하지 않는다. 다음으로 occupancy ground truth를 만들지 않는다.
+
+```
+CO2 concentration
+CO2 slope
+model prediction
+```
+
+`model predicts VACANT → 이 장소의 vacant baseline` 순환도 금지한다. ground truth가 없으면 output behavior·분포·scaler/INT8 saturation만 보고한다.
+
+### C-C0 exit boundary
+
+C-C0는 모델 성능이 아니라 legacy evidence characterization이 완료되면 끝난다. 이 verified legacy set의 exit record는 다음과 같다.
+
+```
+REAL_DEVICE_SOURCE: VERIFIED
+SCD40_MODEL_IDENTITY: VERIFIED_AT_MODEL_CLAIM_LEVEL
+UNIQUE_DEVICE_IDENTITY: UNKNOWN
+RAW_IMMUTABILITY: PARTIAL (raw Git bytes preserved; derived-summary SHA mismatch)
+TIMESTAMP_CONTRACT: PARTIAL (Pi host clocks; no SCD40 measurement timestamp)
+LOGGER_POLL_CADENCE: VERIFIED
+TRANSPORT_FRESHNESS: VERIFIED
+SCD40_FRESH_MEASUREMENT_CADENCE: UNKNOWN
+UNIT_CONTRACT: PARTIAL (CO2 only in captured payload)
+SESSION_BOUNDARIES: PARTIAL
+FEATURE_VECTOR_COMPLETENESS: INSUFFICIENT
+FEATURE_SEMANTIC_CORRESPONDENCE: PARTIAL / BLOCKED
+OCCUPANCY_GROUND_TRUTH: ABSENT
+ENDPOINT_H150_RECONSTRUCTION: DIAGNOSTIC_ONLY
+FROZEN_B5_INFERENCE: BLOCKED_FEATURE_INCOMPLETE
+FORMAL_DEVICE_DOMAIN_VALIDATION: NO
+```
+
+C-C0 may report CO₂ range/distribution, host logger cadence, ESP packet cadence, Pi transport freshness, stale/disconnect behavior, producer lineage, rawness, and measurement gaps. It must not report occupancy accuracy/precision/recall/F1, formal SCD40 validation, or a true vacant baseline. This blocked result is a successful evidence-audit result and becomes the input to C-C1.
+
+### Final pre-acquisition model-input decision (2026-08-15)
+
+The pre-acquisition decision audit is recorded in:
+
+- result: `datasets/co2/manifests/c_c1_model_input_decision/model_input_decision_result.json`
+- report: `docs/reports/20260815_SafeNest_CO2_Pre_Acquisition_Model_Input_Decision_Audit_01.md`
+- audit implementation: `scripts/audit_co2_model_input_final_decision.py`
+
+It compared only the two final candidates below, using the existing TRAIN/VALIDATION lineage and leaving `LOCKED_TEST` sealed:
+
+```text
+A: CO2 + Temperature + Humidity + CO2_slope
+B: CO2 + CO2_slope
+```
+
+The model family, `ENDPOINT_H150`, past-only chronology, 0.58 threshold, imbalance procedure, and split were held fixed. Each arm fit its own scaler on original TRAIN rows only. Five seeds (`20260810`–`20260814`) and 2,000 paired validation-row bootstrap replicates were declared before the new results were consumed.
+
+Observed directional evidence:
+
+- A was better in accuracy, Macro F1, and occupied precision in `5/5` seeds.
+- B was better in occupied recall in `5/5` seeds; the aggregate paired recall delta was negative and its 95% percentile interval was `[-0.019813, -0.006048]`.
+- A was better in PR-AUC, ROC-AUC, Brier score, and log loss in all five seeds when each metric's correct direction is applied. Brier score and log loss are lower-is-better metrics.
+- The aggregate paired bootstrap lower bounds were positive for accuracy (`0.003156`), Macro F1 (`0.002622`), and occupied precision (`0.015862`), but not for occupied recall.
+- `LOCKED_TEST` feature/target rows decoded: `0`; predictive metrics: `0`.
+
+The predeclared burden-of-proof rule therefore selects:
+
+```text
+FINAL_INPUT_DECISION: ADOPT_REDUCED_FEATURE_DIRECTION
+FUTURE_MODEL_INPUT_DIRECTION: CO2 + CO2_slope
+PHYSICAL_ACQUISITION_STATUS: HOLD_PENDING_REDUCED_FEATURE_CANDIDATE_LOCK
+OPERATOR_GUIDE_HANDOFF: HOLD
+```
+
+This is not a claim that Temperature/Humidity contain zero information, nor a statistical-significance or practical-equivalence claim. It means the current evidence does not justify making T/RH mandatory fields for the next acquisition contract. The current B5 four-feature artifact, scaler, threshold, and C-C1 four-feature protocol remain unchanged and are retained as historical evidence. The four-feature arm has `FOUR_FEATURE_PREDICTIVE_BENEFIT_OBSERVED = YES`; the reduced arm has `REDUCED_FEATURE_PREDICTIVE_SUPERIORITY = NO`.
+
+#### C-B6 gate before physical acquisition
+
+The reduced direction is not an instruction to delete T/RH from B5 or to start collecting two-feature device data immediately. `C-B6` must complete before any physical acquisition:
+
+1. A separately authorized `C-B6` model-development task must train and validate a new `CO2 + CO2_slope` candidate using a new TRAIN-only scaler, explicit metadata, model/TFLite artifacts, checksums, and a new lock record.
+2. The candidate must preserve the existing subject/split and past-only `ENDPOINT_H150` chronology, define its own threshold-selection policy, and acknowledge that the current VALIDATION set has prior decision use. The old `LOCKED_TEST` cannot be reused for feature, threshold, or model selection or claimed as a new unbiased held-out test.
+3. Only after the reduced candidate is validated and locked may a revised C-C1 protocol and operator prompt be created. That revised contract must state the reduced feature fields, fresh-event cadence, H150 reset rule, threshold identity, and independent ground-truth requirements.
+4. Until then, external protocol-controlled acquisition is `HOLD`; the existing four-feature operator prompt is historical evidence and must not be distributed for collection.
+
+The current four-feature C-C1 machine-readable protocol remains version `1.0.0` with its original required fields. Its post-decision hold status is recorded separately in `post_c_c1_model_input_decision`; this does not silently mutate the historical four-feature B5 contract.
+
+### C-C1. Measurement protocol freeze & operator handoff
+
+C-C1은 레거시 분석과 분리된 **historical four-feature measurement protocol freeze**다. C-C0에서 발견한 gap이 프로토콜을 정한다. C-C1은 formal validation, model evaluation, 즉시 AI 소비 단계가 아니며 protocol과 operator prompt를 freeze한 뒤 멈춘다. 2026-08-15 final input decision 이후 이 four-feature handoff는 `HOLD`이며, reduced candidate lock 뒤에만 새 protocol revision을 만든다.
+
+#### C-C1 required artifacts
+
+1. A machine-readable/documented protocol, for example `CO2_C_C1_MEASUREMENT_PROTOCOL_001`, with version, owner, schema, required fields, deviation policy, and checksum policy.
+2. An independently executable operator prompt that can be followed without the AI development agent.
+
+The protocol retains only fields justified by C-C0, the frozen B5 contract, SCD40 behavior, and later formal validation needs. At minimum it must decide how to preserve:
+
+```
+session_id, location_id, scenario_id, protocol_version
+SCD40 model claim, unique sensor identity or explicit UNKNOWN, ESP device_id
+sensor measurement timestamp or sensor-fresh measurement marker
+telemetry seq/uptime, Pi receipt timestamp, host logger timestamp, transport age/freshness
+CO2, Temperature, Relative Humidity, per-field validity, sensor error
+measurement_mode, configured measurement interval, ASC state
+temperature_offset, altitude compensation, ambient pressure compensation
+FRC history if known, power-cycle state, firmware/library versions
+independent VACANT/OCCUPIED ground-truth value, source, and synchronized timestamp
+entry/exit timing, ventilation/door/window condition where relevant
+immutable raw payload, per-session source checksum, session manifest/checksum
+```
+
+Unknown or inaccessible calibration/configuration values remain explicitly `UNKNOWN`; they are never filled with defaults. The protocol preserves missing, stale, disconnect, invalid, out-of-range, restart, and logger/transport failure observations. It must not silently convert cached CO₂ into a new measurement or delete failed rows.
+
+The operator prompt specifies the exact hardware connection, firmware/library/code version, fixed sensor settings, session-ID procedure, clocks and freshness fields to log, independent ground-truth procedure, controlled vacant/occupied entry/exit and ventilation scenarios, warm-up and duration rules, failure handling, immutable storage location, checksum generation, no-manual-edit rule, and the summary/deviation report to return. Physical measurement is outside this roadmap revision.
+
+`calibration_state` 한 필드로 끝내지 않는다. 최소한 다음을 분리한다.
+
+```
+measurement_mode
+asc_enabled
+temperature_offset
+altitude_compensation
+ambient_pressure_compensation
+frc_history_if_known
+power_cycle_state
+```
+
+ASC는 일정 기간 실제 대기 수준 CO₂ 노출을 가정하므로, 실험실/밀폐환경의 장기간 device behavior 해석에 관련된다. temperature offset은 enclosure 조건에 따라 T/RH 품질을 바꾼다.
+
+`SCD40_REAL_SENSOR_VALIDATED` 또는 상응하는 deployment 상태는 C-C1에서 부여하지 않는다. C-C1은 protocol freeze와 historical handoff artifact 보존에서 멈추며, 현재는 reduced candidate lock과 revised protocol authorization을 기다린다.
+
+### C-C1R. Reduced-Feature Measurement Protocol Revision and Operator Handoff (protocol frozen; handoff blocked)
+
+`C-C1R` produced and froze `CO2_C_C1R_REDUCED_MEASUREMENT_PROTOCOL_001` and
+the Korean operator guide draft. The protocol is bound to
+`C_B6_REDUCED_CO2_SLOPE_CANDIDATE_001`, feature order `CO2 + CO2_slope`,
+threshold `0.43`, `TRAIN_INTERNAL_ONLY` threshold provenance, and the
+`ENDPOINT_H150` freshness chronology contract. It preserves the nominal
+60-second effective model-input/export cadence separately from native SCD40
+behavior, forbids stale reuse/synthetic fill, requires independent
+VACANT/OCCUPIED ground truth, and requires immutable raw/session/checksum
+evidence before a later C-C2 intake.
+
+The C-B6 `CO2_slope` INT8 saturation remains a known non-blocking limitation
+for device-domain observation; C-C2 must measure and report its real-device
+rate/effect. The current team capture path was inspected read-only at team main
+`3d86bf2a7a4e527d7aba2dfabcb087201ffeb46e` and does not yet provide a verified
+fresh SCD40 event marker/chronology or protocol/session/candidate manifest.
+Therefore the protocol is frozen but `OPERATOR_GUIDE_HANDOFF` and
+`PHYSICAL_ACQUISITION` remain `HOLD` with
+`OPERATOR_HANDOFF_BLOCKED_BY_ACQUISITION_TOOLING`. C-C1R did not modify team
+code, C-B6 artifacts, or start C-C2.
+
+### C-C1T. Acquisition tooling readiness and pre-collection compliance gate (2026-08-15)
+
+`C-C1T` inspected the actual ESP32 SCD40 producer and the Raspberry Pi
+pass-through before any physical collection. The producer calls
+`getDataReadyStatus()` and only accepts a value after successful
+`readMeasurement()`, but the former telemetry contract exposed only packet
+`seq`, `co2Valid`, and the cached CO₂ value. Packet sequence and Pi receipt
+freshness therefore could not prove a new SCD40 measurement event.
+
+The minimum producer-side observability correction is isolated in team PR #19:
+
+```text
+repository: jinsu1011/safenest-embedded-competition
+team main base: 3d86bf2a7a4e527d7aba2dfabcb087201ffeb46e
+feature branch: feature/C-C1T-co2-fresh-event-observability
+feature commit: a7db03e6d7c65e91c52839e7b337c0886fa3431a
+PR: #19 OPEN
+```
+
+The change exposes `co2_measurement_event_id`,
+`co2_measurement_monotonic_ms`, and `co2_measurement_event_valid` only after
+an accepted SCD40 read, and passes them through the Pi state. It does not
+modify the AI model, scaler, threshold, feature order, or runtime decision
+logic. The PR has not been merged or deployed in this task.
+
+Standalone C-C1T tooling is recorded in
+`datasets/co2/manifests/c_c1t_acquisition_tooling/capture_contract.json` and
+implemented by `scripts/capture_co2_c_c1t_session.py`. It preserves raw
+payloads before preprocessing, distinguishes `FRESH_EVENT` from
+`CACHED_RETRANSMISSION`, records missing/transport failures, writes
+independent ground-truth events, and finalizes a per-session SHA-256 bundle.
+The precollection validator is
+`scripts/validate_co2_c_c1t_precollection.py`; its deterministic fixture
+contains two fresh events and one retransmission and passes the bundle
+validator. The 60-second effective model-input/export cadence remains
+explicitly declared and separate from logger polling and native SCD40
+cadence.
+
+The current C-C1T result is:
+
+```text
+C_C1T: C_C1T_BLOCKED
+TOOLING_CONTRACT: PASS
+DRY_RUN_BUNDLE: PASS
+TEAM_PRODUCER_CHANGE: IMPLEMENTED_ON_FEATURE_BRANCH_ONLY
+TEAM_PR: #19 OPEN
+TEAM_MAIN_DEPLOYMENT: NO
+OPERATOR_GUIDE_HANDOFF: HOLD_PENDING_TEAM_PRODUCER_PR_MERGE_AND_DEPLOYMENT
+PHYSICAL_ACQUISITION: HOLD
+C-C2: NOT_STARTED
+C-D: NOT_AUTHORIZED
+```
+
+Opening the team PR does not authorize physical acquisition. After explicit
+review and merge/deploy of the team producer change, C-C1T must be rerun
+against the deployed path before the operator guide can become `READY`.
+
+#### C-C1T human handoff: two evidence levels
+
+The formal C-C1T gate remains blocked on deployed producer fresh-event
+observability, but this must not be interpreted as a ban on every real-device
+observation. The current handoff has two separate statuses:
+
+```text
+EXPLORATORY_OPERATOR_HANDOFF: READY_FOR_HANDOFF
+EXPLORATORY_PHYSICAL_COLLECTION: ALLOWED
+EXPLORATORY_EVIDENCE_CLASS: PRE_DEPLOYMENT_EXPLORATORY_REAL_DEVICE_EVIDENCE
+EXPLORATORY_AUTOMATIC_C_C2_ELIGIBILITY: NO
+
+FORMAL_PROTOCOL_OPERATOR_HANDOFF: HOLD
+FORMAL_PROTOCOL_COLLECTION: HOLD_PENDING_PRODUCER_DEPLOYMENT_AND_LIVE_C_C1T_VERIFICATION
+FORMAL_EVIDENCE_CLASS_AFTER_RELEASE: PROTOCOL_CONTROLLED_REAL_DEVICE_EVIDENCE
+```
+
+Pre-deployment exploratory evidence may characterize real CO₂ range, stable
+VACANT/OCCUPIED qualitative behavior, rise/recovery, transport stability,
+stale/missing/error modes, capture workflow, and future protocol needs. It is
+retained evidence, not discarded data. If a fresh physical measurement event
+identity is not available, it must be labelled
+`fresh_sensor_event_identity=UNVERIFIED` and cannot automatically support a
+formal `ENDPOINT_H150` chronology claim, C-C2 performance metrics, or
+candidate accuracy/F1 claims.
+
+The human-facing documents are:
+
+```text
+docs/handoff/20260815_SafeNest_CO2_AI_and_Measurement_Handoff_KO_01.md
+docs/prompts/20260815_SafeNest_CO2_SCD40_Physical_Measurement_Guide_KO_01.md
+datasets/co2/manifests/c_c1t_acquisition_tooling/human_handoff_status.json
+```
+
+The practical flow is:
+
+```text
+C-C1T tooling prepared
+        ↓
+exploratory collection allowed now
+        ↓                         ↘
+pre-deployment real-device evidence  team producer fresh-event review/deploy
+                                      ↓
+                               live C-C1T verification
+                                      ↓
+                               formal acquisition release
+                                      ↓
+                           protocol-controlled accumulation
+                                      ↓
+                                explicit C-C2 authorization
+```
+
+### External protocol-controlled data accumulation (currently HOLD)
+
+The historical C-C1 contract describes formal protocol-controlled accumulation.
+That formal path remains `HOLD_PENDING_TEAM_PRODUCER_OBSERVABILITY_PR_DEPLOYMENT`.
+No formal session may start from the C-C1R contract while the deployed
+acquisition adapter lacks the required fresh-event evidence. Exploratory
+pre-deployment sessions may run under the separate evidence class above and
+must not be silently promoted to C-C2 inputs. After the team change is deployed
+and the C-C1T live validator PASS is rerun, formal accumulation remains outside
+C-C2 and outside model development: the operator does not repeatedly inspect
+model performance to alter scenario balance, stopping rules, thresholds,
+features, or collection conditions. Any deviation receives a reason, timestamp,
+affected session, and compliance classification. Raw payloads remain immutable
+and the future validation set is not used as an adaptive tuning set.
+
+### C-C2. Controlled evidence intake & formal device-domain validation
+
+C-C2 begins only when all four conditions hold: the `C-B6` final candidate and its revised protocol are locked, protocol-controlled measurements have actually accumulated under that revised protocol, the intake passes pre-metric compliance checks, and the user explicitly authorizes C-C2. C-C2 first audits compliance; it does not assume that a file followed the protocol.
+
+Before any performance metric, C-C2 verifies protocol version, session/source provenance, checksums and raw immutability, every feature required by the finally locked candidate, source and sensor timestamps, sensor-freshness semantics, SCD40 configuration state, error/stale/disconnect records, session boundaries, and independently synchronized VACANT/OCCUPIED ground truth. For the current reduced direction, the target candidate is `CO2 + CO2_slope`; the historical four-feature C-C1 contract is not a new acquisition authorization. Non-compliant sessions are classified and reported; they are not silently repaired or relabeled.
+
+Only after intake passes may C-C2 evaluate the finally locked candidate using its declared feature order, `ENDPOINT_H150` built from verified fresh-measurement chronology using the revised C-C1 timestamp/freshness contract, its frozen TRAIN-only scaler, threshold, and model artifact. C-C2 does not refit the scaler, change the slope, alter the threshold, retrain, recalibrate, or change quantization. If independent ground truth is absent, outputs remain `MODEL_OUTPUT_OBSERVATION` and formal accuracy/precision/recall/F1/balanced-accuracy/confusion-matrix claims remain blocked. The current B5 four-feature artifact is not silently reinterpreted as the reduced candidate.
+
+C-C2 is the first C-stage point that may support `FORMAL_SCD40_DEVICE_DOMAIN_VALIDATION`, subject to protocol compliance, feature completeness, independent ground truth, and complete failure accounting. B5 output semantics remain `VACANT/OCCUPIED` room occupancy; `P(OCCUPIED)` is not danger probability, and absolute CO₂ safety logic remains separate.
+
+After C-C2, a poor or incomplete result is evidence, not automatic C-D authorization. A separate explicit decision gate must record whether any measured gap justifies C-D, what hypothesis it tests, what data split it uses, and what remains frozen.
+
+### Decision Gate before C-D
+
+C-D is permitted only after C-C2 compliance and validation evidence are reviewed and an explicit authorization records the measured gap, hypothesis, data split, unchanged frozen artifacts, owner, and approval. C-C0 or C-C1 findings alone never authorize C-D.
 
 ## C-D. gap-driven CO₂ dataset expansion
+
+C-C0/C-C1/C-C2에서 식별한 mismatch는 재학습을 자동 허가하지 않는다. C-D는 C-C2 뒤 별도 decision gate에서 측정·승인된 gap만 다룬다. C-C 안에서 TRAIN 병합, C-B5 fine-tune, threshold 변경, scaler 재적합, `ENDPOINT_H150` 재선택을 하지 않는다.
 
 - 공개 dataset에 없는 SafeNest 환경·환기·warm-up·drift 조건만 추가한다.
 - 개인 식별 정보 없이 room/session/condition provenance를 보존한다.
@@ -1505,6 +2433,39 @@ A/B의 real-subject 결과와 가능하면 C의 MR60 domain 결과를 먼저 본
 
 ## T-B. Thermal offline model comparison
 
+### Thermal B-series execution authority reconciliation (2026-08-14)
+
+The bullets in this section are the original roadmap intent. For phases that
+have already run, the phase-specific machine-readable evidence and passing
+standalone validator are authoritative; this note does not rename or rewrite
+historical evidence.
+
+- `T-B0` completed the offline protocol, baseline contract, candidate
+  preregistration, and evaluation-role policy. It did not train a model.
+- `T-B1` completed the preprocessing comparison and selected
+  `P1_TRAIN_FITTED_GLOBAL_ZSCORE` for the frame candidate under the frozen
+  validation-only selection rule.
+- `T-B2` completed a controlled frame-architecture comparison and selected
+  `SMALL_CNN_BASELINE_V1`; it did not execute the original class-imbalance or
+  hard-negative study.
+- The original imbalance/hard-negative question remains unperformed. The
+  selected SDT source exposes `LYING`, `SITTING`, `STANDING`, and `EMPTY_ROOM`
+  only; `BENDING` and `PARTIAL_BODY` are not represented by verified source
+  labels, so those hard-negative slices must not be fabricated.
+- T-A3 evidence is frame-only: source timestamps and FPS are not verifiable,
+  sequence/session/recording/event identifiers are absent, and filename or
+  archive-index order is provenance only. Therefore a temporal T-B3 training
+  comparison is blocked until a separate source/provenance amendment supplies
+  verified ordered recordings and event context.
+- The next eligible work item is a **proposed frame-only multi-seed
+  confirmation** of the frozen candidate (minimum three seeds), subject to
+  owner approval and a follow-up roadmap amendment. It is not authorization to
+  construct pseudo-sequences or to start T-B3 training now.
+- `T-B4` remains the Float→TFLite→INT8 equivalence phase, and `T-B5` remains
+  robustness, latency, and candidate lock. Neither is started by this note;
+  both must inherit the explicitly amended frame-level scope if temporal
+  provenance remains unavailable.
+
 ### T-B0. evaluation protocol·baseline
 
 - frame metric과 event metric을 분리
@@ -1596,8 +2557,8 @@ M-B0, C-A0, T-A0와 병렬로 읽기·설계 작업만 수행할 수 있다.
 
 ### 검증 항목
 
-- mmWave: phase unit·sampling·window·gap가 M-A/M-C와 일치
-- CO₂: ppm/humidity/slope unit·history·warm-up가 C-A/C-C와 일치
+- mmWave: phase unit·sampling·window·gap가 M-A canonical contract 및 M-C0/M-C2 대응 판정과 일치. `breath_phase`와 `breath_rate_raw`를 혼동하지 않음
+- CO₂: ppm/humidity/slope unit·history·warm-up가 C-A 및 C-C0/C-C1/C-C2 대응 판정과 일치. `TRANSPORT_FRESHNESS`와 SCD40 fresh measurement를 혼동하지 않음. H150 재구성만으로 B5 추론을 허가하지 않음. UCI T/RH 단위 일치만으로 SCD40 feature correspondence를 주장하지 않음
 - Thermal: frame shape·orientation·unit·invalid pixel가 T-A/T-C와 일치
 - 모든 provider: invalid/stale/missing을 정상값으로 합성하지 않음
 
@@ -1672,14 +2633,26 @@ M-B0, C-A0, T-A0와 병렬로 읽기·설계 작업만 수행할 수 있다.
 
 ## Parallel Wave 4
 
-- [ ] M-C MR60 domain
-- [ ] C-C SCD40 domain
+- [ ] M-C0 existing team MR60 forensic audit
+- [ ] M-C0A signal/cadence/offline-contract correspondence gate
+- [ ] M-C0B exploratory legacy inference (optional)
+- [ ] M-C1 protocolized physical MR60 measurement
+- [ ] M-C2 formal device-domain evaluation of frozen Phase-B candidate
+- [x] C-C0 existing team SCD40 forensic audit (`B5_INFERENCE_BLOCKED_FEATURE_INCOMPLETE`)
+- [x] C-C0 freshness / feature-completeness / semantic / H150 / B5-identity / pre-inference gates
+- [x] C-C0 exploratory legacy inference decision (`BLOCKED_FEATURE_INCOMPLETE`; no legacy inference run)
+- [x] C-C1 four-feature measurement protocol freeze + independently executable operator prompt (historical evidence)
+- [x] final pre-acquisition model-input decision (`ADOPT_REDUCED_FEATURE_DIRECTION`)
+- [x] C-B6 reduced-feature candidate development and lock (`C_B6_PASS_WITH_LIMITATIONS`; INT8 slope-saturation review pending)
+- [x] C-C1R reduced-feature protocol frozen and operator guide draft created (`C_C1R_BLOCKED`; handoff HOLD pending acquisition-tooling correction)
+- [ ] external protocol-controlled SCD40 data accumulation (currently `HOLD`; AI tuning 금지)
 - [ ] T-B offline candidate
 - [ ] I-2 deterministic replay
 
 ## Parallel Wave 5
 
-- [ ] gap가 있는 sensor만 M/C/T-D 진입
+- [ ] C-C2 controlled intake + formal SCD40 device-domain validation (revised candidate/protocol and explicit authorization only)
+- [ ] C-C2 뒤 별도 decision gate를 통과한 measured gap만 M/C/T-D 진입. mmWave는 M-C2에서 측정되고 별도 승인된 gap만
 - [ ] T-C Thermal-44 domain
 - [ ] I-3 rule fusion baseline
 - [ ] I-4 learned fusion 조건 판정

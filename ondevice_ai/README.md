@@ -12,53 +12,60 @@
 | 여기가 뭐하는 폴더인가요? | 전처리·추론·모델 자산·데이터 계약·위험도 로직·validator/보고서가 모인 AI 컴포넌트입니다. |
 | 실기기 드라이버도 여기 있나요? | **아니요.** 실하드웨어 드라이버는 팀 저장소의 `devices/<device>/src/` 쪽입니다. |
 | 지금 배포해도 되나요? | **안 됩니다.** Mock 통과 ≠ 실배포 승인입니다. |
-| 최신 동기화 기준은? | 스탠드얼론 소스 `https://github.com/sheepmeat/test` 커밋 `9a66a3b` |
+| 최신 동기화 기준은? | 스탠드얼론 소스 `https://github.com/sheepmeat/test` 커밋 `efc7e2eb61a49e221ce0ebf6057b0c1617525ad1` (B-complete offline baseline) |
 
 ## 이번 동기화에서 바뀐 점 (요약)
 
+이 동기화는 **재현 가능한 offline AI candidate baseline**을 팀 저장소에 맞추는 중간 배포입니다. Raspberry Pi 통합과 이후 실기기 Phase C의 공통 기준이지, 실하드웨어 성능 승인이 아닙니다.
+
 1. **mmWave**
-   - `M-A0`~`M-A6` 실데이터 변환/무결성 락 유지
-   - `M-B0`~`M-B5` 추가 동기화
-   - `M-B5`에서 TRAIN-only representative calibration profile 선택 (`M-B5_CAL_CLASS_BALANCED_120`)
-   - 이는 **최종 배포 INT8 모델 승인 완료가 아님** (M-B6 stage equivalence 및 locked evaluation 남음)
+   - `M-A0`~`M-A6`, `M-B0`~`M-B12` frozen offline candidate 유지
+   - 활성 offline INT8 후보는 `models/mmwave/experiments/M-B6_stage_equivalence/M-B3_CONV1D_GAP_BASELINE_seed42_M-B5_CAL_CLASS_BALANCED_120_int8.tflite`
+   - MR60 입력 대응·실기기 분류 성능·Pi latency는 **미검증**
+   - 실측 안내서는 PRE-M-C1 준비 문서이며 M-C1 시작 승인이 아님
 2. **CO₂**
-   - `C-A0`~`C-A6` raw→canonical 데이터 체인 락 동기화
-   - **C-B 모델 재학습/비교는 아직 시작 전**
+   - `C-A0`~`C-A6`, `C-B0`~`C-B5` 유지
+   - `C-B6` reduced-feature (`CO2` + `CO2_slope`) INT8 occupancy candidate 추가
+   - occupancy 모델 ≠ CO₂ safety threshold ≠ sensor health ≠ fusion
+   - SCD40 device-domain validation은 **미완**. C-C1 측정 안내/도구는 문서·tooling일 뿐 정식 C 완료가 아님
 3. **Thermal**
-   - `T-A0`~`T-A4` 동기화 (`LYING`은 frame-level post-fall posture proxy)
-   - **T-A5 split / T-A6 full conversion / T-B 학습은 아직 없음**
+   - `T-A0`~`T-A6` 및 `T-B0`~`T-B5` offline lock 증거 추가
+   - T-B5 FULL_INT8 바이너리는 git에 없고 외부 SSD identity만 기록됨
+   - `HUMAN_FALL`/`LYING` ≠ verified `FALL_EVENT`
+   - Thermal-44 실기기 검증은 **미완**
 4. **통합 규칙**
-   - 팀 전용 파일(예: `esp32_sensor_node.ino`, 구버전 빌드/검증 스크립트, 팀 보유 모델 바이너리)은 **삭제하지 않고 보존**
+   - 팀 전용 파일(`integrated_node/competition_runtime/`, `esp32_sensor_node.ino`, 구버전 모델/스크립트)은 **삭제하지 않고 보존**
+   - 기본 runtime `config/models.yaml` / `models/model_manifest.json`은 여전히 역사적 v0.1.0을 가리킴. B-complete 후보는 `docs/integration/20260816_b_complete_active_offline_candidates.json`
    - 실드라이버 중복 복사 금지, fail-closed 유지
 5. **문서**
-   - 본 README와 `docs/TEAM_HANDOFF_GUIDE.md`를 팀 `ondevice_ai/` 기준으로 최신화
-   - 충돌 결정 기록: `docs/integration/collision_summary.md`
+   - mmWave/CO₂/Thermal 인수인계·실측 안내서 추가
+   - 충돌 결정: `docs/integration/20260816_b_complete_collision_matrix.json`
 
 ## 현재 개발 상태 (정직하게)
 
 ### mmWave
-- 완료: M-A0..M-A6, M-B0..M-B5 (경고/조건 포함)
-- 미완: M-B6 이후 formal stage equivalence / locked evaluation
+- 완료: M-A0..M-A6, M-B0..M-B12 (offline candidate, 경고/조건 포함)
+- 미완: standalone M-C0 correspondence, M-C1 protocolized acquisition, M-C2 device-domain evaluation, Pi latency
 - LOCKED_TEST 모델 선택 접근: **0**
 - MR60 실기기·Pi 배포 검증: **미완**
 
 ### CO₂
-- 완료: C-A0..C-A6
-- 미완: C-B+ 모델 비교/재학습, SCD40 device-domain validation
+- 완료: C-A0..C-A6, C-B0..C-B6 (offline occupancy candidate, limitations 포함)
+- 미완: SCD40 device-domain validation, formal C-C2
 - UCI 소스만으로 cross-room/cross-building 일반화 주장 불가
 
 ### Thermal
-- 완료: T-A0..T-A4 (제한사항 포함)
-- 미완: T-A5+, T-B, Thermal-44 device validation
-- `LYING` ≠ verified fall-event onset label
+- 완료: T-A0..T-A6, T-B0..T-B5 (offline lock, limitations 포함)
+- 미완: T-C device-domain, git-tracked T-B5 INT8 binary intake, Thermal-44 validation
+- `LYING`/`HUMAN_FALL` ≠ verified fall-event onset label
 
 ### 통합/배포
 다음을 **주장하지 마세요.**
 - 실센서 통합 완료
-- Raspberry Pi 검증 완료
+- Raspberry Pi 장기 검증 완료
 - 임상 검증 완료
 - final fusion 최적화 완료
-- deployment ready
+- hardware-validated / production-ready / deployment complete
 
 ## 책임 경계
 

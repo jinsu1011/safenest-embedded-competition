@@ -1,6 +1,6 @@
 # SafeNest mmWave M-C1 Requirements Draft
 
-Status: **documentation only — M-C1 remains `BLOCKED_HARDWARE`**
+Status: **documentation only — hardware available; M-C1 is `PENDING_EXPLICIT_PROTOCOL_APPROVAL`**
 
 This draft records capture requirements derived from the measured M-C0
 correspondence audit. It does not authorize M-C1 capture, inference, model
@@ -10,11 +10,12 @@ scoring, retraining, preprocessing changes, or LOCKED_TEST access.
 
 The M-C0 audit of the long MR60 log
 `devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl`
-measured telemetry row cadence separately from the phase-age reset proxy:
-`9.986342911 Hz` versus `4.30467137 Hz`. The computation is recorded in the
-M-C0 JSON artifacts as `(timestamp_count - 1) / timestamp_span` for row cadence
-and `phase_age_ms` decrease count divided by timestamp span for the freshness
-proxy. No session produced a valid 300-genuinely-fresh-sample window.
+measured telemetry row cadence separately from reconstructed fresh updates:
+`9.986342911 Hz` versus corrected `8.419003785 Hz`. The earlier
+`4.30467137 Hz` value is retained only as a superseded result from the faulty
+`phase_age_ms`-decrease estimator. The corrected computation reconstructs each
+update instant as `round(timestamp_s*1000)-phase_age_ms`, counts advancing
+instants, and divides by the timestamp span.
 
 The nine legacy CSVs used by the historical window path do not contain
 `phase_age_ms` or a 0x0A13 freshness identity. Reconstructing
@@ -25,21 +26,25 @@ proven fresh-phase cadence.
 
 ## PR18 pilot consequence for capture tooling
 
-The two PR18 pilot captures resolve the M-C0 alternatives in favour of (a):
-the measured limitation is supported as structural to the audited MR60/ESP
-telemetry path, rather than specific to the 2026-07-26 legacy CSV capture
-method. `M-C0-PILOT-DESKWORK-001` measured `3.679658492 Hz` and
-`M-C0-PILOT-STATIONARY-001` measured `3.518230325 Hz`, while their telemetry
-row cadences were `9.993996932 Hz` and `9.993330369 Hz`, respectively. These
-values are recorded separately under `PR18_PILOT_CAPTURE` in
-`datasets/mmwave/manifests/M-C0_correspondence_audit/m_c0_summary.json`; each
-fresh-cadence proxy is computed as the count of `phase_age_ms` decreases divided
-by that pilot's timestamp span. The comparison classifies (a) because both
-pilot values are closer to the independently measured legacy fresh-cadence
-proxy of `4.30467137 Hz` than to nominal 10 Hz telemetry rows.
+The two PR18 pilot captures resolve the M-C0 alternatives in favour of (b):
+the PR18-lineage capture tooling approaches the telemetry row cadence and does
+not exhibit the extreme phase-age tail in the legacy long log.
+`M-C0-PILOT-DESKWORK-001` measures corrected fresh cadence `9.988438535 Hz`
+with `phase_age_ms` p95 `15 ms`; `M-C0-PILOT-STATIONARY-001` measures
+`9.993330369 Hz` with p95 `15 ms`. The legacy p95 is `195627 ms`. The earlier
+pilot values `3.679658492 Hz` and `3.518230325 Hz`, and the resulting (a)
+verdict, are retracted because the age-decrease estimator undercounted
+always-low age values.
 
-Consequently, M-C1 capture tooling must change the acquisition boundary used
-for eligibility. It must:
+Direct corrected window reconstruction found `4/6` valid 300-fresh windows in
+DESKWORK and `5/6` in STATIONARY. These pilot results are recorded only under
+`PR18_PILOT_CAPTURE` in
+`datasets/mmwave/manifests/M-C0_correspondence_audit/m_c0_summary.json`; they are
+not merged with legacy results.
+
+Consequently, M-C1 may proceed with PR18-lineage capture tooling only after an
+explicit protocol approval. Each session must pass a fresh-cadence and
+300-fresh-window acceptance gate. The tooling must:
 
 - record each source 0x0A13/phase update when received, with an update identity,
   source timestamp, sequence, and freshness provenance, rather than treating a
@@ -49,14 +54,13 @@ for eligibility. It must:
   fresh updates;
 - prevent stale repeats, interpolation, or synthesis from increasing the fresh
   sample count; and
-- instrument the upstream MR60-to-ESP receive path so the project can determine
-  whether that boundary can supply a contract-eligible window. If it cannot,
-  the current capture path remains ineligible and a different acquisition
-  capability must be selected through a separately approved protocol.
+- reconstruct or directly identify source update instants per session and
+  reject the session if no contract-eligible 300-fresh window is demonstrated.
 
 This consequence does not choose a numeric `phase_age_ms` threshold, a
 resampling method, an official distance, reference hardware, or sample size.
-Those remain **UNDEFINED**, and this finding does not authorize capture.
+Those remain **UNDEFINED**. Existing hardware availability removes the previous
+hardware blocker, but this draft does not approve or begin M-C1 capture.
 
 ## M-C1 capture must guarantee
 
@@ -111,8 +115,9 @@ The following findings remain constraints for interpretation:
 
 - the M-C0 decision is `BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`;
 - semantic correspondence is `UNDETERMINED`;
-- temporal correspondence is `MEASURED_INSUFFICIENT`;
-- `valid_300_fresh_windows` is `0` in the measured evidence;
+- temporal correspondence is `MEASURED_SUFFICIENT_FOR_PR18_PILOT_CAPTURE_ONLY`;
+- valid windows are reported separately as `PR18_PILOT_CAPTURE=9` and
+  `PRE_PR18_LEGACY_LOGS=27`, with no cross-group aggregate;
 - the 620-window legacy path diverges at freshness provenance before
   `BPF_ZSCORE`; and
 - the all-APNEA historical collapse is not assigned to BPF, z-score, INT8, or
@@ -129,5 +134,7 @@ This draft intentionally does not define or authorize:
 - M-C1 sample size; or
 - any paced-rpm-to-label mapping.
 
-M-C1 remains `BLOCKED_HARDWARE` until the required independent hardware and an
-approved capture protocol exist. No new capture was performed for this draft.
+The PR18-lineage capture hardware/tooling is available, so M-C1 is no longer
+`BLOCKED_HARDWARE`. M-C1 remains `PENDING_EXPLICIT_PROTOCOL_APPROVAL`; this
+document does not grant that approval. No new capture was performed for this
+draft, and independent reference hardware remains **UNDEFINED**.

@@ -2772,8 +2772,10 @@
       "p95": 30.564167676,
       "std": 17.696499497
     },
+    "reproducible_from_published_target": false,
     "sha256": "c2e2cd1615c7af0f0e21700f291ee12ac0347a9f7fc6ccc9f337433c16868f0e",
     "source_path": "safenest-mmwave-standalone/datasets/mmwave/processed/mmwave_canonical_real_v1.npy",
-    "status": "AVAILABLE_AUXILIARY_FROZEN_REFERENCE"
+    "source_tracked_in_target_repo": false,
+    "status": "AVAILABLE_LOCAL_ONLY_AUXILIARY_REFERENCE_NOT_TRACKED"
   }
 }

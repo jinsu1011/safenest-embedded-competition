@@ -578,16 +578,30 @@ def load_training_reference(root: Path) -> dict[str, Any] | None:
     values = read_npy_float64(source)
     normalized = [(value - FROZEN["zscore_mean"]) / FROZEN["zscore_std"] for value in values]
     digest, size = sha256_file(source)
+    source_path = repo_rel(root, source)
+    try:
+        subprocess.run(
+            ["git", "ls-files", "--error-unmatch", source_path],
+            cwd=root,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        source_tracked = True
+    except (OSError, subprocess.CalledProcessError):
+        source_tracked = False
     return {
-        "source_path": repo_rel(root, source),
+        "source_path": source_path,
         "sha256": digest,
         "bytes": size,
+        "source_tracked_in_target_repo": source_tracked,
+        "reproducible_from_published_target": source_tracked,
         "raw_stats": numeric_stats(values),
         "naive_affine": {
             "stats": numeric_stats(normalized),
             "computation": "same diagnostic frozen affine used for MR60 raw phase; BPF was not reconstructed",
         },
-        "status": "AVAILABLE_AUXILIARY_FROZEN_REFERENCE",
+        "status": "AVAILABLE_AUXILIARY_FROZEN_REFERENCE" if source_tracked else "AVAILABLE_LOCAL_ONLY_AUXILIARY_REFERENCE_NOT_TRACKED",
     }
 
 
@@ -904,6 +918,53 @@ def render_report(root: Path, evidence_root: Path, summary: dict[str, Any], expe
         for session in sessions
         if session["session_id"].startswith("S001_BREATH_PACED_")
     }
+    long_session = next((session for session in sessions if session["kind"] == "long_jsonl"), None)
+    if long_session is not None:
+        long_integrity = long_session["timestamp_integrity"]
+        long_sequence = long_integrity["sequence"]
+        long_q4 = (
+            f"Long-log measured numbers are `gap_count={long_integrity['gap_count']}`, "
+            f"`duplicate_timestamp_count={long_integrity['duplicate_timestamp_count']}`, "
+            f"`nonmonotonic_timestamp_count={long_integrity['nonmonotonic_timestamp_count']}`, "
+            f"`timestamp_freeze_intervals={long_integrity['timestamp_freeze_intervals']['interval_count']}`, "
+            f"`freeze_flag_count={long_integrity['freeze_flag_count']}`, and "
+            f"`sequence_missing_count={long_sequence['missing_sequence_count']}`; all are computed from "
+            f"`{long_session['evidence_path']}`."
+        )
+        long_distortion = long_session["interpolation"].get("distortion") or {}
+        long_q7 = (
+            f"For `{long_session['evidence_path']}`, simulated linear interpolation was not applied; "
+            f"the proxy distortion is `RMSE={long_distortion.get('rmse')}`, `MAE={long_distortion.get('mae')}`, "
+            f"and `max_abs={long_distortion.get('max_abs')}` over `{long_distortion.get('sample_count')}` samples."
+        )
+        before_int8 = long_session["int8_distribution"]["before_int8"]
+        after_int8 = long_session["int8_distribution"]["after_int8_dequantized"]
+
+        def distribution_text(label: str, stats: dict[str, Any]) -> str:
+            return (
+                f"{label} `n={stats['count']}`, `mean={stats['mean']}`, `std={stats['std']}`, "
+                f"`p05={stats['p05']}`, `p95={stats['p95']}`, `min={stats['min']}`, `max={stats['max']}`"
+            )
+
+        if training_reference is not None:
+            training_stats = training_reference["naive_affine"]["stats"]
+            training_note = (
+                f" The auxiliary reference is `{training_reference['source_path']}` with SHA-256 "
+                f"`{training_reference['sha256']}` and status `{training_reference['status']}`; its diagnostic affine "
+                f"distribution is {distribution_text('training', training_stats)}."
+            )
+        else:
+            training_note = " No training-reference file was available in the target worktree, so a numeric training comparison was not fabricated."
+        long_q9 = (
+            f"For the long log, {distribution_text('before-INT8', before_int8)}; "
+            f"{distribution_text('after-INT8 dequantized', after_int8)}; "
+            f"quantized saturation is `{long_session['int8_distribution']['quantized_saturation_fraction']}`."
+            f"{training_note} These are diagnostic affine values because BPF was not reconstructed."
+        )
+    else:
+        long_q4 = "No long JSONL session was present, so long-log timestamp numbers were not fabricated."
+        long_q7 = "No long JSONL session was present, so interpolation distortion numbers were not fabricated."
+        long_q9 = "No long JSONL session was present, so pre/post INT8 distribution numbers were not fabricated."
     lines += [
         "",
         "## Preserved measurement corrections",
@@ -938,7 +999,7 @@ def render_report(root: Path, evidence_root: Path, summary: dict[str, Any], expe
         "",
         "### Question 4 — timestamp integrity",
         "",
-        "Per-session gaps, duplicates, non-monotonic timestamps, timestamp freezes, sequence loss, and freeze flags are in `offline_contract_correspondence.json` under `per_session[].timestamp_integrity`. Gap counts use the diagnostic threshold stated above; no official phase-age failure threshold was invented.",
+        f"Per-session gaps, duplicates, non-monotonic timestamps, timestamp freezes, sequence loss, and freeze flags are in `offline_contract_correspondence.json` under `per_session[].timestamp_integrity`. {long_q4} Gap counts use the diagnostic threshold stated above; no official phase-age failure threshold was invented.",
         "",
         "### Question 5 — `phase_age_ms` distribution",
         "",
@@ -950,7 +1011,7 @@ def render_report(root: Path, evidence_root: Path, summary: dict[str, Any], expe
         "",
         "### Question 7 — interpolation",
         "",
-        "Interpolation was **not applied** to any audit input. Where phase-age reset proxies existed, linear interpolation was simulated only to quantify distortion; its RMSE/MAE/max-absolute error are reported per session. The method remains unresolved.",
+        f"Interpolation was **not applied** to any audit input. Where phase-age reset proxies existed, linear interpolation was simulated only to quantify distortion; its RMSE/MAE/max-absolute error are reported per session. {long_q7} The method remains unresolved.",
         "",
         "### Question 8 — BPF + z-score identity",
         "",
@@ -958,7 +1019,7 @@ def render_report(root: Path, evidence_root: Path, summary: dict[str, Any], expe
         "",
         "### Question 9 — pre/post INT8 distribution",
         "",
-        "The JSON contains diagnostic before-INT8, after-INT8-dequantized, quantized integer, saturation, and quantization-error distributions using scale `0.041720833629369736` and zero-point `-3`. Because BPF was not reconstructed, these are explicitly non-contract-equivalent diagnostics. The auxiliary frozen training reference, when available, is hashed and cited in the JSON.",
+        f"The JSON contains diagnostic before-INT8, after-INT8-dequantized, quantized integer, saturation, and quantization-error distributions using scale `0.041720833629369736` and zero-point `-3`. {long_q9}",
         "",
         "### Question 10 — 620/620 all-APNEA collapse stage",
         "",

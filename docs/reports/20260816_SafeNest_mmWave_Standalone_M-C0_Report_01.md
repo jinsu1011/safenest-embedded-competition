@@ -2,7 +2,7 @@
 
 - Repository: `jinsu1011/safenest-embedded-competition`
 - Branch: `codex/mmwave-m-c0-correspondence`
-- Head at audit: `b88d1a597839b7bb803dc2590e0de55e187c959e`
+- Head at audit: `98e1cdec5634c3da804b038506a88ce8a29ecccf`
 - Evidence-root used: `devices/mmwave/firmware`
 - Decision: **`BLOCKED_PENDING_SIGNAL_CORRESPONDENCE`**
 - Blocking reason: **`SIGNAL_CORRESPONDENCE_NOT_ESTABLISHED`**
@@ -78,7 +78,7 @@ The table reports the two cadences separately. Legacy CSV has no `phase_age_ms`/
 
 ### Question 4 — timestamp integrity
 
-Per-session gaps, duplicates, non-monotonic timestamps, timestamp freezes, sequence loss, and freeze flags are in `offline_contract_correspondence.json` under `per_session[].timestamp_integrity`. Gap counts use the diagnostic threshold stated above; no official phase-age failure threshold was invented.
+Per-session gaps, duplicates, non-monotonic timestamps, timestamp freezes, sequence loss, and freeze flags are in `offline_contract_correspondence.json` under `per_session[].timestamp_integrity`. Long-log measured numbers are `gap_count=0`, `duplicate_timestamp_count=0`, `nonmonotonic_timestamp_count=0`, `timestamp_freeze_intervals=0`, `freeze_flag_count=2566`, and `sequence_missing_count=0`; all are computed from `devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl`. Gap counts use the diagnostic threshold stated above; no official phase-age failure threshold was invented.
 
 ### Question 5 — `phase_age_ms` distribution
 
@@ -90,7 +90,7 @@ The measured count is shown per session. A value of `0` means no fixed 30-second
 
 ### Question 7 — interpolation
 
-Interpolation was **not applied** to any audit input. Where phase-age reset proxies existed, linear interpolation was simulated only to quantify distortion; its RMSE/MAE/max-absolute error are reported per session. The method remains unresolved.
+Interpolation was **not applied** to any audit input. Where phase-age reset proxies existed, linear interpolation was simulated only to quantify distortion; its RMSE/MAE/max-absolute error are reported per session. For `devices/mmwave/firmware/logs/final/2026-08-01_occupied_d09_v120_31min_attempt02.jsonl`, simulated linear interpolation was not applied; the proxy distortion is `RMSE=0.008928878`, `MAE=0.004631681`, and `max_abs=0.084` over `15688` samples. The method remains unresolved.
 
 ### Question 8 — BPF + z-score identity
 
@@ -98,7 +98,7 @@ The answer is **not established as identical**. The frozen contract is `M-B10B_S
 
 ### Question 9 — pre/post INT8 distribution
 
-The JSON contains diagnostic before-INT8, after-INT8-dequantized, quantized integer, saturation, and quantization-error distributions using scale `0.041720833629369736` and zero-point `-3`. Because BPF was not reconstructed, these are explicitly non-contract-equivalent diagnostics. The auxiliary frozen training reference, when available, is hashed and cited in the JSON.
+The JSON contains diagnostic before-INT8, after-INT8-dequantized, quantized integer, saturation, and quantization-error distributions using scale `0.041720833629369736` and zero-point `-3`. For the long log, before-INT8 `n=18574`, `mean=-0.000530514`, `std=0.054656118`, `p05=-0.089029009`, `p95=0.086920135`, `min=-0.298814527`, `max=0.317007476`; after-INT8 dequantized `n=18574`, `mean=-0.000914202`, `std=0.055741911`, `p05=-0.083441667`, `p95=0.083441667`, `min=-0.292045835`, `max=0.333766669`; quantized saturation is `0.0`. The auxiliary reference is `safenest-mmwave-standalone/datasets/mmwave/processed/mmwave_canonical_real_v1.npy` with SHA-256 `c2e2cd1615c7af0f0e21700f291ee12ac0347a9f7fc6ccc9f337433c16868f0e` and status `AVAILABLE_LOCAL_ONLY_AUXILIARY_REFERENCE_NOT_TRACKED`; its diagnostic affine distribution is training `n=159000`, `mean=0.804020513`, `std=5.987853719`, `p05=-7.463087722`, `p95=10.340751587`, `min=-37.444280452`, `max=47.313521248`. These are diagnostic affine values because BPF was not reconstructed.
 
 ### Question 10 — 620/620 all-APNEA collapse stage
 

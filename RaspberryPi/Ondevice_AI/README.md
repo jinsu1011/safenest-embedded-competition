@@ -5,6 +5,7 @@
 > - **TFLite 파일 존재·SHA·텐서 규격**: CONFIRMED
 > - **Mock 파이프라인**: CONFIRMED
 > - **mmWave historical v0.1.0**: BLOCKED (`CLASS_COLLAPSE_ON_REPOSITORY_NPZ`)
+> - **mmWave M-N9 FULL_INT8**: locked successor imported; Runtime still blocked v0.1.0; `DEVICE_VALIDATED=NO`. Handoff: `docs/reports/20260818_SafeNest_mmWave_M-N9_Team_Import_Handoff_KO_01.md`
 > - **mmWave v0.2.0 candidate**: `SYNTHETIC_SMOKE_ONLY`
 > - **Zenodo real-data reconstruction**: A0–A6 `PASS_WITH_WARNINGS`; Phase B `READY_WITH_CONDITIONS`
 > - **Thermal 실제 낙상 성능**: NOT_VERIFIABLE (합성 NPZ 테스트 fixture만 존재)
@@ -18,6 +19,7 @@
 
 - **P0 소프트웨어 파이프라인 / Mock 테스트**: CONFIRMED (통과)
 - **mmWave historical v0.1.0**: BLOCKED (저장소 합성 NPZ 평가 시 Class Collapse, APNEA/비정상 Recall 0%)
+- **mmWave M-N9 FULL_INT8**: 팀 저장소에 잠긴 후속 INT8을 넣었으나 Runtime 라이브 키는 아직 v0.1.0. 인수인계 `docs/reports/20260818_SafeNest_mmWave_M-N9_Team_Import_Handoff_KO_01.md`
 - **mmWave v0.2.0 candidate**: 학습·재현·양자화 파이프라인을 확인하는 합성 smoke 자산; 실세계 성능 근거로 사용 금지
 - **Zenodo 110명 실데이터**: A0–A6 완료. TRAIN/VALIDATION/LOCKED_TEST = 77/17/16 subject split 고정, 440 recording·530 window 변환 및 무결성 감사 통과
 - **Thermal & CO₂ 오프라인 평가**: synthetic regression fixture 기반 99% 수준 (실센서/실공간 성능 주장 불가)

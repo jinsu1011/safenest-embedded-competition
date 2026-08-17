@@ -72,7 +72,7 @@
       "integration_path": "RaspberryPi/Ondevice_AI",
       "classification": "UPSTREAM_AUTHORITATIVE",
       "integration_modifications": "upstream archive/ moved to archive/ondevice_ai_upstream_history/; upstream .gitignore and .github removed",
-      "runtime_critical_parity": "inference/, config/, adapters/, models/model_manifest.json are byte-identical to the integration frozen snapshot at 9e4ddfe7, so adopting upstream introduces no runtime semantic change",
+      "runtime_critical_parity": "inference/ and adapters/ remain the integration frozen snapshot at 9e4ddfe7. models/model_manifest.json and config/ were merged with an M-N9 overlay; LazyModel still reads blocked models.mmwave so live runtime semantics are unchanged.",
       "overlays": [
         {
           "name": "mmwave_m_n9_full_int8",
@@ -86,7 +86,12 @@
             "RaspberryPi/Ondevice_AI/config/mmwave/m_n4_canonical_input_dataset_contract.json",
             "RaspberryPi/Ondevice_AI/scripts/mmwave_m_n4_canonical.py"
           ],
-          "notes": "Partial import of locked M-N9 INT8 and M-N4 contract. Does not replace the 4129753 Ondevice_AI snapshot."
+          "team_authored_paths": [
+            "RaspberryPi/Ondevice_AI/models/mmwave/m_n9/team_import_inventory.json",
+            "RaspberryPi/Ondevice_AI/docs/reports/20260818_SafeNest_mmWave_M-N9_Team_Import_Handoff_KO_01.md",
+            "RaspberryPi/Ondevice_AI/models/model_manifest.json"
+          ],
+          "notes": "Partial import of locked M-N9 INT8 and M-N4 contract. model_manifest.json is merged, not a byte copy of 390f3be. Does not replace the 4129753 Ondevice_AI snapshot. Live Runtime is not promoted."
         }
       ]
     },

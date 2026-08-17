@@ -43,6 +43,18 @@ class TestMmwaveMN9TeamImport(unittest.TestCase):
         self.assertIn("mmwave_m_n9_full_int8", payload["model_promotion_policy"])
         self.assertIs(payload["model_promotion_policy"]["automatic_promotion_performed"], False)
 
+    def test_team_handoff_report_exists(self) -> None:
+        handoff = (
+            ONDEVICE_AI_ROOT
+            / "docs/reports/20260818_SafeNest_mmWave_M-N9_Team_Import_Handoff_KO_01.md"
+        )
+        self.assertTrue(handoff.is_file())
+        text = handoff.read_text(encoding="utf-8")
+        self.assertIn("MMWAVE_M_N9_FULL_INT8_V1", text)
+        self.assertIn("3b008af4be0facc4037c2afd3fe39292fb794208eb4370dbe6916b2d15aa38a4", text)
+        self.assertIn("DEVICE_VALIDATED = NO", text)
+        self.assertIn("PRESENCE_GATE_REQUIRED = YES", text)
+
     def test_runtime_default_mmwave_remains_blocked(self) -> None:
         manifest = json.loads(MODEL_MANIFEST.read_text(encoding="utf-8"))
         self.assertIs(manifest["models"]["mmwave"]["deployment_allowed"], False)

@@ -27,7 +27,8 @@
     "RaspberryPi/Ondevice_AI/models/mmwave/m_n9/MMWAVE_M_N9_FULL_INT8_V1.tflite",
     "RaspberryPi/Ondevice_AI/config/mmwave/m_n9_full_int8_artifact_lock.json",
     "RaspberryPi/Ondevice_AI/config/mmwave/m_n4_canonical_input_dataset_contract.json",
-    "RaspberryPi/Ondevice_AI/scripts/mmwave_m_n4_canonical.py"
+    "RaspberryPi/Ondevice_AI/scripts/mmwave_m_n4_canonical.py",
+    "RaspberryPi/Ondevice_AI/docs/reports/20260818_SafeNest_mmWave_M-N9_Team_Import_Handoff_KO_01.md"
   ],
   "intentionally_not_transferred": [
     "sensors/ as duplicate team drivers",

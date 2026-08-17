@@ -1,5 +1,6 @@
 # macOS and editors
 .DS_Store
+**/.DS_Store
 .idea/
 .vscode/
 
@@ -7,40 +8,67 @@
 **/__pycache__/
 *.py[cod]
 **/.venv/
+.venv/
 .pytest_cache/
 
-# PlatformIO
+# PlatformIO / Arduino build output
 **/.pio/
 **/.cache/
+**/build/
 
-# Local secrets and runtime state
+# ---------------------------------------------------------------------------
+# Secrets. Only the *.example templates are committed.
+# ESP32 credentials belong in the sketch-local secrets.h, which is never tracked.
+# ---------------------------------------------------------------------------
+**/secrets.h
+**/wifi_secrets.h
+ESP32/secret.h
+ESP32/Arduino/**/secrets.h
 .env
 .env.*
 !.env.example
-*.pid
+*.pem
+*.key
+credentials.json
+
+# ---------------------------------------------------------------------------
+# Runtime output. The SafeNest service writes these on the Pi; they are state,
+# not source. Directory placeholders (.gitkeep) stay tracked.
+# ---------------------------------------------------------------------------
+RaspberryPi/Runtime/data/*.db
+RaspberryPi/Runtime/data/*.db-wal
+RaspberryPi/Runtime/data/*.db-shm
+RaspberryPi/Runtime/data/mmwave/*
+RaspberryPi/Runtime/data/co2/*
+RaspberryPi/Runtime/data/thermal/*
+!RaspberryPi/Runtime/data/**/.gitkeep
 *.sqlite
 *.sqlite3
+*.pid
+*.log
 
-# ESP32 Wi-Fi/host credentials. secrets.example.h만 커밋한다.
-**/secrets.h
-**/wifi_secrets.h
+# LCD kiosk local state
+RaspberryPi/LCD/state.json
+RaspberryPi/LCD/logs/
+RaspberryPi/LCD/.chromium-kiosk/
 
-# Node (integration/web)
+# Research workspaces keep bulky datasets and model binaries out of Git.
+# Identities and checksums stay in the tracked manifests.
+research/thermal_ai/data/**
+research/thermal_ai/artifacts/**
+research/thermal_ai/models/*
+!research/thermal_ai/models/README.md
+!research/thermal_ai/**/.gitkeep
+research/co2_validation/sessions/*
+!research/co2_validation/sessions/.gitkeep
+
+# Node
 node_modules/
 .pnpm-store/
 npm-debug.log*
 
-# integration 런타임 산출물
-integration/web/data/store.json
-integration/pi_lcd/state.json
-integration/pi_lcd/logs/
-integration/pi_lcd/.chromium-kiosk/
-
 # Rendered/intermediate documents
 tmp/
-
-# Local terminal artifacts
-*.log
 
 # 외부 저장소의 중첩 clone. sheepmeat/test 는 별도 저장소로 관리한다.
 /safenest-mmwave-standalone/

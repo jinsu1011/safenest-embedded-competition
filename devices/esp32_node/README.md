@@ -1,35 +1,151 @@
-# `devices/esp32_node/`
+# SafeNest ESP32 sensor node
 
-## 1. 디렉터리 목적
-네 개 센서를 한 보드에서 수집해 Raspberry Pi로 전송하는 ESP32 수집 노드의 펌웨어와 보드 설정을 한곳에서 관리한다.
+This firmware runs on an ESP32-WROOM-32 (Arduino IDE board: ESP32 Dev Module). It reads the MR60BHA2 radar, SCD4x CO2 sensor, PIR input, and MI48 thermal camera, then sends sensor data to a Raspberry Pi.
 
-## 2. 시스템에서 담당하는 기능
-MR60BHA2(UART), SCD4x(I2C), PIR(디지털 입력), MI48 계열 열화상(I2C 제어 + SPI 데이터)을 스케줄에 따라 읽고, 1초 주기 `safenest.telemetry.v1` JSON 패킷으로 Wi-Fi TCP 9000에 전송한다. 위험도 판정은 하지 않는다.
+## Change summary
 
-## 3. 포함해야 하는 파일 유형
-ESP32 스케치와 헤더, 보드 핀·주기·전송 설정, 자격증명 예제(`secrets.example.h`), 보드 단독으로 확인 가능한 절차를 포함한다.
+- Synchronized the repository firmware with the tested ESP32-WROOM-32 sketch.
+- Split sensor capture from network I/O. Sensor capture stays responsive while network reconnects and writes run in FreeRTOS tasks.
+- Respiration, heart rate, CO2, and PIR scalar telemetry use the existing SafeNest packet format over TCP port 9000.
+- 80 x 62 thermal frames use a separate UDP port 5005 so a large frame cannot block the scalar TCP stream.
+- A 10 KiB thermal frame is split into nine datagrams no larger than 1200 bytes. Each datagram includes frame sequence, chunk index, byte offset, and CRC32.
+- The thermal queue has one slot. When the network is slow, an old unsent frame is replaced by the newest frame.
+- Unknown respiration, heart rate, and CO2 values are emitted as JSON null with valid flags instead of being changed to zero.
+- Wi-Fi credentials and the Raspberry Pi address stay in secrets.h. secrets.h is ignored and must never be committed.
 
-## 4. 포함하면 안 되는 파일 유형
-실제 Wi-Fi 자격증명(`secrets.h`), Pi 쪽 수신·표시·웹 코드(`integration/`), 위험도 융합과 추론(`ondevice_ai/`), 개별 센서의 Python 어댑터(`devices/<sensor>/src/`)는 포함하지 않는다.
+## Hardware wiring
 
-## 5. 주요 하위 구성
-`firmware/esp32_sensor_node.ino`(수집·패킷화 전체)와 `firmware/secrets.example.h`(Wi-Fi SSID·비밀번호·`RPI_HOST` 템플릿)로 구성된다.
+| Device signal | ESP32-WROOM-32 pin |
+|---|---|
+| SCD4x SDA | GPIO21 |
+| SCD4x SCL | GPIO22 |
+| PIR OUT | GPIO13 |
+| MR60BHA2 TX -> ESP32 RX2 | GPIO16 |
+| MR60BHA2 RX <- ESP32 TX2 | GPIO17 |
+| Thermal SCLK / MISO / MOSI | GPIO18 / GPIO19 / GPIO23 |
+| Thermal CS / READY / RESET | GPIO27 / GPIO26 / GPIO25 |
+| Common ground | ESP32 GND |
 
-## 6. 입력과 출력 인터페이스
-입력은 UART/I2C/SPI/GPIO 원신호다. 출력은 `schema`, `device_id`, `uptime_ms`와 센서별 값·유효성 플래그를 담은 JSON 텔레메트리이며, 값을 읽지 못하면 0으로 바꾸지 않고 유효성 플래그를 내린다. 열화상은 프레임 대신 `thermal_max_c` 스칼라만 실어 보낸다.
+MR60BHA2 UART speed is 115200 baud. Sensor ground and ESP32 ground must be common. Check voltage levels before connecting a 5 V sensor signal to an ESP32 GPIO.
 
-## 7. 다른 기능 영역과의 관계
-이 노드의 텔레메트리를 `integration/pi_lcd/server.py`가 받아 저장하고, `integration/web/server.js`가 상태를 판정한다. 이 디렉터리는 Pi 쪽 코드를 import하지 않는다. `devices/mmwave/firmware/`는 MR60 단독 계측·검증용 PlatformIO 프로젝트로 목적이 다르며, 이 스케치는 4센서 통합 수집용이다.
+## Arduino IDE setup
 
-## 8. 실행·학습·추론 또는 활용 방법
-Arduino IDE에서 `firmware/esp32_sensor_node.ino`를 열고, `firmware/secrets.example.h`를 같은 폴더의 `secrets.h`로 복사해 Wi-Fi와 `RPI_HOST`를 채운 뒤 ESP32 Dev Module로 업로드한다. 보드·라이브러리 설치 절차는 [`docs/esp32_node/ESP32_ARDUINO_SETUP.md`](../../docs/esp32_node/ESP32_ARDUINO_SETUP.md)에 있다.
+1. Install the Espressif ESP32 board package.
+2. Select ESP32 Dev Module and use 115200 baud in Serial Monitor.
+3. Install the Sensirion I2C SCD4x and Seeed Arduino mmWave libraries.
+4. Copy firmware/secrets.example.h to firmware/secrets.h and set the real values.
 
-## 9. 현재 개발 상태 및 버전
-실제 하드웨어(ESP32 + Raspberry Pi 5 + LCD)에서 4센서 수집과 LCD 자동 전환까지 검증했다. 열화상 배열은 픽셀 약 30%만 살아 있어 최고 온도만 사용하며, 프레임 스트리밍은 `THERMAL_STREAM_FRAMES = false`로 꺼져 있다. 한계는 [`docs/esp32_node/ESP32_LCD_INTEGRATION_NOTES.md`](../../docs/esp32_node/ESP32_LCD_INTEGRATION_NOTES.md) 5절에 기록했다.
+Example secrets.h:
 
-## 10. 향후 파일 추가 및 관리 규칙
-핀 배치나 전송 주기를 바꾸면 [`docs/esp32_node/COMMUNICATION_PROTOCOL.md`](../../docs/esp32_node/COMMUNICATION_PROTOCOL.md)와 Pi 쪽 파서를 같은 PR에서 함께 고친다. 한 번에 필터 또는 임계값 하나만 바꾸고 변경 전후를 같은 조건에서 비교한다. `secrets.h`는 절대 커밋하지 않는다.
+~~~
+#pragma once
+constexpr char WIFI_SSID[] = "YOUR_2G_SSID";
+constexpr char WIFI_PASSWORD[] = "YOUR_WIFI_PASSWORD";
+constexpr char RPI_HOST[] = "192.168.0.50";
+constexpr uint16_t RPI_PORT = 9000;
+~~~
 
-## 11. 주요 기여자와 원본 브랜치·커밋 추적 정보
-담당: Seungha (`@yuseungha`) — ESP32 수집 노드 펌웨어, 센서 배선, 텔레메트리.
-원본 ref `yuseungha/safenest-embedded-competition@0992a6d`(`main`에 PR #1로 병합), 원본 경로 `yuseungha/esp32_sensor_node/`.
+RPI_HOST is an IP address or DNS host only. Do not include http:// or a port suffix. ESP32 and Raspberry Pi must be on the same 2.4 GHz network. The real secrets.h is excluded by .gitignore.
+
+## Transport overview
+
+~~~
+ESP32
+  |-- TCP 9000 --> scalar telemetry JSON --> Raspberry Pi
+  |-- UDP 5005 --> thermal frame chunks --> Raspberry Pi
+~~~
+
+The two channels use independent FreeRTOS tasks and sockets. A TCP reconnect cannot stop thermal capture or UDP transmission.
+
+### TCP 9000: scalar telemetry
+
+The firmware reconnects to RPI_HOST:RPI_PORT (default port 9000). Every message is a 16-byte SNST header followed by a JSON payload.
+
+- magic: SNST
+- version: 1
+- type: 1
+- flags: 0
+- sequence: unsigned 32-bit big-endian
+- payload_length: unsigned 32-bit big-endian
+
+Example JSON:
+
+~~~
+{"schema":"safenest.telemetry.v1","device_id":"esp32-01",
+ "seq":42,"uptime_ms":12345,"resp_rate_bpm":null,
+ "heart_rate_bpm":null,"co2_ppm":820,"pir_motion":false,
+ "valid":{"respiration":false,"heart":false,"co2":true}}
+~~~
+
+A null respiration or heart value means that MR60 has not produced a fresh valid measurement. It must not be interpreted as zero bpm.
+
+### UDP 5005: thermal frames
+
+UDP provides no connection handshake or retransmission. The Raspberry Pi receiver must reassemble and validate complete frames.
+
+- UDP destination port: 5005
+- Maximum datagram size: 1200 bytes
+- Logical payload: 16-byte metadata plus 80 x 62 uint16 pixels = 9936 bytes
+- Chunk payload: 1168 bytes
+- Datagrams per frame: 9
+- All integers use network byte order (big-endian)
+- Every chunk repeats the same frame CRC32
+
+UDP datagram header (32 bytes):
+
+| offset | size | field | description |
+|---:|---:|---|---|
+| 0 | 4 | magic | ASCII SNTU |
+| 4 | 1 | version | 1 |
+| 5 | 1 | type | 2 (thermal uint16 big-endian) |
+| 6 | 2 | header_length | 32 |
+| 8 | 4 | frame_sequence | frame identifier |
+| 12 | 2 | chunk_index | zero-based chunk index |
+| 14 | 2 | chunk_count | 9 for this firmware |
+| 16 | 4 | payload_length | 9936 |
+| 20 | 4 | payload_offset | offset in logical payload |
+| 24 | 2 | chunk_length | bytes after this header |
+| 26 | 2 | reserved | 0 |
+| 28 | 4 | crc32 | CRC32/IEEE of metadata plus all pixel bytes |
+
+The 16-byte logical metadata is width=80, height=62, frame_sequence, uptime_ms, minimum_raw, and maximum_raw. The remaining 9920 bytes contain 4960 big-endian uint16 pixels. Raw values are preserved; the receiver converts them to Celsius.
+
+A receiver must validate the header and all ranges, collect chunks by frame_sequence and payload_offset, then calculate CRC32 after every byte range is present. Drop the whole frame if a chunk is missing, a frame does not complete within the timeout (recommended 0.5 seconds), or CRC32 does not match. UDP does not guarantee order, uniqueness, or retransmission, so the receiver must handle reordering and duplicates.
+
+## Health log fields
+
+Example:
+
+~~~
+[health] wifi=up rpi=192.168.137.249 resp=nan heart=nan co2=875
+pir=0 thermal_frames=52 udp_sent=0 udp_failed=45 free_heap=123792
+~~~
+
+- wifi: ESP32 Wi-Fi link state.
+- rpi: configured RPI_HOST. A wrong address breaks both TCP and UDP.
+- resp / heart: MR60 respiration and heart rate. nan means no valid fresh value.
+- co2: latest SCD4x value in ppm.
+- pir: GPIO13 input. Zero can be normal when there is no motion.
+- thermal_frames: number of thermal frames captured over SPI.
+- udp_sent / udp_failed: completed thermal frame send results.
+- free_heap: free ESP32 heap bytes. A stable value is not a short-circuit indicator.
+
+If udp_sent stays at zero while udp_failed increases, check RPI_HOST, network/subnet, the UDP receiver, and firewall before suspecting a sensor short.
+
+On the Raspberry Pi:
+
+~~~
+hostname -I
+sudo ss -lunp | grep 5005
+sudo ufw allow 5005/udp
+~~~
+
+The receiver must bind UDP 5005 on 0.0.0.0 or the Raspberry Pi Wi-Fi address. The legacy integration/pi_lcd/server.py in this repository is TCP-only; use a runtime with an SNTU UDP reassembler or add one before expecting thermal frames.
+
+## Verification
+
+- Arduino IDE Verify with ESP32 Dev Module
+- Serial Monitor at 115200 baud
+- Confirm Wi-Fi and health logs
+- Check TCP 9000 and UDP 5005 independently on the receiver
+- Do not include secrets.h, Wi-Fi passwords, or private credentials in a commit

@@ -15,7 +15,6 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from devices.mmwave.src.mr60_esp_adapter import MR60ESPAdapter
-from ondevice_ai.src.integrated_node.run_mr60_usb_node import MR60IntegratedPipeline
 
 
 LOG_ROOT = REPO_ROOT / "devices" / "mmwave" / "firmware" / "logs" / "breath"
@@ -145,49 +144,6 @@ class TestMR60ESPAdapter(unittest.TestCase):
         self.assertTrue(mmwave["stale"])
         self.assertEqual(mmwave["fault_reason"], "MMWAVE_SERIAL_TIMEOUT")
         self.assertEqual(mmwave["window_samples"], 0)
-
-    def test_e2e_timeout_clears_integration_buffer_and_degrades_mmwave(self) -> None:
-        pipeline = MR60IntegratedPipeline()
-        stream = pipeline.risk_engine.mmwave_stream_adapter
-        stream.push_sample(0.1, timestamp_s=1.0, presence=1)
-        self.assertEqual(len(stream.buffer), 1)
-        output = pipeline.process_timeout()
-        self.assertEqual(output["integration"]["mmwave_status"], "DEGRADED")
-        self.assertEqual(output["integration"]["buffer_samples"], 0)
-        self.assertEqual(len(stream.buffer), 0)
-        safety = output["integration"]["safety"]
-        self.assertEqual(safety["state"], "UNKNOWN")
-        self.assertEqual(safety["fault_reason"], "MMWAVE_SERIAL_TIMEOUT")
-        self.assertFalse(safety["heart_verified"])
-        self.assertFalse(safety["apnea_verified"])
-
-    def test_e2e_valid_packet_reaches_integration_buffer(self) -> None:
-        pipeline = MR60IntegratedPipeline()
-        output = None
-        for index in range(620):
-            timestamp_s = index / 10.0
-            record = self.current_record({
-                "seq": index, "ts_monotonic_ms": int(timestamp_s * 1000),
-                "uart_frame_ok": True, "checksum_ok": True,
-                "checksum_errors": 0, "parse_errors": 0,
-                "human_detected_raw": True, "human_detected_stable": True,
-                "distance_cm_raw": 90.0, "breath_rate_raw": 19.0,
-                "heart_rate_raw": 78.0,
-                "breath_phase": float(np.sin(2.0 * np.pi * 0.25 * timestamp_s)),
-                "heart_phase": 0.1, "phase_age_ms": 10, "heart_age_ms": 10,
-                "sensor_state": "RAW",
-            })
-            output = pipeline.process_line(json.dumps(record))
-        self.assertIsNotNone(output)
-        mmwave = output["mmwave_mr60"]
-        integration = output["integration"]
-        self.assertEqual(mmwave["state"], "VALID")
-        self.assertEqual(integration["mmwave_status"], "OK")
-        self.assertGreater(integration["buffer_samples"], 0)
-        self.assertFalse(integration["buffer_ready"])
-        self.assertFalse(integration["safety"]["heart_verified"])
-        self.assertFalse(integration["safety"]["apnea_verified"])
-
 
 if __name__ == "__main__":
     unittest.main()

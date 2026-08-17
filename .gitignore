@@ -41,3 +41,12 @@ tmp/
 
 # Local terminal artifacts
 *.log
+
+# 외부 저장소의 중첩 clone. sheepmeat/test 는 별도 저장소로 관리한다.
+/safenest-mmwave-standalone/
+
+# 2026-08-13 통합 전달본 압축 해제물. GitHub 의 yuname121/integration 이 상위 버전이다.
+/safenest_integration/
+
+# 전달용 압축 아카이브
+*.zip

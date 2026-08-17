@@ -11,6 +11,9 @@
  *   - Wi-Fi TCP to a Raspberry Pi
  *   - JSON packets for low-rate scalar telemetry
  *   - Big-endian uint16 binary packets for thermal frames
+ *   - USB serial JSONL for CO2/RH/temperature, so a development host can
+ *     collect real SCD4x samples without any Wi-Fi connection. This stream is
+ *     machine-readable and is deliberately separate from the [health] log line.
  *
  * The Arduino loop never calls delay(). Sensor scheduling uses millis().
  * TCP connection and potentially blocking writes run in a separate FreeRTOS task.
@@ -32,6 +35,7 @@ constexpr char WIFI_PASSWORD[] = "openlab206";
 constexpr char RPI_HOST[] = "192.168.1.44";  // Raspberry Pi IPv4 address
 constexpr uint16_t RPI_PORT = 9000;
 constexpr char DEVICE_ID[] = "esp32-01";
+constexpr char FIRMWARE_VERSION[] = "safenest-integrated-esp/1.0.0";
 
 // -----------------------------------------------------------------------------
 // ESP32 Dev Module wiring (matches the existing standalone sensor tests).
@@ -57,6 +61,7 @@ constexpr uint32_t THERMAL_SPI_HZ = 8000000;
 constexpr uint32_t PIR_PERIOD_MS = 20;
 constexpr uint32_t CO2_POLL_PERIOD_MS = 250;
 constexpr uint32_t TELEMETRY_PERIOD_MS = 1000;
+constexpr uint32_t CO2_SERIAL_PERIOD_MS = 1000;
 constexpr uint32_t HEALTH_LOG_PERIOD_MS = 10000;
 constexpr uint32_t MMWAVE_STALE_MS = 5000;
 constexpr uint32_t CO2_STALE_MS = 15000;
@@ -146,6 +151,15 @@ bool co2Started = false;
 float respirationRate = NAN;
 float heartRate = NAN;
 uint16_t co2Ppm = 0;
+// SCD4x also returns RH and temperature in the same measurement. They are kept
+// so the USB serial stream can expose every physical value the sensor produced.
+float co2HumidityPct = NAN;
+float co2TemperatureC = NAN;
+uint32_t co2SampleSequence = 0;
+// Last CO2 failure reason. Never cleared into a fake "ok" sample: the serial
+// stream reports null values together with this code whenever a sample is not
+// fresh and fully finite.
+const char *co2ErrorCode = "CO2_NOT_INITIALIZED";
 bool pirMotion = false;
 
 uint32_t lastRespirationMs = 0;
@@ -155,8 +169,10 @@ uint32_t lastThermalMs = 0;
 uint32_t lastThermalStatusPollMs = 0;
 uint32_t lastPirPollMs = 0;
 uint32_t lastCo2PollMs = 0;
+uint32_t lastCo2SerialMs = 0;
 uint32_t lastTelemetryMs = 0;
 uint32_t lastHealthLogMs = 0;
+uint32_t co2SerialSequence = 0;
 uint32_t telemetrySequence = 0;
 uint32_t thermalSequence = 0;
 
@@ -320,6 +336,7 @@ void captureThermalIfReady(uint32_t now) {
 
 void initializeCo2() {
   if (!i2cPresent(SCD4X_ADDRESS)) {
+    co2ErrorCode = "CO2_I2C_ADDRESS_NOT_FOUND";
     Serial.println("[co2] ERROR: I2C address 0x62 not found");
     return;
   }
@@ -329,10 +346,12 @@ void initializeCo2() {
   setupWait(500);
   const int16_t error = scd4x.startPeriodicMeasurement();
   if (error != 0) {
+    co2ErrorCode = "CO2_START_PERIODIC_MEASUREMENT_FAILED";
     Serial.printf("[co2] ERROR: startPeriodicMeasurement=%d\n", error);
     return;
   }
   co2Started = true;
+  co2ErrorCode = "CO2_WARMING_UP";
   Serial.println("[co2] ready: first measurement takes about 5 seconds");
 }
 
@@ -342,16 +361,34 @@ void pollCo2(uint32_t now) {
   }
 
   bool ready = false;
-  if (scd4x.getDataReadyStatus(ready) != 0 || !ready) return;
+  if (scd4x.getDataReadyStatus(ready) != 0) {
+    co2ErrorCode = "CO2_DATA_READY_STATUS_FAILED";
+    return;
+  }
+  // "not ready yet" is normal between the ~5 s SCD4x sample periods and must not
+  // overwrite a real error code.
+  if (!ready) return;
 
   uint16_t newCo2 = 0;
   float temperature = NAN;
   float humidity = NAN;
-  if (scd4x.readMeasurement(newCo2, temperature, humidity) == 0 &&
-      newCo2 != 0) {
-    co2Ppm = newCo2;
-    lastCo2Ms = millis();
+  if (scd4x.readMeasurement(newCo2, temperature, humidity) != 0) {
+    co2ErrorCode = "CO2_READ_MEASUREMENT_FAILED";
+    return;
   }
+  // A zero ppm reading, or a non-finite RH/temperature, is discarded instead of
+  // being published. Previous values are never re-stamped as a new sample.
+  if (newCo2 == 0 || !isfinite(humidity) || !isfinite(temperature)) {
+    co2ErrorCode = "CO2_INVALID_SAMPLE";
+    return;
+  }
+
+  co2Ppm = newCo2;
+  co2HumidityPct = humidity;
+  co2TemperatureC = temperature;
+  ++co2SampleSequence;
+  lastCo2Ms = millis();
+  co2ErrorCode = "";
 }
 
 void pollMmWave(uint32_t now) {
@@ -432,6 +469,62 @@ void formatNullableFloat(char *output, size_t outputSize, bool valid,
   } else {
     strlcpy(output, "null", outputSize);
   }
+}
+
+// USB serial CO2 stream. One JSON object per line, independent of Wi-Fi and of
+// the TCP transport, so a development host can collect real SCD4x samples over
+// USB alone. Schema name differs from the TCP telemetry schema on purpose.
+void emitCo2SerialTelemetry(uint32_t now) {
+  if (!scheduleDue(now, lastCo2SerialMs, CO2_SERIAL_PERIOD_MS)) return;
+
+  const bool valid = co2Started && isFresh(lastCo2Ms, now, CO2_STALE_MS) &&
+                     co2Ppm != 0 && isfinite(co2HumidityPct) &&
+                     isfinite(co2TemperatureC);
+
+  char ppm[16], humidity[20], temperature[20];
+  if (valid) {
+    snprintf(ppm, sizeof(ppm), "%u", co2Ppm);
+  } else {
+    strlcpy(ppm, "null", sizeof(ppm));
+  }
+  formatNullableFloat(humidity, sizeof(humidity), valid, co2HumidityPct);
+  formatNullableFloat(temperature, sizeof(temperature), valid, co2TemperatureC);
+
+  // Stale-but-previously-valid data reports the age of the original sample, so
+  // the host can tell a frozen transport from a legitimately repeated reading.
+  char sampleTimestamp[16], sampleAge[16];
+  if (lastCo2Ms != 0) {
+    snprintf(sampleTimestamp, sizeof(sampleTimestamp), "%lu",
+             static_cast<unsigned long>(lastCo2Ms));
+    snprintf(sampleAge, sizeof(sampleAge), "%lu",
+             static_cast<unsigned long>(now - lastCo2Ms));
+  } else {
+    strlcpy(sampleTimestamp, "null", sizeof(sampleTimestamp));
+    strlcpy(sampleAge, "null", sizeof(sampleAge));
+  }
+
+  char error[48];
+  if (valid) {
+    strlcpy(error, "null", sizeof(error));
+  } else {
+    const char *code =
+        (co2ErrorCode != nullptr && co2ErrorCode[0] != '\0') ? co2ErrorCode
+                                                             : "CO2_STALE";
+    snprintf(error, sizeof(error), "\"%s\"", code);
+  }
+
+  Serial.printf(
+      "{\"schema\":\"safenest.co2.serial.v1\",\"device_id\":\"%s\","
+      "\"firmware_version\":\"%s\",\"seq\":%lu,\"ts_monotonic_ms\":%lu,"
+      "\"co2_ppm\":%s,\"humidity_pct\":%s,\"temperature_c\":%s,"
+      "\"co2_valid\":%s,\"co2_error\":%s,\"co2_sample_seq\":%lu,"
+      "\"co2_sample_ts_ms\":%s,\"co2_sample_age_ms\":%s}\n",
+      DEVICE_ID, FIRMWARE_VERSION,
+      static_cast<unsigned long>(++co2SerialSequence),
+      static_cast<unsigned long>(now), ppm, humidity, temperature,
+      valid ? "true" : "false", error,
+      static_cast<unsigned long>(co2SampleSequence), sampleTimestamp,
+      sampleAge);
 }
 
 bool sendTelemetry(WiFiClient &client, const TelemetrySnapshot &snapshot) {
@@ -606,6 +699,7 @@ void loop() {
   }
 
   publishTelemetrySnapshot(now);
+  emitCo2SerialTelemetry(now);
   logHealth(now);
 
   // Cooperative yield only; there is intentionally no delay() in runtime.

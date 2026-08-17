@@ -257,6 +257,71 @@
           "zero_point": -128
         }
       }
+    },
+    "mmwave_m_n9": {
+      "model_id": "MMWAVE_M_N9_FULL_INT8_V1",
+      "version": "m_n9",
+      "status": "locked_int8_candidate",
+      "artifact_status": "CONFIRMED",
+      "validation_status": "PUBLIC_VAL_AND_HELDOUT_LOCKED; DEVICE_VALIDATED=NO",
+      "deployment_allowed": false,
+      "block_reason": "NOT_YET_WIRED_TO_RUNTIME_PIPELINE; ARTIFACT_LOCKED",
+      "runtime_default": false,
+      "locked_for_next_runtime_wiring": true,
+      "hardware_validation": "NOT_PERFORMED",
+      "DEVICE_VALIDATED": false,
+      "PRESENCE_GATE_REQUIRED": true,
+      "role": "respiration_anomaly_classification",
+      "framework": "TensorFlow Lite",
+      "quantization": "full_int8",
+      "path": "models/mmwave/m_n9/MMWAVE_M_N9_FULL_INT8_V1.tflite",
+      "lock_path": "config/mmwave/m_n9_full_int8_artifact_lock.json",
+      "input_contract_path": "config/mmwave/m_n4_canonical_input_dataset_contract.json",
+      "size_bytes": 11816,
+      "sha256": "3b008af4be0facc4037c2afd3fe39292fb794208eb4370dbe6916b2d15aa38a4",
+      "source_repository": "https://github.com/sheepmeat/test",
+      "source_sha": "390f3be3d75987a79a0e0438ba8a9d5e9e19dc97",
+      "source_float_id": "MMWAVE_M_N6_SELECTED_FLOAT_V1",
+      "source_architecture": "M-N5_DILATED_CONV1D_GAP_TINY",
+      "input": {
+        "name": "serving_default_canonical_r2:0",
+        "shape": [
+          1,
+          240,
+          1
+        ],
+        "dtype": "int8",
+        "scale": 0.5623255372047424,
+        "zero_point": 4,
+        "sample_rate_hz": 8,
+        "window_seconds": 30,
+        "semantic": "canonical_r2_window_local_mad"
+      },
+      "output": {
+        "name": "StatefulPartitionedCall_1:0",
+        "shape": [
+          1,
+          3
+        ],
+        "dtype": "int8",
+        "scale": 0.00390625,
+        "zero_point": -128,
+        "semantic": "softmax_probabilities"
+      },
+      "class_map": {
+        "0": "NORMAL",
+        "1": "RAPID_OR_ABNORMAL",
+        "2": "APNEA"
+      },
+      "class_map_note": "APNEA is a SafeNest voluntary-breath-hold / reference-derived proxy, not clinical apnea."
     }
+  },
+  "mmwave_active_locked_artifact": {
+    "artifact_id": "MMWAVE_M_N9_FULL_INT8_V1",
+    "model_key": "mmwave_m_n9",
+    "runtime_default_key": "mmwave",
+    "runtime_wired": false,
+    "source_sha": "390f3be3d75987a79a0e0438ba8a9d5e9e19dc97",
+    "note": "M-N9 is the locked successor INT8. Runtime still loads historical models.mmwave, which remains blocked."
   }
 }

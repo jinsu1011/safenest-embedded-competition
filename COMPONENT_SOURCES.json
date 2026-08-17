@@ -72,7 +72,28 @@
       "integration_path": "RaspberryPi/Ondevice_AI",
       "classification": "UPSTREAM_AUTHORITATIVE",
       "integration_modifications": "upstream archive/ moved to archive/ondevice_ai_upstream_history/; upstream .gitignore and .github removed",
-      "runtime_critical_parity": "inference/, config/, adapters/, models/model_manifest.json are byte-identical to the integration frozen snapshot at 9e4ddfe7, so adopting upstream introduces no runtime semantic change"
+      "runtime_critical_parity": "inference/ and adapters/ remain the integration frozen snapshot at 9e4ddfe7. models/model_manifest.json and config/ were merged with an M-N9 overlay; LazyModel still reads blocked models.mmwave so live runtime semantics are unchanged.",
+      "overlays": [
+        {
+          "name": "mmwave_m_n9_full_int8",
+          "upstream_repository": "https://github.com/sheepmeat/test",
+          "upstream_commit": "390f3be3d75987a79a0e0438ba8a9d5e9e19dc97",
+          "classification": "UPSTREAM_AUTHORITATIVE_OVERLAY",
+          "runtime_promoted": false,
+          "paths": [
+            "RaspberryPi/Ondevice_AI/models/mmwave/m_n9/MMWAVE_M_N9_FULL_INT8_V1.tflite",
+            "RaspberryPi/Ondevice_AI/config/mmwave/m_n9_full_int8_artifact_lock.json",
+            "RaspberryPi/Ondevice_AI/config/mmwave/m_n4_canonical_input_dataset_contract.json",
+            "RaspberryPi/Ondevice_AI/scripts/mmwave_m_n4_canonical.py"
+          ],
+          "team_authored_paths": [
+            "RaspberryPi/Ondevice_AI/models/mmwave/m_n9/team_import_inventory.json",
+            "RaspberryPi/Ondevice_AI/docs/reports/20260818_SafeNest_mmWave_M-N9_Team_Import_Handoff_KO_01.md",
+            "RaspberryPi/Ondevice_AI/models/model_manifest.json"
+          ],
+          "notes": "Partial import of locked M-N9 INT8 and M-N4 contract. model_manifest.json is merged, not a byte copy of 390f3be. Does not replace the 4129753 Ondevice_AI snapshot. Live Runtime is not promoted."
+        }
+      ]
     },
     "gateway": {
       "upstream_repository": "https://github.com/yuname121/integration",
@@ -199,7 +220,8 @@
     "mmwave_v0_2_0_candidate": "candidate, SYNTHETIC_SMOKE_ONLY, hardware validation BLOCKED_HARDWARE (not promoted to runtime default)",
     "thermal_v0_1_0": "candidate, CONFIRMED_SYNTHETIC_ONLY",
     "co2_v0_1_0": "candidate, CONFIRMED_SYNTHETIC_ONLY",
-    "co2_c_b6_candidate": "binary unavailable upstream; not promoted"
+    "co2_c_b6_candidate": "binary unavailable upstream; not promoted",
+    "mmwave_m_n9_full_int8": "artifact imported from sheepmeat/test 390f3be; SHA 3b008af4be0facc4037c2afd3fe39292fb794208eb4370dbe6916b2d15aa38a4; NOT promoted to Runtime default because LazyModel still reads models.mmwave (blocked v0.1.0, 300-sample); DEVICE_VALIDATED=NO; PRESENCE_GATE_REQUIRED=YES"
   },
   "hardware_validation_status": {
     "real_hardware_e2e": "NOT_PERFORMED",

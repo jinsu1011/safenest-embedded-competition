@@ -385,6 +385,52 @@ M-N4 는 빈 방 입력을 거르지 않고 zero tensor(MAD=0, `mad_collapsed=tr
 
 ---
 
+## 7.5 캡처 경로와 라이브 경로는 서로 다른 경로다 (2026-08-18 정정)
+
+모델 트랙 회신에서 두 경로가 한 번 섞여 서술됐고, 이후 정정됐다. 혼동하기 쉬우므로 기록한다.
+
+| | 캡처/레퍼런스 경로 (센서 트랙) | 라이브 프로덕션 경로 |
+|---|---|---|
+| 전송 | **USB serial** | SafeNest TCP v1 :9000 |
+| 펌웨어 | `ESP32/reference/mmwave_platformio` (`safenest-mr60-esp/1.2.0`) | `ESP32/Arduino/esp32_sensor_node` |
+| JSON | 평평(flat) | 중첩 예정 (`mmwave.{...}`, PR #29 DRAFT) |
+| `breath_phase`/`ts_monotonic_ms`/`phase_age_ms`/`seq` | 있음 | 없음 (PR #29 에서 중첩으로 추가 예정) |
+| `human_detected_raw` | **있음** | 없음. **PR #29 에도 없음** |
+| CODEOWNERS | `@jinsu1011` | `/ESP32/` → `@yuseungha @jinsu1011` |
+
+CAP-0~3 은 전부 USB 경로 증거다.
+
+확정된 사항:
+
+- **PR #29(DRAFT) 머지는 선행 조건이 아니다.** 기다리지도, 머지하지도 않는다.
+  하드웨어 컴파일/플래시/라이브 캡처 증거가 없는 DRAFT 이며 `ESP32/` 소유자 영역이다.
+- **`human_detected_raw` 를 Arduino TCP JSON 에 추가하지 않는다.**
+  ESP32 소유자의 펌웨어/스키마 변경이며 "펌웨어 변경 금지" 지시와 충돌한다.
+  모델 트랙이 앞서 요청했던 이 항목은 **철회됐다.**
+- presence gate 는 USB JSONL 에 이미 있는 boolean(`human_detected_raw` /
+  `human_detected_stable`)을 그대로 소비한다. **숫자 점유 임계값을 새로 만들지 않는다.**
+- USB 를 프로덕션 경로로 슬쩍 대체하지 않는다. USB 는 캡처/레퍼런스 경로다.
+- 라이브 TCP 를 붙이는 작업은 **integration 디코더 쪽 일**이며 센서 트랙 펌웨어 일이 아니다.
+
+통합 측 USB 어댑터는 이미 존재하고 필요한 필드를 읽는다
+(`archive/integration_source_snapshots/devices/mmwave/src/mr60_esp_adapter.py`):
+`human_detected_stable` 우선, 없으면 `human_detected_raw` 로 presence 를 잡고
+(`:193`), presence 가 아니면 추정기를 `MMWAVE_PRESENCE_NOT_DETECTED` 로 리셋한다(`:243`).
+
+## 7.6 `distance_cm_raw` 는 5.74 cm 로 양자화되어 있다
+
+전 캡처(2026-08-18 세션 4건 + PR18 파일럿 2건)에서 관측된 고유값은 15개뿐이며
+인접 간격이 모두 정확히 5.74 cm 다.
+
+```text
+40.18  45.92  51.66  57.40  63.14  68.88  74.62  80.36
+86.10  91.84  97.58  103.32  109.06  114.80  120.54
+```
+
+따라서 장치 파생 `distance_cm` 의 실질 해상도는 최선이어도 ±2.87 cm 다.
+manifest 의 `distance_cm` 을 줄자 실측으로 대체하면 이 한계가 사라진다.
+세션 간 거리 비교(예: 51.7 cm 대 57.4 cm)도 한 칸 차이일 뿐이므로 과대 해석하지 않는다.
+
 ## 8. 경계 (유지됨)
 
 | 항목 | 상태 |

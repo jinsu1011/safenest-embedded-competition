@@ -164,15 +164,48 @@
       "min": -3.03
     }
   },
-  "qa_schema_version": "m-c0-physical-qa-1.1",
+  "qa_schema_version": "m-c0-physical-qa-1.2",
   "raw": {
     "byte_count": 1837444,
     "malformed_line_count": 0,
     "malformed_lines": [],
-    "path": "devices/mmwave/device_measurements/pilot/M-C0-PILOT-STATIONARY-001.raw.jsonl",
+    "path": "pilot/M-C0-PILOT-STATIONARY-001.raw.jsonl",
     "physical_lines": 1799,
     "sha256": "e2b832fd3a72f18b4c3a370738c10e58c0269283dac218ae2d7d4dad48036f6f",
     "valid_json_records": 1799
+  },
+  "schema_conformance": {
+    "anomalous_record_count": 1,
+    "anomalous_record_indices": [
+      1030
+    ],
+    "inconsistent_key_counts": {
+      "breath_filtered_v_std": 1,
+      "breath_filtered_valid": 1798,
+      "breath_phase_std": 1798
+    },
+    "missing_required_key_counts": {
+      "breath_filtered_valid": 1,
+      "breath_phase_std": 1
+    },
+    "note": "Undeclared keys present on every record are current-firmware fields the schema has not declared; informational only. A key present on some records but not others indicates a truncated serial line that still parsed as JSON.",
+    "pass": false,
+    "record_count": 1799,
+    "schema": "raw_record.schema.json",
+    "undeclared_keys_on_every_record": [
+      "breath_age_ms",
+      "breath_rate_raw_trusted",
+      "breath_raw_valid",
+      "checksum_errors",
+      "consecutive_uart_errors",
+      "distance_age_ms",
+      "freeze_detected",
+      "heart_age_ms",
+      "parse_errors",
+      "presence_age_ms",
+      "uart_frames_total",
+      "vital_presence_detected"
+    ]
   },
   "sensor_state_counts": {
     "DEGRADED": 1568,
@@ -186,7 +219,7 @@
     "last": 20886,
     "missing_sequences": 0
   },
-  "stream_integrity_pass": true,
+  "stream_integrity_pass": false,
   "timing": {
     "backward_timestamps": 0,
     "duplicate_timestamps": 0,

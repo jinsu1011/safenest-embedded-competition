@@ -108,7 +108,16 @@ MAD collapse 도 0건이었다. 즉 지금 방식대로 더 찍으면, 저진폭
 `pilot/M-C0-PILOT-STATIONARY-001.raw.jsonl:1030` 에서 인접 키가 융합된
 `"breath_filtered_v_std"` 가 관측됨 (`breath_filtered_valid` + `breath_phase_std` 가
 바이트 유실로 붙음). JSON 은 정상 파싱되므로 파싱 기반 QA 로는 잡히지 않는다.
-빈도 1/3598. → QA 에 **미지 키 검출** 한 줄만 추가하면 충분하다.
+빈도 1/3598.
+
+→ **해소됨.** `tools/physical_capture_qa.py` 에 `schema_conformance` 검사를 추가했다
+(qa schema 1.2). 스키마가 `additionalProperties: true` 이고 현재 펌웨어가 미선언 필드를
+12개 내보내므로, 키 이름이 아니라 **키 빈도**로 판정한다. 모든 레코드에 있는 미선언 키는
+정보성이고, 일부 레코드에만 있는 키만 실패로 처리한다. 손상 행 위치는 캡처의 최빈 키 조합과
+비교해 찾는다. STATIONARY 파일럿에서 1030 행을 지목하고 DESKWORK 파일럿과 2026-08-18 세션
+4건은 통과한다. 파일럿 QA 산출물도 1.2 로 재생성했다(raw 파일은 불변).
+참고: `M-C0-PILOT-STATIONARY-001` 에는 session manifest 가 없어 이 손상을 설명할 실험
+기록지가 원래부터 없었다.
 
 ### 1.5 §33 로컬 전용 미커밋 데이터
 
@@ -194,7 +203,12 @@ sensor_state      2400행 전부 UNKNOWN / PRESENCE_NOT_DETECTED
 M-N4 창 8개 → 전부 채택, MAD=0, mad_collapsed=true (zero tensor)
 ```
 
-**M-N4 는 빈 방을 거르지 않는다.** 계약의 `near_zero_behavior: ZERO_TENSOR` 대로 zero tensor 를 내보내고,
+**빈 방에서는 phase 갱신 자체가 느려진다. 점유 세션 3건은 8 ms 규칙으로 폐기된 행이 0 이고
+`phase_age_ms` 최대 18 ms 인 반면, 빈 방 세션은 2400 행 중 330 행이 재게시로 폐기되고
+(`phase_age_ms` 최대 114 ms) 실질 갱신률이 약 8.6 Hz 로 내려간다. 창 판정에는 영향이
+없었지만(8개 전부 채택) presence gate 의 보조 신호로 쓸 수 있는 특성이다.
+
+M-N4 는 빈 방을 거르지 않는다.** 계약의 `near_zero_behavior: ZERO_TENSOR` 대로 zero tensor 를 내보내고,
 모델은 그것을 APNEA 로 읽는다. 이를 막을 수 있는 것은 presence gate 뿐이다.
 
 다만 gate 가 쓸 producer 신호는 예외 0건으로 깨끗하다. Pi 런타임 담당자에게 그대로 넘길 수 있다.

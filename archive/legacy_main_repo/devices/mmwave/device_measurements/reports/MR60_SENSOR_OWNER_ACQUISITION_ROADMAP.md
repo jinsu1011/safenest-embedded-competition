@@ -460,6 +460,36 @@ manifest 의 `distance_cm` 을 줄자 실측으로 대체하면 이 한계가 �
 
 향후 세션은 이 기준선에서 시작하며, 값은 캡처 전에 다시 확인해 manifest 에 기록한다.
 
+## 7.8 M-N10 영문 프로토콜 정독 결과 (센서 트랙에 영향 있는 항목만)
+
+`docs/mmwave/20260818_SafeNest_mmWave_M-N10_Targeted_Real_Device_Capture_01.md` 전문 확인.
+`M_N11_AUTHORIZED = NO`, gate `INCOMPLETE`, `NEXT_RECOMMENDED_PHASE = M-N10_CAPTURE_COMPLETION`.
+
+**Pi smoke 는 하드 블로커가 아니다.** 앞서 §5.2 에 "Pi 를 로거로 쓰면 인간 측정 전 필수"로
+적어 두었는데, 문서는 대안을 명시한다.
+
+```text
+Pi 가 로거     → INT8 SHA 3b008af4… 로 isolated smoke 를 인간 측정 전에 닫을 것
+다른 검증된 raw 로거 → 캡처 진행 가능. 단 보고서에 PI_SMOKE_REMAINS_UNVERIFIED 를 적을 것
+```
+
+우리 USB/맥 로거(`tools/live_mr60_monitor.py`)가 후자에 해당한다. 즉 M-N10 캡처가
+Pi 준비에 묶여 있지 않다. 다만 그 경우 보고서 표기 의무가 생긴다.
+
+**피험자 배분 예시** — 6→DEV 2/RESERVED 4, 8→3/5, 9→3/6.
+"데이터가 불편하다는 이유로 RESERVED 를 DEV 로 옮기지 않는다"가 명시돼 있다.
+
+**raw 파일별 기록 의무** — 파일명, subject/session, 크기, SHA-256, **clocks**,
+device ID, firmware/config identity. 우리 manifest 는 clocks 를 제외하고 이미 충족한다.
+M-N10 세션에는 wall time 과 monotonic time 을 함께 남겨야 한다.
+
+**창 적격성 집계는 M-N10 범위 안이다.** "M-N10 may count eligible vs invalid 30 s windows
+under the frozen M-N4 contract (timing, gaps, boots, MAD)" — `tools/cap0_m_n4_feasibility.py`
+가 이미 그 집계를 산출한다. 신경망 정확도 검사는 M-N10 범위 밖이며 RESERVED 추론은 0 이다.
+
+**raw 로컬 루트** — `datasets/mmwave/raw/m_n10/` (Git 에 넣지 않음).
+우리 CAP 세션의 `raw/` ignore 정책과 같은 취급이다.
+
 ## 8. 경계 (유지됨)
 
 | 항목 | 상태 |

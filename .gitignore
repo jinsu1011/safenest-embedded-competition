@@ -73,6 +73,9 @@ tmp/
 # 외부 저장소의 중첩 clone. sheepmeat/test 는 별도 저장소로 관리한다.
 /safenest-mmwave-standalone/
 
+# M-N10 로컬 raw. Git에는 manifest/SHA만 두고 payload는 커밋하지 않는다.
+RaspberryPi/Ondevice_AI/datasets/mmwave/raw/
+
 # 2026-08-13 통합 전달본 압축 해제물. GitHub 의 yuname121/integration 이 상위 버전이다.
 /safenest_integration/
 

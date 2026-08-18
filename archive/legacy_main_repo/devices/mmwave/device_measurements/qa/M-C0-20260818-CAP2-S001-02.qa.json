@@ -164,7 +164,7 @@
       "min": -3.11
     }
   },
-  "qa_schema_version": "m-c0-physical-qa-1.1",
+  "qa_schema_version": "m-c0-physical-qa-1.2",
   "raw": {
     "byte_count": 2410415,
     "malformed_line_count": 0,
@@ -173,6 +173,30 @@
     "physical_lines": 2398,
     "sha256": "e46fc5cc94e83ed372420925297ca60dd425722672acc6b6042cf89251871a71",
     "valid_json_records": 2398
+  },
+  "schema_conformance": {
+    "anomalous_record_count": 0,
+    "anomalous_record_indices": [],
+    "inconsistent_key_counts": {},
+    "missing_required_key_counts": {},
+    "note": "Undeclared keys present on every record are current-firmware fields the schema has not declared; informational only. A key present on some records but not others indicates a truncated serial line that still parsed as JSON.",
+    "pass": true,
+    "record_count": 2398,
+    "schema": "raw_record.schema.json",
+    "undeclared_keys_on_every_record": [
+      "breath_age_ms",
+      "breath_rate_raw_trusted",
+      "breath_raw_valid",
+      "checksum_errors",
+      "consecutive_uart_errors",
+      "distance_age_ms",
+      "freeze_detected",
+      "heart_age_ms",
+      "parse_errors",
+      "presence_age_ms",
+      "uart_frames_total",
+      "vital_presence_detected"
+    ]
   },
   "sensor_state_counts": {
     "DEGRADED": 685,

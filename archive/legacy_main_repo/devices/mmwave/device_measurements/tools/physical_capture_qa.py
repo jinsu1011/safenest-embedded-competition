@@ -34,6 +34,63 @@ COVERAGE_FIELDS = (
 PHASE_MAX_AGE_MS = 500
 PHASE_MAX_AGE_SOURCE = "devices/mmwave/firmware/include/mmwave_config.h:kPhaseMaxAgeMs"
 
+RAW_RECORD_SCHEMA = Path(__file__).resolve().parents[1] / "schemas" / "raw_record.schema.json"
+
+
+def summarize_schema_conformance(records: list[dict]) -> dict:
+    """Flag record keys that appear on only some records.
+
+    The schema sets additionalProperties=true and the current firmware emits
+    several fields it does not declare, so an undeclared key is not by itself a
+    defect. A key carried by only a subset of records is: a serial byte dropout
+    can fuse two adjacent JSON keys into one novel key (observed once as
+    "breath_filtered_v_std" in M-C0-PILOT-STATIONARY-001). That line still parses,
+    so malformed_line_count never sees it; only key frequency does.
+    """
+    schema = json.loads(RAW_RECORD_SCHEMA.read_text())
+    declared = set(schema.get("properties", {}))
+    required = set(schema.get("required", []))
+    total = len(records)
+
+    key_counts: Counter = Counter()
+    for record in records:
+        key_counts.update(record.keys())
+
+    consistent = {key for key, count in key_counts.items() if count == total}
+    inconsistent = {
+        key: count for key, count in sorted(key_counts.items()) if count < total
+    }
+    missing_required = {
+        key: total - key_counts.get(key, 0)
+        for key in sorted(required)
+        if key_counts.get(key, 0) < total
+    }
+
+    # The modal key signature is what a healthy record looks like in this capture.
+    signatures: Counter = Counter(frozenset(record) for record in records)
+    modal_signature = signatures.most_common(1)[0][0] if signatures else frozenset()
+    anomalous = [
+        index
+        for index, record in enumerate(records, start=1)
+        if frozenset(record) != modal_signature
+    ]
+
+    return {
+        "schema": RAW_RECORD_SCHEMA.name,
+        "record_count": total,
+        "undeclared_keys_on_every_record": sorted(consistent - declared),
+        "inconsistent_key_counts": inconsistent,
+        "missing_required_key_counts": missing_required,
+        "anomalous_record_indices": anomalous[:20],
+        "anomalous_record_count": len(anomalous),
+        "pass": not inconsistent and not missing_required,
+        "note": (
+            "Undeclared keys present on every record are current-firmware fields the "
+            "schema has not declared; informational only. A key present on some records "
+            "but not others indicates a truncated serial line that still parsed as JSON."
+        ),
+    }
+
 
 def finite(value: object) -> bool:
     return (
@@ -172,8 +229,11 @@ def main() -> int:
     checksum_bad = sum(record.get("checksum_ok") is not True for record in records)
     heart_verified_true = sum(record.get("heart_verified") is True for record in records)
 
+    schema_conformance = summarize_schema_conformance(records)
+
     stream_integrity_pass = not any((
         malformed_lines,
+        not schema_conformance["pass"],
         sequence_gap_events,
         sequence_duplicates,
         sequence_backwards,
@@ -184,7 +244,7 @@ def main() -> int:
     ))
 
     result = {
-        "qa_schema_version": "m-c0-physical-qa-1.1",
+        "qa_schema_version": "m-c0-physical-qa-1.2",
         "raw": {
             "path": args.raw_jsonl.as_posix(),
             "sha256": hashlib.sha256(args.raw_jsonl.read_bytes()).hexdigest(),
@@ -239,6 +299,7 @@ def main() -> int:
             "checksum_bad": checksum_bad,
         },
         "coverage": coverage,
+        "schema_conformance": schema_conformance,
         "numeric_ranges": numeric_ranges,
         "sensor_state_counts": dict(sorted(state_counts.items())),
         "error_code_counts": dict(sorted(error_counts.items())),

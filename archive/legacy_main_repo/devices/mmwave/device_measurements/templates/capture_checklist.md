@@ -49,3 +49,22 @@ M-N4 계약(`MMWAVE_MR60_COMPAT_INPUT_DATASET_V1`)과 펌웨어 1.2.0 실측에�
       `windows_accepted`, `windows_rejected`, `producer_non_valid_fraction` 을 세션 노트에 남긴다
 - [ ] CAP-3 재부팅 세션은 재부팅 **전/후를 각각 별도 세션 ID** 로 기록한다
       (M-N4 `boot.window_may_cross_boot_or_restart: false`)
+
+## M-N10 조건 (나중 정식 측정 · 지금 수행하지 않음)
+
+`m_n10_capture_protocol_lock.json` (`LOCKED_BEFORE_HUMAN_CAPTURE`) 기준.
+팀 PR #32 에서 전문을 읽을 것. 지금은 6명 모집·레퍼런스 구매·숨 참기를 하지 않는다.
+
+- [ ] 조건 A 편안한 정지 호흡 — 사용 가능 구간 120초 이상
+- [ ] 조건 B 빠른 호흡 또는 짧은 가벼운 움직임 후 회복 — 120초 이상.
+      **큐는 정답이 아니다**
+- [ ] 조건 C 자리를 옮기거나 기하를 리셋한 뒤 최소 한 조건 반복 — 120초 이상
+- [ ] 조건 이름을 클래스로 매핑하지 않는다 (`intent_is_not_label: true`)
+- [ ] 숨 참기를 강제하지 않는다. 짧은 pause 는 별도 안전 승인 + 독립 레퍼런스 확인이 있을 때만
+- [ ] `subject_id` 는 `MN10-S001` 체계를 쓴다. `SUBJ-001` 은 새 피험자가 아니다
+- [ ] `session_id` / `trial_id` / `boot_id` / `condition_intent` /
+      `actual_reference_availability` 를 manifest 에 채운다
+- [ ] 레퍼런스는 near-raw 파형 + 타임스탬프여야 한다. **BPM 전용 장비는 안 된다**
+- [ ] 시계 동기는 같은 호스트 공통 시계가 1순위. 눈대중 정렬 금지.
+      미검증이면 `AVAILABLE_ALIGNMENT_UNVERIFIED` 로 기록한다
+- [ ] Pi 를 로거로 쓸 경우, 인간 측정 전에 M-N9 isolated smoke 를 먼저 통과시킨다

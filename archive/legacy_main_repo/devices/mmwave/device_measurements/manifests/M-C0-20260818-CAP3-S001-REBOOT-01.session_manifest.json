@@ -3,6 +3,8 @@
   "status": "pilot",
   "session_id": "M-C0-20260818-CAP3-S001-REBOOT-01",
   "subject_id": "SUBJ-001",
+  "trial_id": "T1",
+  "boot_id": "BOOT-20260818-B",
   "operator_id": "OP-LOCAL-001",
   "start_time_utc": "2026-08-18T01:14:28.170Z",
   "end_time_utc": "2026-08-18T01:18:28.115Z",
@@ -30,7 +32,8 @@
   "condition": {
     "breathing_mode": "normal_spontaneous",
     "movement_context": "stationary_no_deliberate_arm_movement_after_esp_power_cycle",
-    "notes": "CAP-3 repeatability session recorded AFTER a deliberate ESP32 USB power cycle, with subject posture and geometry otherwise unchanged from the CAP-2 pair. Reboot is confirmed by the producer clock: ts_monotonic_ms dropped from 1704098 to about 20000 and seq from 17015 to 192. Capture started only after the firmware 60 s kWarmupMs completed; two earlier warmup attempts were abandoned because intermittent PRESENCE_NOT_DETECTED reset the warmup counter. Those warmup checks are retained locally as raw/reboot_warmup_check*.jsonl and are NOT sessions. distance_cm=52 is DEVICE-DERIVED (median distance_cm_raw 51.66). sensor_angle_deg=100 uses the same operator convention as the CAP-2 pair. Phase scale did not shift across the reboot: value range -0.82..+0.85 and pstdev 0.295 sit within the CAP-2 session-to-session spread (0.204, 0.230). Producer flagged BREATH_PHASE_LOW_AMPLITUDE on only 24 of 2398 records (1%)."
+    "notes": "CAP-3 repeatability session recorded AFTER a deliberate ESP32 USB power cycle, with subject posture and geometry otherwise unchanged from the CAP-2 pair. Reboot is confirmed by the producer clock: ts_monotonic_ms dropped from 1704098 to about 20000 and seq from 17015 to 192. Capture started only after the firmware 60 s kWarmupMs completed; two earlier warmup attempts were abandoned because intermittent PRESENCE_NOT_DETECTED reset the warmup counter. Those warmup checks are retained locally as raw/reboot_warmup_check*.jsonl and are NOT sessions. distance_cm=52 is DEVICE-DERIVED (median distance_cm_raw 51.66). sensor_angle_deg=100 uses the same operator convention as the CAP-2 pair. Phase scale did not shift across the reboot: value range -0.82..+0.85 and pstdev 0.295 sit within the CAP-2 session-to-session spread (0.204, 0.230). Producer flagged BREATH_PHASE_LOW_AMPLITUDE on only 24 of 2398 records (1%). boot_id is DERIVED, not emitted by the firmware: sessions sharing a boot show a monotonically increasing ts_monotonic_ms, and a backwards jump marks a new boot. This session belongs to BOOT-20260818-B. condition_intent records operator intent only; M-N10 sets intent_is_not_label=true, so it must never be mapped to a class. These three fields were added for M-N10 session_identity_required; whether M-N10 expects boot_id per RECORD rather than per SESSION is an open question with the model track, and this manifest takes the per-session reading.",
+    "condition_intent": "quiet_rest_breathing_seated_after_producer_power_cycle"
   },
   "reference": {
     "type": "none",
@@ -38,7 +41,8 @@
     "synchronized": false,
     "status": "not_collected",
     "file": null,
-    "notes": "INDEPENDENT_REFERENCE = NOT_AVAILABLE. No respiration or heart accuracy claim. Contract-designated reference (MOVESENSE_CHEST_ACC) is not available to this track."
+    "notes": "INDEPENDENT_REFERENCE = NOT_AVAILABLE. No respiration or heart accuracy claim. Contract-designated reference (MOVESENSE_CHEST_ACC) is not available to this track.",
+    "actual_reference_availability": "NOT_AVAILABLE"
   },
   "files": {
     "raw_immutable": true,

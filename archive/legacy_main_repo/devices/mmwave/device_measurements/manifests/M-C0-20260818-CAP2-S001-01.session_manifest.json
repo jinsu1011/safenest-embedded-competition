@@ -3,6 +3,8 @@
   "status": "pilot",
   "session_id": "M-C0-20260818-CAP2-S001-01",
   "subject_id": "SUBJ-001",
+  "trial_id": "T1",
+  "boot_id": "BOOT-20260818-A",
   "operator_id": "OP-LOCAL-001",
   "start_time_utc": "2026-08-18T00:40:03.683Z",
   "end_time_utc": "2026-08-18T00:44:03.627Z",
@@ -30,7 +32,8 @@
   "condition": {
     "breathing_mode": "normal_spontaneous",
     "movement_context": "stationary_no_deliberate_arm_movement",
-    "notes": "CAP-2 neutral device-domain session, first of the sensor-owner acquisition track. PILOT_NOT_FORMAL_EVALUATION. distance_cm=52 is DEVICE-DERIVED (median distance_cm_raw 51.66, range 45.92-57.40, sd 2.27); it was not tape-measured, so it is not directly comparable to M-C0-PILOT-* where the operator reported a physical measurement. sensor_angle_deg=100 uses the OPERATOR convention for this session: angle from the desk surface, 90 = perpendicular to the desk, so the sensor was reclined about 10 degrees past vertical. This is NOT the M-C0-PILOT-* convention where 0 meant horizontal alignment with the chest; do not compare the two numbers directly. One other person was present in the room; their distance was not recorded and their stillness is operator-reported, not verified. Producer flagged BREATH_PHASE_LOW_AMPLITUDE on 1032 of 2398 records (43%) concentrated in the 90-180s span while distance stayed constant at 51.7cm, which is consistent with shallower breathing rather than a setup or geometry fault."
+    "notes": "CAP-2 neutral device-domain session, first of the sensor-owner acquisition track. PILOT_NOT_FORMAL_EVALUATION. distance_cm=52 is DEVICE-DERIVED (median distance_cm_raw 51.66, range 45.92-57.40, sd 2.27); it was not tape-measured, so it is not directly comparable to M-C0-PILOT-* where the operator reported a physical measurement. sensor_angle_deg=100 uses the OPERATOR convention for this session: angle from the desk surface, 90 = perpendicular to the desk, so the sensor was reclined about 10 degrees past vertical. This is NOT the M-C0-PILOT-* convention where 0 meant horizontal alignment with the chest; do not compare the two numbers directly. One other person was present in the room; their distance was not recorded and their stillness is operator-reported, not verified. Producer flagged BREATH_PHASE_LOW_AMPLITUDE on 1032 of 2398 records (43%) concentrated in the 90-180s span while distance stayed constant at 51.7cm, which is consistent with shallower breathing rather than a setup or geometry fault. boot_id is DERIVED, not emitted by the firmware: sessions sharing a boot show a monotonically increasing ts_monotonic_ms, and a backwards jump marks a new boot. This session belongs to BOOT-20260818-A. condition_intent records operator intent only; M-N10 sets intent_is_not_label=true, so it must never be mapped to a class. These three fields were added for M-N10 session_identity_required; whether M-N10 expects boot_id per RECORD rather than per SESSION is an open question with the model track, and this manifest takes the per-session reading.",
+    "condition_intent": "quiet_rest_breathing_seated"
   },
   "reference": {
     "type": "none",
@@ -38,7 +41,8 @@
     "synchronized": false,
     "status": "not_collected",
     "file": null,
-    "notes": "INDEPENDENT_REFERENCE = NOT_AVAILABLE. No respiration or heart accuracy claim. Contract-designated reference (MOVESENSE_CHEST_ACC) is not available to this track."
+    "notes": "INDEPENDENT_REFERENCE = NOT_AVAILABLE. No respiration or heart accuracy claim. Contract-designated reference (MOVESENSE_CHEST_ACC) is not available to this track.",
+    "actual_reference_availability": "NOT_AVAILABLE"
   },
   "files": {
     "raw_immutable": true,

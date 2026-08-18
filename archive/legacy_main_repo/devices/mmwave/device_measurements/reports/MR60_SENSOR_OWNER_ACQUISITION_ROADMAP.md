@@ -1,7 +1,7 @@
 # MR60 SENSOR-OWNER ACQUISITION ROADMAP (MR60-CAP)
 
 작성일: 2026-08-18 (CAP-2/CAP-3 실측 반영)
-상태: CAP-0/1/2/3 완료 · CAP-5 부분 · CAP-6 차단
+상태: CAP-0/1/2/3 완료 · CAP-5 부분 · **CAP-6 DEFERRED**(모델 트랙 결정, 2026-08-18)
 범위: 센서 담당자(물리 데이터 획득) 트랙 전용.
 이 문서는 canonical 모델 로드맵이 아니다. Phase A/B/M-C/M-D/M-N ID 를 재사용하지 않는다.
 
@@ -236,46 +236,174 @@ M-N4 에 진폭 게이트가 없으므로, 저진폭 창을 구분하려면 이 
 
 ---
 
-## 5. CAP-6 — 차단됨
+## 5. CAP-6 — DEFERRED (2026-08-18 모델 트랙 결정)
 
-모델 트랙 M-N10 이 구체적 결손을 지목해 CAP-6 가 열렸다(§45). 근거는 담당자 메모의 다음 한 문장뿐이다.
+`reports/MR60_CAP6_PROTOCOL_REQUEST.md` 에 대한 회신으로 CAP-6 의 상태가 **차단에서 연기로** 바뀌었다.
 
-> 현장에서 MR60+독립 호흡센서로 새 사람 최소 6명을 측정한 뒤 같은 PR에 두 번째 evidence commit
+```text
+Six new people are NOT required to build or integrate the system.
+Six is only the later M-N11 scoring floor.
+Immediate priority = sensor integration + end-to-end system.
+CAP-6 / M-N10 multi-subject capture is DEFERRED.
+```
 
-차단 요인 3가지:
+즉 앞서 정리한 차단 3가지는 해소된 것이 아니라 **일정에서 뒤로 밀렸다.**
+센서 트랙은 6명 모집을 시작하지 않는다.
 
-| # | 차단 | 현황 | 해소 조건 |
+### 5.1 질문별 회신
+
+| 질문 | 회신 |
+|---|---|
+| APNEA 확보 방법 | **(C)** — 숨 참기 없음. 공개 110명 데이터의 APNEA proxy 사용. 빈 방은 presence gate 이지 APNEA GT 가 아님. 통합은 APNEA 캡처에 막히지 않음 |
+| M-N10 프로토콜 문서 | 팀 PR #32 (`docs/mmwave-m-n10-protocol-share`). 상태 `CAPTURE_NOT_PERFORMED`, "나중 시험지이지 이번 주 SOP 아님" |
+| 레퍼런스 장비 | M-N10 시작 시에만 필요. Movesense 우선, 벨트/흉부움직임/독립 타임스탬프 파형 허용. **BPM 전용 금지.** 자체 구매 금지 |
+| "새 사람 6명" | `SUBJ-001` 은 새 사람 아님. 한 몸 = 한 명. 6 = 나중 하한, 8 = 나중 목표. 둘 다 이번 주 일이 아님 |
+| CAP-0~3 | 통합 근거로 수용. presence 신호를 gate 로 배선 예정. **M-N4 에 진폭 게이트 추가하지 않음.** 4개 세션은 `DEVICE_DOMAIN_REFERENCE` / `FAILURE_QA_EVIDENCE` 유지 |
+
+`phase_update_seq` 펌웨어 패치 미제안 판단도 그대로 유지됐다.
+M-N11 과 `DEVICE_VALIDATED` 는 승인되지 않았다. APNEA 는 SafeNest proxy 이며 임상 판정이 아니다.
+
+### 5.2 M-N10 규격 대조 — 지금 맞는 것과 안 맞는 것
+
+`config/mmwave/m_n10_capture_protocol_lock.json` (`MMWAVE_M_N10_CAPTURE_PROTOCOL_V1`,
+`LOCKED_BEFORE_HUMAN_CAPTURE`) 기준.
+
+**이미 맞는 것**
+
+| 항목 | M-N10 요구 | 현재 |
+|---|---|---|
+| 조건당 사용 가능 구간 | ≥ 120 s | 4분 세션 = 여유 |
+| MR60 필수 필드 7개 | breath_phase, ts_monotonic_ms, phase_age_ms, seq, human_detected_raw, firmware_version, device_id | 전부 있음 |
+| 창 경계 | subject/session/boot/large_gap 를 넘지 못함 | 재부팅을 별도 session_id 로 분리해 둠 |
+| 기하 | "not a frozen law", 기록만 | 52–57 cm 기록됨 |
+
+**안 맞아서 이번에 채운 것**
+
+`session_identity_required` 6개 중 4개가 없었다. 스키마 최상위가 `additionalProperties: false`
+였으므로 값을 넣을 수조차 없었다. 다음을 **optional** 로 추가해 기존 manifest 호환을 유지했다.
+
+```text
+schemas/session_manifest.schema.json
+  + trial_id                              (top level, optional)
+  + boot_id                               (top level, optional)
+  + condition.condition_intent
+  + reference.actual_reference_availability
+      NOT_AVAILABLE / AVAILABLE_ALIGNMENT_VERIFIED /
+      AVAILABLE_ALIGNMENT_UNVERIFIED / NOT_APPLICABLE
+```
+
+2026-08-18 세션 4건에 값을 채웠다. `boot_id` 는 펌웨어가 내보내지 않으므로 **파생값**이다.
+`ts_monotonic_ms` 가 직전 캡처 대비 역행하면 새 boot 로 본다.
+
+| 세션 | trial_id | boot_id | uptime |
 |---|---|---|---|
-| 1 | M-N10 측정 프로토콜 문서 | 이 저장소에 없음(main·PR 전수 확인) | 모델 담당자에게 요청 → `reports/MR60_CAP6_PROTOCOL_REQUEST.md` |
-| 2 | 독립 호흡 레퍼런스 | 없음. `INDEPENDENT_REFERENCE = NOT_AVAILABLE` | 프로젝트 리드 결정(§24). M-N4 는 `MOVESENSE_CHEST_ACC` 계열을 전제 |
-| 3 | 새 피험자 6명 | 1명(SUBJ-001) | 1·2 해소 후 모집 |
+| CAP2-S001-01 | T1 | BOOT-20260818-A | 635 → 875 s |
+| CAP2-S001-02 | T2 | BOOT-20260818-A | 1464 → 1704 s |
+| CAP3-S001-REBOOT-01 | T1 | BOOT-20260818-B | 959 → 1199 s |
+| CAP3-EMPTY-01 | T1 | BOOT-20260818-B | 1317 → 1557 s |
 
-### 5.1 승인이 별도로 필요한 지점
+**미해결 — 모델 트랙 확인 필요**
 
-M-N4 의 클래스 정의는 `APNEA = voluntary breath-hold overlap >= 6 s`, 즉 **자발적 숨 참기**를 전제한다.
-센서 트랙 지시 §26 은 숨 참기·무호흡 시뮬레이션의 자율 수행을 금지한다.
+`boot_id`, `session_id`, `subject_id`, `trial_id` 가 `required_mr60_fields`(레코드 단위)와
+`session_identity_required`(세션 단위) 양쪽에 들어 있다. 레코드에 주입하면 raw immutable 원칙을
+깨므로 **세션 단위로 해석해 manifest 에 넣었다.** 이 해석이 맞는지 확인이 필요하다.
 
-따라서 CAP-6 프로토콜에 숨 참기가 포함될 경우, 장비·인원과 별개로 **참가자 안전 규칙을 포함한 별도 승인**이
-필요하다. M-N10 문서에서 "MR60 측정으로 APNEA 를 얻을 계획인지"를 먼저 확인해야 한다.
+**아직 대응하지 않은 것 (M-N10 착수 시점 사안)**
+
+```text
+subject id 체계    현재 SUBJ-001 / M-N10 은 MN10-S001 (previous_team_subject_reused=false)
+조건 A/B/C         프로토콜은 정의됐으나 우리 체크리스트에는 미반영 → 아래 6장
+레퍼런스 필드 9개   장비가 없어 해당 없음
+시계 동기          장비가 없어 해당 없음
+피험자 배분        1/3 DEV, 2/3 RESERVED (N>=6 이면 RESERVED>=4), seed 20260818
+Pi preflight       Pi 를 로거로 쓰면 인간 측정 전 M-N9 isolated smoke 필수. 현재 NOT_PERFORMED
+```
+
+### 5.3 M-N10 중에는 추론이 금지된다
+
+```json
+"float_inference_allowed_in_m_n10": false,
+"int8_inference_allowed_in_m_n10": false,
+"prediction_inspection_allowed_in_m_n10": false,
+"reserved_model_inference_count": 0
+```
+
+M-N10 측정 작업 자체는 센서 트랙의 §45 경계(TFLite scoring 금지)와 충돌하지 않는다.
+다만 **이번 주 통합 작업**(M-N9 INT8 실행 → UI/DB)은 별개이며, 그 주체가 센서 트랙이라면
+§45 예외 승인이 필요하다. 이 건은 미해결로 둔다.
 
 ---
 
-## 6. 경계 (유지됨)
+## 6. 나중 M-N10 측정 조건 (지금 수행하지 않음)
+
+`capture_conditions` 잠금 내용. 체크리스트에도 같은 내용을 넣어 두었다.
+
+| 조건 | 의도 | 최소 사용 구간 |
+|---|---|---|
+| A quiet rest | 정지, 편안한 자세 | 120 s |
+| B elevated | 유도된 빠른 호흡 **또는** 짧은 가벼운 움직임 후 회복 | 120 s |
+| C repeat after reposition | 피험자가 나갔다 오거나 기하 리셋 후 최소 한 조건 반복 | 120 s |
+
+`intent_is_not_label: true` — 조건 이름을 클래스로 매핑하면 안 된다. B 의 큐도 정답이 아니다.
+
+숨 참기는 강제 금지다. 선택적 짧은 pause 는 앉은 정지 자세, 불편 시 즉시 중단,
+독립 레퍼런스 확인 필수이며 **별도 안전 승인**이 있어야 한다.
+
+레퍼런스 정답으로 금지된 것: MR60 `breath_rate_raw`, 벤더 추정치, paced cue 단독,
+`human_detected_raw`, 모델 예측.
+
+시계 동기는 같은 호스트 공통 시계가 1순위이고, 아니면 양쪽 타임라인에 명시적 sync marker 를
+남겨야 한다. 눈대중 정렬은 금지이며, 미검증 세션은 `REFERENCE_ALIGNMENT_UNVERIFIED` 로
+분류되어 M-N11 채점에서 제외된다.
+
+---
+
+## 7. presence gate 근거 (통합 담당 인계용)
+
+`M-C0-20260818-CAP3-EMPTY-01` 에서 gate 입력으로 쓸 신호는 예외 0건이다.
+
+```text
+2400 records, 240 s, 사람 없음
+
+human_detected_stable   false        2400 / 2400
+sensor_state            UNKNOWN      2400 / 2400
+error_code              PRESENCE_NOT_DETECTED  2400 / 2400
+distance_cm_raw         null         2400 / 2400
+breath_phase            정확히 0.0   고유값 1종
+```
+
+점유 세션 3건과의 차이:
+
+| | 점유 3건 | 빈 방 |
+|---|---:|---:|
+| 8 ms 규칙 폐기 | 0 | 330 / 2400 |
+| `phase_age_ms` 최대 | 18 ms | 114 ms |
+| 실질 갱신률 | 10.0 Hz | 약 8.6 Hz |
+
+M-N4 는 빈 방 입력을 거르지 않고 zero tensor(MAD=0, `mad_collapsed=true`) 8개를 그대로
+내보낸다. 이를 막는 것은 presence gate 뿐이다.
+
+---
+
+## 8. 경계 (유지됨)
 
 | 항목 | 상태 |
 |---|---|
 | 대규모 라벨 데이터셋 | NO |
 | NORMAL/RAPID/APNEA 매핑 | NO |
 | 숨 참기/무호흡 실험 | NO |
-| 학습 / TFLite 추론 | NO |
+| 학습 / TFLite 추론 | NO (통합 작업 주체 미확정) |
 | 구 B 모델 수정 | NO |
 | 펌웨어 수정 | NO |
 | raw 전처리 적용 | NO |
+| 6명 모집 | NO — 모델 트랙이 명시적으로 중단 요청 |
 
-## 7. 현재 결손
+## 9. 현재 결손
 
-1. 독립 respiration reference 없음 → supervised 주장 불가 (§37 Case C).
-2. 피험자 1명 → `SUBJECT_DIVERSITY_LIMITED`. 처음 보는 사람에 대한 일반화 검증 불가.
-3. M-N10 측정 규격 미확보 → CAP-6 착수 불가.
-4. `distance_cm` 줄자 실측 미수행. 다음 세션에서 1회 재두면 해소된다.
-5. 거리 특성화(80–110 cm) 미수행. 우선순위는 낮으나 미측정 상태.
+1. 독립 respiration reference 없음. M-N10 은 장비가 벤치에 올라올 때까지
+   `INDEPENDENT_RESPIRATORY_REFERENCE_NOT_AVAILABLE` 상태로 두는 것이 정상이라고 회신됨.
+2. 피험자 1명. `SUBJ-001` 은 M-N10 피험자가 될 수 없음.
+3. `distance_cm` 줄자 실측 미수행 (장치 파생값). 다음 세션에서 1회면 해소.
+4. 전이 구간(사람 입/퇴장) 데이터 없음. presence gate 경계 케이스 미확보.
+5. `boot_id` 등 4개 필드의 레코드/세션 단위 해석 미확정.
+6. Pi preflight (`M-N9 isolated smoke`) 미수행.

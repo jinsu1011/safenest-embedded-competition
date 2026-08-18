@@ -3,6 +3,8 @@
   "status": "pilot",
   "session_id": "M-C0-20260818-CAP3-EMPTY-01",
   "subject_id": "SUBJ-NONE",
+  "trial_id": "T1",
+  "boot_id": "BOOT-20260818-B",
   "operator_id": "OP-LOCAL-001",
   "start_time_utc": "2026-08-18T01:20:25.535Z",
   "end_time_utc": "2026-08-18T01:24:25.536Z",
@@ -30,7 +32,8 @@
   "condition": {
     "breathing_mode": "safe_observation",
     "movement_context": "unoccupied_room_no_subject_present",
-    "notes": "CAP-3 unoccupied-room reference. No human subject; subject_id SUBJ-NONE is a placeholder, not a person. Same sensor placement as the CAP-2/CAP-3 occupied sessions with the operator out of the room. distance_cm=0 records that no target distance existed; distance_cm_raw was null on all 2400 records. Producer reported PRESENCE_NOT_DETECTED and human_detected_stable=false on all 2400 records, and breath_phase was exactly 0.0 with a single distinct value. This session exists to supply device-side evidence for the presence-gating hazard reported by the model track in M-N7: all 8 canonical windows were ACCEPTED by M-N4 with MAD=0 and mad_collapsed=true, i.e. zero tensors. M-N4 does not reject unoccupied input; only a presence gate can. The producer signal needed for that gate is unambiguous here."
+    "notes": "CAP-3 unoccupied-room reference. No human subject; subject_id SUBJ-NONE is a placeholder, not a person. Same sensor placement as the CAP-2/CAP-3 occupied sessions with the operator out of the room. distance_cm=0 records that no target distance existed; distance_cm_raw was null on all 2400 records. Producer reported PRESENCE_NOT_DETECTED and human_detected_stable=false on all 2400 records, and breath_phase was exactly 0.0 with a single distinct value. This session exists to supply device-side evidence for the presence-gating hazard reported by the model track in M-N7: all 8 canonical windows were ACCEPTED by M-N4 with MAD=0 and mad_collapsed=true, i.e. zero tensors. M-N4 does not reject unoccupied input; only a presence gate can. The producer signal needed for that gate is unambiguous here. boot_id is DERIVED, not emitted by the firmware: sessions sharing a boot show a monotonically increasing ts_monotonic_ms, and a backwards jump marks a new boot. This session belongs to BOOT-20260818-B. condition_intent records operator intent only; M-N10 sets intent_is_not_label=true, so it must never be mapped to a class. These three fields were added for M-N10 session_identity_required; whether M-N10 expects boot_id per RECORD rather than per SESSION is an open question with the model track, and this manifest takes the per-session reading.",
+    "condition_intent": "unoccupied_room_presence_gate_reference"
   },
   "reference": {
     "type": "none",
@@ -38,7 +41,8 @@
     "synchronized": false,
     "status": "not_collected",
     "file": null,
-    "notes": "INDEPENDENT_REFERENCE = NOT_AVAILABLE. No respiration or heart accuracy claim. Contract-designated reference (MOVESENSE_CHEST_ACC) is not available to this track."
+    "notes": "INDEPENDENT_REFERENCE = NOT_AVAILABLE. No respiration or heart accuracy claim. Contract-designated reference (MOVESENSE_CHEST_ACC) is not available to this track.",
+    "actual_reference_availability": "NOT_APPLICABLE"
   },
   "files": {
     "raw_immutable": true,

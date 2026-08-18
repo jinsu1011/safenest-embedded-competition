@@ -1,6 +1,7 @@
 # MR60 SENSOR-OWNER ACQUISITION ROADMAP (MR60-CAP)
 
-작성일: 2026-08-18
+작성일: 2026-08-18 (CAP-2/CAP-3 실측 반영)
+상태: CAP-0/1/2/3 완료 · CAP-5 부분 · CAP-6 차단
 범위: 센서 담당자(물리 데이터 획득) 트랙 전용.
 이 문서는 canonical 모델 로드맵이 아니다. Phase A/B/M-C/M-D/M-N ID 를 재사용하지 않는다.
 
@@ -136,31 +137,116 @@ subject ID 는 기존 규약 `SUBJ-PSEUDONYM-NNN` 를 유지한다. 사람과 �
 
 ---
 
-## 3. 남은 단계 (센서 필요)
+## 3. CAP-2 / CAP-3 실측 결과 (2026-08-18 완료)
 
-### CAP-2 — 소규모 중립 다피험자 파일럿
-자연호흡, 정지, 자세 명시, 피험자당 **4 분**(60 s warmup + 6 창).
-가능하면 3명 이상. 1–2명이면 `SUBJECT_DIVERSITY_LIMITED` 로 신고하고 진행.
-게이트: `cap0_m_n4_feasibility.py` 로 창 채택률과 `producer_non_valid_fraction` 확인.
+센서 연결 후 4개 세션을 기록했다. 전부 `validate_contract.py --check-files --strict-warnings` PASS.
 
-### CAP-3 — 반복성 + 최소 기하 변형
-동일 피험자 2회차 1건, ESP 재부팅 후 1건.
-기하 변형은 **거리 1건만** — 파일럿 45.9 cm 대비 **80–100 cm** 를 권장한다
-(진폭 회복 여부 확인이 목적이며, 매트릭스를 만들지 않는다).
+### 3.1 세션 인벤토리 (§34)
 
-### CAP-4 — paced 특성화 (선택)
-저부담일 때만. `intended_paced_rate` / 독립 reference / `breath_rate_raw` 를 각각 분리 기록.
-cue 를 ground truth 로 쓰지 않는다. 클래스 매핑 금지.
+| Session | Subject | Condition | Duration | Core phase | Freshness | Reference | Main limitation | Recommended use |
+|---|---|---|---:|---|---|---|---|---|
+| M-C0-20260818-CAP2-S001-01 | SUBJ-001 | 자연호흡·정지·앉음 52cm | 239.9 s | OK | DERIVED | none | 저진폭 43% | DEVICE_DOMAIN_REFERENCE |
+| M-C0-20260818-CAP2-S001-02 | SUBJ-001 | 동일조건 반복 57cm | 239.9 s | OK | DERIVED | none | 저진폭 29% | DEVICE_DOMAIN_REFERENCE |
+| M-C0-20260818-CAP3-S001-REBOOT-01 | SUBJ-001 | ESP 재부팅 후 52cm | 239.9 s | OK | DERIVED | none | 피험자 1명 | DEVICE_DOMAIN_REFERENCE |
+| M-C0-20260818-CAP3-EMPTY-01 | SUBJ-NONE | 빈 방 | 240.0 s | 전부 0.0 | DERIVED | n/a | 호흡신호 없음(의도적) | FAILURE_QA_EVIDENCE |
 
-### CAP-5 — 핸드오프
-세션별 raw 경로 + manifest + QA + `cap0_m_n4_feasibility.py` 출력 + 한계.
+총 canonical window 29개, 폐기 0. raw JSONL 은 기존 `raw/` ignore 정책에 따라 로컬 보관.
 
-### CAP-6 — 표적 캡처
-자동 실행하지 않는다. 모델 트랙이 구체적 결손을 지목한 뒤에만 연다.
+### 3.2 M-N4 수율
+
+| 세션 | 창 | 폐기 | republication | phase_age max | 저진폭 |
+|---|---:|---:|---:|---:|---:|
+| CAP2-01 | 7 | 0 | 0 | 18 ms | 43 % |
+| CAP2-02 | 7 | 0 | 0 | 18 ms | 29 % |
+| REBOOT | 7 | 0 | 0 | 18 ms | 1 % |
+| EMPTY | 8 | 0 | 0 | — | n/a |
+
+네 세션 모두 10 Hz, 0.5 s 초과 끊김 0, uart/checksum 오류 0, seq 누락 0.
+
+### 3.3 답이 나온 질문
+
+**재부팅은 phase 스케일을 바꾸지 않는다.**
+
+| 세션 | breath_phase 범위 | pstdev |
+|---|---|---|
+| CAP2-01 | −0.65 … +0.72 | 0.204 |
+| CAP2-02 | −0.82 … +0.66 | 0.230 |
+| REBOOT | −0.82 … +0.85 | 0.295 |
+
+재부팅 후 값이 세션 간 자연 변동 범위 안에 있다. M-N4 의 `boot.window_may_cross_boot_or_restart: false` 는
+타이밍(`ts_monotonic_ms` 리셋) 때문이지 스케일 변화 때문이 아니다. n=3 관찰이며 통계적 주장이 아니다.
+
+**저진폭은 거리 문제가 아니다.** CAP-0 에서 세운 "파일럿 저진폭은 46 cm 때문"이라는 가설은 기각됐다.
+파일럿과 같은 45.9/51.7 cm 에서 저진폭이 1 %까지 내려간 세션이 나왔고, CAP2-01 은 거리가 51.7 cm 로
+고정된 상태에서 90–180 s 구간만 진폭이 내려갔다 회복했다. 호흡 깊이를 반영하는 신호로 본다.
+→ 거리 특성화(CAP-3 잔여)의 우선순위를 낮춘다.
+
+### 3.4 빈 방 세션 — presence gate 근거
+
+모델 트랙 M-N7 의 `NO_PERSON_INFERENCE_GATING_HAZARD` 를 장치 쪽에서 재현했다.
+
+```text
+breath_phase      2400행 전부 정확히 0.0 (고유값 1종)
+distance_cm_raw   2400행 전부 null
+presence          2400행 전부 false
+sensor_state      2400행 전부 UNKNOWN / PRESENCE_NOT_DETECTED
+
+M-N4 창 8개 → 전부 채택, MAD=0, mad_collapsed=true (zero tensor)
+```
+
+**M-N4 는 빈 방을 거르지 않는다.** 계약의 `near_zero_behavior: ZERO_TENSOR` 대로 zero tensor 를 내보내고,
+모델은 그것을 APNEA 로 읽는다. 이를 막을 수 있는 것은 presence gate 뿐이다.
+
+다만 gate 가 쓸 producer 신호는 예외 0건으로 깨끗하다. Pi 런타임 담당자에게 그대로 넘길 수 있다.
 
 ---
 
-## 4. 경계 (유지됨)
+## 4. CAP-5 핸드오프
+
+모델 트랙이 소비할 것:
+
+- raw: `raw/M-C0-20260818-*.jsonl` (로컬, SHA-256 은 각 manifest 의 `files.raw_jsonl`)
+- manifest: `manifests/M-C0-20260818-*.session_manifest.json`
+- QA: `qa/M-C0-20260818-*.qa.json`
+- 창 수율/품질 재현: `python3 tools/cap0_m_n4_feasibility.py <raw.jsonl>`
+
+세션당 반드시 함께 읽어야 하는 값은 `producer_non_valid_fraction` 이다.
+M-N4 에 진폭 게이트가 없으므로, 저진폭 창을 구분하려면 이 값을 봐야 한다.
+
+주의 두 가지가 각 manifest 노트에 기록돼 있다.
+
+1. `distance_cm` 은 **장치 파생값**(`distance_cm_raw` 중앙값)이다. 줄자 실측이 아니므로
+   운영자가 실측을 적은 `M-C0-PILOT-*` 의 값과 같은 성격으로 비교하면 안 된다.
+2. `sensor_angle_deg = 100` 은 이번 세션들의 **운영자 기준**(책상면 기준, 90 = 책상에 수직)이다.
+   `M-C0-PILOT-*` 의 `0`(가슴과 수평 정렬)과 다른 관례이므로 숫자를 직접 비교하면 안 된다.
+
+---
+
+## 5. CAP-6 — 차단됨
+
+모델 트랙 M-N10 이 구체적 결손을 지목해 CAP-6 가 열렸다(§45). 근거는 담당자 메모의 다음 한 문장뿐이다.
+
+> 현장에서 MR60+독립 호흡센서로 새 사람 최소 6명을 측정한 뒤 같은 PR에 두 번째 evidence commit
+
+차단 요인 3가지:
+
+| # | 차단 | 현황 | 해소 조건 |
+|---|---|---|---|
+| 1 | M-N10 측정 프로토콜 문서 | 이 저장소에 없음(main·PR 전수 확인) | 모델 담당자에게 요청 → `reports/MR60_CAP6_PROTOCOL_REQUEST.md` |
+| 2 | 독립 호흡 레퍼런스 | 없음. `INDEPENDENT_REFERENCE = NOT_AVAILABLE` | 프로젝트 리드 결정(§24). M-N4 는 `MOVESENSE_CHEST_ACC` 계열을 전제 |
+| 3 | 새 피험자 6명 | 1명(SUBJ-001) | 1·2 해소 후 모집 |
+
+### 5.1 승인이 별도로 필요한 지점
+
+M-N4 의 클래스 정의는 `APNEA = voluntary breath-hold overlap >= 6 s`, 즉 **자발적 숨 참기**를 전제한다.
+센서 트랙 지시 §26 은 숨 참기·무호흡 시뮬레이션의 자율 수행을 금지한다.
+
+따라서 CAP-6 프로토콜에 숨 참기가 포함될 경우, 장비·인원과 별개로 **참가자 안전 규칙을 포함한 별도 승인**이
+필요하다. M-N10 문서에서 "MR60 측정으로 APNEA 를 얻을 계획인지"를 먼저 확인해야 한다.
+
+---
+
+## 6. 경계 (유지됨)
 
 | 항목 | 상태 |
 |---|---|
@@ -169,13 +255,13 @@ cue 를 ground truth 로 쓰지 않는다. 클래스 매핑 금지.
 | 숨 참기/무호흡 실험 | NO |
 | 학습 / TFLite 추론 | NO |
 | 구 B 모델 수정 | NO |
-| 펌웨어 수정 | NO (제안조차 현재 근거상 보류) |
+| 펌웨어 수정 | NO |
 | raw 전처리 적용 | NO |
 
-## 5. 현재 결손
+## 7. 현재 결손
 
-1. 독립 respiration reference 없음. 계약이 지목한 표준은 `MOVESENSE_CHEST_ACC` 이며,
-   확보 여부는 프로젝트 리드 결정 사항이다. 없으면 supervised 주장 불가 (§37 Case C).
-2. 물리 피험자 1명 (`m_n4_canonical_input_dataset_contract.json` 기준). CAP-2 의 존재 이유.
-3. 파일럿 전 구간이 producer 기준 저진폭. 거리/자세 재현 조건이 미확정.
-4. 재부팅 간 phase 스케일 안정성 미측정 (CAP-3).
+1. 독립 respiration reference 없음 → supervised 주장 불가 (§37 Case C).
+2. 피험자 1명 → `SUBJECT_DIVERSITY_LIMITED`. 처음 보는 사람에 대한 일반화 검증 불가.
+3. M-N10 측정 규격 미확보 → CAP-6 착수 불가.
+4. `distance_cm` 줄자 실측 미수행. 다음 세션에서 1회 재두면 해소된다.
+5. 거리 특성화(80–110 cm) 미수행. 우선순위는 낮으나 미측정 상태.

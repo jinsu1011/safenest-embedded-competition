@@ -1,0 +1,65 @@
+{
+  "schema_version": "m-c0-session-1.0",
+  "status": "pilot",
+  "session_id": "M-C0-20260818-CAP3-S001-REBOOT-01",
+  "subject_id": "SUBJ-001",
+  "operator_id": "OP-LOCAL-001",
+  "start_time_utc": "2026-08-18T01:14:28.170Z",
+  "end_time_utc": "2026-08-18T01:18:28.115Z",
+  "sensor": {
+    "model": "MR60BHA2",
+    "transport": "ESP32_UART_USB",
+    "firmware_version": "safenest-mr60-esp/1.2.0",
+    "sensor_firmware_version": "UNKNOWN_NOT_REPORTED",
+    "config_hash": "b817e8bfd5e52b18275626f7b6a9bd60098ea4b108428a5aaf63600dbc987834",
+    "device_id": "safenest-node-01"
+  },
+  "setup": {
+    "distance_cm": 52,
+    "sensor_height_cm": 100,
+    "sensor_angle_deg": 100,
+    "orientation": "front_slightly_left_of_subject",
+    "posture": "seated_at_desk_against_backrest",
+    "clothing": "cardigan",
+    "bedding": "none",
+    "environment": "indoor_office_or_lab",
+    "other_people_present": true,
+    "other_people_distance_m": null,
+    "background_movement": "minimal_reported_not_verified"
+  },
+  "condition": {
+    "breathing_mode": "normal_spontaneous",
+    "movement_context": "stationary_no_deliberate_arm_movement_after_esp_power_cycle",
+    "notes": "CAP-3 repeatability session recorded AFTER a deliberate ESP32 USB power cycle, with subject posture and geometry otherwise unchanged from the CAP-2 pair. Reboot is confirmed by the producer clock: ts_monotonic_ms dropped from 1704098 to about 20000 and seq from 17015 to 192. Capture started only after the firmware 60 s kWarmupMs completed; two earlier warmup attempts were abandoned because intermittent PRESENCE_NOT_DETECTED reset the warmup counter. Those warmup checks are retained locally as raw/reboot_warmup_check*.jsonl and are NOT sessions. distance_cm=52 is DEVICE-DERIVED (median distance_cm_raw 51.66). sensor_angle_deg=100 uses the same operator convention as the CAP-2 pair. Phase scale did not shift across the reboot: value range -0.82..+0.85 and pstdev 0.295 sit within the CAP-2 session-to-session spread (0.204, 0.230). Producer flagged BREATH_PHASE_LOW_AMPLITUDE on only 24 of 2398 records (1%)."
+  },
+  "reference": {
+    "type": "none",
+    "independent": false,
+    "synchronized": false,
+    "status": "not_collected",
+    "file": null,
+    "notes": "INDEPENDENT_REFERENCE = NOT_AVAILABLE. No respiration or heart accuracy claim. Contract-designated reference (MOVESENSE_CHEST_ACC) is not available to this track."
+  },
+  "files": {
+    "raw_immutable": true,
+    "raw_jsonl": [
+      {
+        "path": "raw/M-C0-20260818-CAP3-S001-REBOOT-01.jsonl",
+        "sha256": "f25dcb4173ef5048c1c900de502f72bcb2cbf8f020a396eeedeeda48d4fd8b98",
+        "record_count": 2398,
+        "byte_count": 2389548
+      }
+    ]
+  },
+  "privacy": {
+    "identifiers_removed": true,
+    "video_collected": false,
+    "third_party_visible": false,
+    "consent_or_workplace_permission": "Subject is the operator. No identifying media collected. One other person was in the room but was not measured and is not a subject."
+  },
+  "qa": {
+    "status": "pass_with_limitations",
+    "validator_version": "m-c0-validator-1.1",
+    "notes": "Stream integrity passed: 0 uart/checksum errors, 0 seq gaps, 0 gaps over 500ms, max gap 103ms, phase_age max 18ms. M-N4 canonical yield 7 of 7 windows accepted, 0 rejected, 0 republications dropped. Cleanest of the three occupied sessions. Limitations: no independent physiological reference, single subject, device-derived distance, other person present at unrecorded distance, sensor firmware version unavailable. Reboot-vs-session variance is observational from n=3 and is not a statistical claim."
+  }
+}

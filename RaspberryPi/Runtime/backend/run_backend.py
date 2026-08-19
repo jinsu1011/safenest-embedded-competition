@@ -12,13 +12,6 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
-def _default_db_path() -> Path:
-    """Resolve after the sys.path bootstrap above so direct execution works."""
-    from paths import DATABASE_PATH
-
-    return DATABASE_PATH
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="SafeNest integrated FastAPI backend")
     parser.add_argument("--api-host", default="0.0.0.0")
@@ -49,7 +42,7 @@ def main() -> int:
     parser.add_argument("--room", default="밀폐공간 A-01")
     parser.add_argument(
         "--db-path",
-        default=str(_default_db_path()),
+        default=str(Path(__file__).resolve().parent.parent / "data" / "safenest.db"),
     )
     parser.add_argument("--log-level", default="info")
     args = parser.parse_args()

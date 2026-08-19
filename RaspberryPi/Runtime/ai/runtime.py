@@ -6,11 +6,11 @@ import importlib.util
 import json
 from pathlib import Path
 import sys
+
+from paths import ONDEVICE_AI_ROOT
 import threading
 from typing import Callable
 
-
-from paths import ONDEVICE_AI_ROOT
 
 VENDOR_ROOT = ONDEVICE_AI_ROOT
 

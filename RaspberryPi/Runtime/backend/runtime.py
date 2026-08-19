@@ -10,7 +10,6 @@ import time
 from ai.pipeline import OnDeviceAIPipeline
 from backend.store import RuntimeStore
 from gateway.protocol import ConnectionClosed, ProtocolError, ThermalFrame
-from paths import DATA_ROOT
 from gateway.receiver import SafeNestTCPServer
 from gateway.thermal_udp import ThermalUDPServer
 from risk.engine import SafeNestRiskEngine
@@ -44,7 +43,9 @@ class SafeNestRuntime:
         selected_storage_config = storage_config or (
             sensor_data_logger.config
             if sensor_data_logger is not None
-            else SensorStorageConfig.from_env(DATA_ROOT)
+            else SensorStorageConfig.from_env(
+                Path(__file__).resolve().parent.parent / "data"
+            )
         )
         self.sensor_data_logger = sensor_data_logger or SensorDataLogger(
             selected_storage_config

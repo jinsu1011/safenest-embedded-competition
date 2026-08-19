@@ -116,7 +116,7 @@ bash deployment/run_pi.sh --install
 
 이 명령은 다음을 순서대로 수행한다.
 
-1. `~/.venv` 생성
+1. `<repository>/.venv` 생성 (`SAFENEST_VENV_PATH`로 재정의 가능. `~/.venv`가 기본값이 아니다)
 2. backend 및 Pi AI 의존성 설치
 3. 필수 파일과 Python runtime 확인
 4. manifest에 등록된 primary 3개와 보존된 후보 artifact의 SHA-256 확인
@@ -144,7 +144,7 @@ Copy-Item -LiteralPath (Join-Path $sketch "secrets.example.h") -Destination (Joi
 `secrets.h`를 다음처럼 실제 환경에 맞춘다.
 
 ```cpp
-constexpr char WIFI_SSID[] = "YOUR_2_4_GHZ_WIFI_SSID";
+constexpr char WIFI_SSID[] = "EELab04 2G";
 constexpr char WIFI_PASSWORD[] = "실제_비밀번호";
 constexpr char RPI_HOST[] = "Raspberry_Pi_IP";
 constexpr uint16_t RPI_PORT = 9000;
@@ -167,7 +167,7 @@ Pi는 source의 `uptime_ms`와 sensor event monotonic time을 그대로 보존�
 
 ## 6. 매번 프로그램 실행 순서
 
-1. 노트북 Wi-Fi를 `YOUR_2_4_GHZ_WIFI_SSID`로 연결한다.
+1. 노트북 Wi-Fi를 `EELab04 2G`로 연결한다.
 2. Raspberry Pi 전원을 켠다.
 3. Raspberry Pi가 부팅될 때까지 기다린다.
 4. VS Code Remote SSH로 Raspberry Pi에 연결한다.
@@ -187,6 +187,7 @@ bash deployment/run_pi.sh
 
 ```text
 통합 웹 대시보드: http://RPI_IP:8000/dashboard
+통합 LCD 화면:     http://RPI_IP:8000/display
 상태 API:         http://RPI_IP:8000/api/status
 시스템 진단:      http://RPI_IP:8000/health
 API 문서:         http://RPI_IP:8000/docs
@@ -252,10 +253,114 @@ curl -fsS http://127.0.0.1:8000/api/status | python -m json.tool
 - 받는 사람이 WROOM-32와 XIAO C6 제한을 이해했는가?
 - 실제 장비 HIL 미완료와 TEST 4/6 제약을 전달했는가?
 
-## 11. 긴급 대응 HMI와 환경변수
+## 11. Stage 7 Mac-offline preflight and future Pi execution
+
+Mac에서 배포 구조만 확인할 때는 Pi를 기다리지 않는다.
+
+```bash
+python3 -m hil.preflight --offline-preflight
+```
+
+이 명령이 PASS여도 Pi 배포, ARM, process/port, 실센서 검증을 의미하지 않는다. `pi_checks`와 `sensor_checks`는 `NOT_RUN`이다. Python 3.10 이상에서 runtime import/construct 실패는 구조적 차단이고, 3.10 미만 skip은 ARM/Pi runtime 검증이 아니다.
+
+```text
+STAGE_7_MAC_OFFLINE_RUNTIME_PREPARATION = PASS_WITH_LIMITATIONS
+STAGE7_PREFLIGHT_MMWAVE_SELECTOR_DRIFT = RESOLVED_IN_CODE
+PI_DEPLOYMENT = NOT_RUN
+PI_PROCESS_CHECK = NOT_RUN
+PI_PORT_CHECK = NOT_RUN
+PI_ARM_RUNTIME = NOT_RUN
+```
+
+Stage 7 preflight는 현재 M-N9 selector를 검사한다. `deployment_allowed=true`는
+device validation이 아니다. 추가 Mac RP-X0 구현은 필요 없고, 이후 실제 Pi 실행만 남는다.
+
+```text
+Further Mac RP-X0 implementation required:
+NO
+
+FUTURE_OPERATOR_CAN_EXECUTE_WITHOUT_CHAT_HISTORY:
+YES for Mac-offline RP-X0 integration work
+
+Remaining boundary:
+Stage 7 actual Pi execution = PI_REQUIRED / NOT_RUN
+Stage 9 live smoke = SENSOR_AND_PI_REQUIRED / NOT_RUN
+```
+
+현재 효과:
+
+```text
+PR #22 active M-N9 selector = authoritative
+historical B = inactive
+O3 status projection = MODEL_PENDING
+Stage 7 preflight asserts M-N9 selector identity
+deployment_allowed=true is not device validation
+DEVICE_VALIDATED = false
+PI_SMOKE = NOT_PERFORMED
+PRESENCE_GATE_REQUIRED = true
+```
+
+아래는 Stage 7의 hardware boundary이며 Stage 9 live-sensor smoke가 아니다.
+
+1. 검토된 integration commit을 checkout한다. 현재 권위 저장소는 `yuname121/integration`의 검토된 `main`이다.
+2. Raspberry Pi에서 지원 Python(3.10+)과 `bash deployment/run_pi.sh --install`을 사용한다.
+3. `.env.example`을 참고해 필요한 env/config를 적용한다. 개발자 Mac 절대경로를 넣지 않는다. venv 기본은 `<repository>/.venv` (`SAFENEST_VENV_PATH`로 재정의).
+4. Thermal/CO2 production path는 역사적 v0.1.0을 유지한다. T-B5를 켜지 않는다. mmWave primary selector는 PR #22의 M-N9 FULL_INT8이며 옛 B live gate가 아니다. Stage 7 preflight는 그 M-N9 selector identity를 검사하며 `deployment_allowed=true`를 Pi/device validation으로 읽지 않는다. `STAGE7_PREFLIGHT_MMWAVE_SELECTOR_DRIFT = RESOLVED_IN_CODE`.
+5. `bash deployment/run_pi.sh`로 runtime을 시작한다. 진입점은 `deployment/run_pi.sh → backend/run_backend.py`다.
+6. process가 살아 있는지 확인한다.
+7. 기대 포트: HTTP `:8000`, TCP `:9000`, UDP `:5005`.
+8. `curl -fsS http://127.0.0.1:8000/health` 와 `/api/status`로 backend health를 확인한다.
+9. LCD `http://<pi-ip>:8000/display` 와 Web `http://<pi-ip>:8000/dashboard` 도달을 확인한다.
+
+그 다음 Stage 9 minimal live smoke만 수행한다. 30분 soak는 기본이 아니다.
+
+## 12. 긴급 대응 HMI와 환경변수
 
 DANGER 전환 시 터치 화면에 긴급 오버레이가 열리고, 서버의 alarm latch·buzzer·SQLite event log가 함께 갱신된다. 119 버튼은 경진대회 시연용 모의 카운트다운만 수행하며 실제 119에 연결되지 않는다. `경고 확인`은 buzzer만 끄고 Risk Engine의 DANGER를 해제하지 않는다. 센서가 offline이거나 WebSocket이 끊겨도 live `WARNING/NORMAL` publication이 오기 전까지 DANGER를 유지한다.
 
 담당자 SMS와 GPIO 설정은 [`docs/EMERGENCY_HMI_AND_OPERATIONS_KO.md`](docs/EMERGENCY_HMI_AND_OPERATIONS_KO.md)의 `.env` 표를 따른다. 실제 SMS 자격증명이 없을 때는 요청을 성공으로 처리하지 않고 `SMS_NOT_CONFIGURED`를 반환한다. 개발 PC에서는 `SAFENEST_GPIO_MODE=mock`을 사용하고, Raspberry Pi에서는 BCM buzzer 핀과 전원 회로를 실제 배선과 대조한다.
 
 화면에 사용할 한국어 음성 파일의 이름과 위치는 [`web/dashboard/audio/README.md`](web/dashboard/audio/README.md)에 있다. 음성 파일이 없거나 autoplay가 차단되어도 API와 터치 동작은 중단되지 않는다.
+
+## 13. Stage 9 minimal live-smoke tooling
+
+Stage 9 툴링은 배포 후 런타임이 최소로 살아 있는지 관측하기 위한 읽기 전용 probe다. Mac에서 평가기를 완성하며, 실제 live smoke는 하지 않는다.
+
+```bash
+python3 -m hil.stage9_smoke
+python3 -m hil.stage9_smoke --plan
+python3 -m hil.stage9_smoke --evaluate-fixture tests/fixtures/stage9/pass.json
+```
+
+기본 호출은 plan이며 hardware에 접속하지 않는다. fixture PASS는 evaluator 검증일 뿐 `STAGE_9_LIVE_SMOKE = PASS`가 아니다.
+
+```text
+STAGE_9_LIVE_SMOKE = NOT_RUN
+```
+
+미래 Pi에서만, Stage 7 process/port 확인 뒤에 명시적으로:
+
+```bash
+python3 -m hil.stage9_smoke --live
+```
+
+`--live`는 Linux/Pi에서 로컬 `ss`와 localhost HTTP만 결합한다. `--host`가 loopback이 아니면 거절한다. Mac에서 `--live`를 실행하면 실패로 거절한다. 기본 관측 창은 20초이며 운영 smoke 시간일 뿐 모델/샘플링 계약이 아니다. 30분 soak는 기본이 아니다.
+
+검사하는 것:
+
+- HTTP `:8000` `/health`, `/api/status`
+- TCP `:9000`, UDP `:5005` listener
+- ESP TCP session (`/api/status` TCP 센서 connectivity; receiver counters는 보조)
+- CO2 물리 측정 identity 진행 (`measurement_event_count`; `last_received_at`만으로는 PASS하지 않음)
+- Thermal/mmWave/PIR identity 진행 (값 변화가 아님; PIR `NO_MOTION` 허용)
+- runtime-status (Thermal AI `BLOCKED`, PIR AI `NOT_APPLICABLE`; mmWave는 현재 O3 projection `MODEL_PENDING`을 소비한다. PR #22 M-N9 selector와 혼동하지 않는다)
+- logger drop **증가분** (`/health` `receiver.sensor_logging.dropped`; `new_drops = after - before`. 과거 lifetime count만으로 FAIL하지 않음)
+
+검사하지 않는 것:
+
+- 모델 정확도, T-B5 활성화, 옛 mmWave B live gate, Capture, risk 임계값, 합성 패킷 주입
+
+결과: `PASS` / `PASS_WITH_LIMITATIONS` / `FAIL` / plan의 `NOT_RUN`.
+종료코드: `PASS`, `PASS_WITH_LIMITATIONS`, `NOT_RUN` → 0; `FAIL` → 1.
+
+JSON은 stdout. `--output logs/stage9-smoke.json`은 선택이며 `logs/`는 gitignore된다. 실측 리포트를 커밋하지 않는다.

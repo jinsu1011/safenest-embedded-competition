@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 from backend.runtime import SafeNestRuntime
-from paths import DATA_ROOT, LCD_STATIC, WEB_GUEST, WEB_PORTAL, WEB_ROOT
 from backend.portal import PortalAuth, PortalStore, portal_event, portal_space, thermal_payload
 from backend.store import RuntimeStore
 from backend.views import (
@@ -100,18 +99,19 @@ def create_app(
     app.state.safenest_store = selected_store
     app.state.safenest_emergency = selected_emergency
 
+    repository_root = Path(__file__).resolve().parent.parent
     frontend_dir = Path(
-        os.getenv("SAFENEST_WEB_DIR", str(WEB_PORTAL))
+        os.getenv("SAFENEST_WEB_DIR", str(repository_root / "web" / "portal"))
     ).resolve()
     portal_store = PortalStore(
-        os.getenv("SAFENEST_SPACES_FILE", str(DATA_ROOT / "web" / "spaces.json"))
+        os.getenv("SAFENEST_SPACES_FILE", str(repository_root / "data" / "web" / "spaces.json"))
     )
     portal_auth = PortalAuth()
     offline_grace = _float_env("SAFENEST_PORTAL_OFFLINE_SECONDS", 30.0)
     app.state.safenest_portal_store = portal_store
     app.state.safenest_portal_auth = portal_auth
 
-    dashboard_dir = WEB_ROOT
+    dashboard_dir = Path(__file__).resolve().parent.parent / "web" / "dashboard"
     app.mount(
         "/dashboard/assets",
         StaticFiles(directory=str(dashboard_dir)),
@@ -122,12 +122,6 @@ def create_app(
     @app.get("/dashboard/", include_in_schema=False)
     def dashboard() -> Any:
         return FileResponse(dashboard_dir / "index.html")
-
-
-    @app.get("/display", include_in_schema=False)
-    @app.get("/display/", include_in_schema=False)
-    def display() -> Any:
-        return FileResponse(LCD_STATIC / "display.html")
 
     def require_admin(request: Request) -> None:
         authorization = request.headers.get("authorization", "")
@@ -176,7 +170,7 @@ def create_app(
     def guest_dashboard(space_id: str) -> Any:
         if portal_store.get(space_id) is None:
             raise HTTPException(status_code=404, detail="등록되지 않은 공간입니다.")
-        return FileResponse(WEB_GUEST / "index.html")
+        return FileResponse(repository_root / "web" / "guest" / "index.html")
 
     @app.get("/")
     def root() -> Any:

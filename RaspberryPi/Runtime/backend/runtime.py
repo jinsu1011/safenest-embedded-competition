@@ -13,6 +13,7 @@ from gateway.protocol import ConnectionClosed, ProtocolError, TelemetryPayload, 
 from gateway.receiver import SafeNestTCPServer
 from gateway.thermal_udp import ThermalUDPServer
 from risk.formula_v1 import SafeNestRiskFormulaV1
+from services.tts import TTSProtocol, create_tts_from_env
 from state.manager import SensorStateManager
 from storage.sensor_logger import SensorDataLogger, SensorStorageConfig
 
@@ -35,6 +36,7 @@ class SafeNestRuntime:
         store: RuntimeStore | None = None,
         sensor_data_logger: SensorDataLogger | None = None,
         storage_config: SensorStorageConfig | None = None,
+        tts: TTSProtocol | None = None,
     ) -> None:
         if evaluation_interval_seconds <= 0:
             raise ValueError("evaluation interval must be positive")
@@ -56,6 +58,9 @@ class SafeNestRuntime:
         self.ai_pipeline = ai_pipeline or OnDeviceAIPipeline(self.manager)
         self.risk_engine = risk_engine or SafeNestRiskFormulaV1()
         self.store = store or RuntimeStore()
+        self.tts = tts or create_tts_from_env(
+            error_handler=lambda error: self.store.record_runtime_error("tts", error)
+        )
         self.evaluation_interval_seconds = float(evaluation_interval_seconds)
         self.server = SafeNestTCPServer(
             self._on_tcp_packet,
@@ -86,6 +91,10 @@ class SafeNestRuntime:
                 return
             self._started = True
             self._stop_event.clear()
+            try:
+                self.tts.start()
+            except Exception as error:
+                self.store.record_runtime_error("tts", error)
             self.sensor_data_logger.start()
             self.evaluate_once()
             self._receiver_thread = threading.Thread(
@@ -127,6 +136,10 @@ class SafeNestRuntime:
                 timeout=self.thermal_udp_server.reassembler.frame_timeout_seconds + 1.0
             )
         self.sensor_data_logger.stop()
+        try:
+            self.tts.close()
+        except Exception as error:
+            self.store.record_runtime_error("tts", error)
 
     def receiver_stats(self) -> dict[str, object]:
         return {
@@ -137,6 +150,7 @@ class SafeNestRuntime:
             "unexpected_tcp_thermal_packets": self._unexpected_tcp_thermal_packets,
             "thermal_udp": self.thermal_udp_server.stats(),
             "sensor_logging": self.sensor_data_logger.diagnostics(),
+            "tts": self._tts_status(),
         }
 
     def _on_tcp_packet(self, packet, peer) -> None:
@@ -200,7 +214,21 @@ class SafeNestRuntime:
         risk_document = risk.to_dict()
         publication = self.store.publish(state, ai, risk_document)
         try:
+            self.tts.handle_publication(publication)
+        except Exception as error:
+            self.store.record_runtime_error("tts", error)
+        try:
             self.sensor_data_logger.set_analysis_context(ai, risk_document)
         except Exception as error:
             self.store.record_runtime_error("sensor_logging_context", error)
         return publication
+
+    def _tts_status(self) -> dict[str, object]:
+        try:
+            return dict(self.tts.status())
+        except Exception as error:
+            return {
+                "mode": "error",
+                "available": False,
+                "error": f"{type(error).__name__}: {error}",
+            }

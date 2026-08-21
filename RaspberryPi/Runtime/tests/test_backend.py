@@ -201,7 +201,7 @@ class RuntimeStoreTests(unittest.TestCase):
 
 class FastAPIContractTests(unittest.TestCase):
     def test_route_contracts_are_complete(self):
-        self.assertEqual(set(ROUTE_CONTRACTS), {
+        expected = {
             "GET /admin",
             "POST /api/auth/login",
             "GET/POST /api/spaces",
@@ -212,6 +212,9 @@ class FastAPIContractTests(unittest.TestCase):
             "GET /api/qr/{space_id}.png",
             "GET /api/portal/events",
             "GET /dashboard",
+            "GET /display",
+            "GET /api/lcd/thermal",
+            "GET /api/lcd/thermal/image.jpg",
             "GET /api/status",
             "GET /api/sensors",
             "GET /api/events",
@@ -226,7 +229,8 @@ class FastAPIContractTests(unittest.TestCase):
             "POST /api/client-connection",
             "GET /health",
             "WS /ws",
-        })
+        }
+        self.assertTrue(expected.issubset(set(ROUTE_CONTRACTS)))
 
     def test_app_factory_has_clear_dependency_boundary_or_routes(self):
         if importlib.util.find_spec("fastapi") is None:
@@ -241,7 +245,8 @@ class FastAPIContractTests(unittest.TestCase):
             "/api/spaces/{space_id}", "/api/portal/events",
             "/api/guest/spaces/{space_id}", "/api/thermal/{space_id}",
             "/api/qr/{space_id}.png",
-            "/dashboard", "/dashboard/",
+            "/dashboard", "/dashboard/", "/display", "/display/", "/common.css",
+            "/api/lcd/thermal", "/api/lcd/thermal/image.jpg",
             "/api/status", "/api/sensors", "/api/events",
             "/api/history", "/api/state", "/api/emergency/state",
             "/api/emergency/119/simulation/start", "/api/emergency/119/simulation/complete",

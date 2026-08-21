@@ -9,15 +9,22 @@ from typing import Any
 from backend.runtime import SafeNestRuntime
 from backend.portal import PortalAuth, PortalStore, portal_event, portal_space, thermal_payload
 from backend.store import RuntimeStore
+from backend.thermal_image import (
+    ThermalImageDependencyError,
+    ThermalImageError,
+    encode_thermal_jpeg,
+)
 from backend.views import (
     ROUTE_CONTRACTS,
     events_document,
     health_document,
     history_document,
+    lcd_thermal_document,
     legacy_state_document,
     sensors_document,
     status_document,
 )
+from paths import DATA_ROOT, LCD_STATIC, WEB_GUEST, WEB_PORTAL, WEB_ROOT
 from services.buzzer import BuzzerProtocol, create_buzzer_from_env
 from services.emergency import EmergencyActionError, EmergencyActionService
 from services.sms_service import SMSProvider
@@ -122,6 +129,15 @@ def create_app(
     @app.get("/dashboard/", include_in_schema=False)
     def dashboard() -> Any:
         return FileResponse(dashboard_dir / "index.html")
+
+    @app.get("/display", include_in_schema=False)
+    @app.get("/display/", include_in_schema=False)
+    def lcd_display() -> Any:
+        return FileResponse(LCD_STATIC / "display.html")
+
+    @app.get("/common.css", include_in_schema=False)
+    def lcd_styles() -> Any:
+        return FileResponse(LCD_STATIC / "common.css", media_type="text/css")
 
     def require_admin(request: Request) -> None:
         authorization = request.headers.get("authorization", "")
@@ -260,6 +276,51 @@ def create_app(
             content=thermal_payload(frame),
             media_type="application/octet-stream",
             headers={"ETag": etag, "Cache-Control": "no-store"},
+        )
+
+    def latest_thermal_state() -> dict[str, Any]:
+        snapshot = selected_runtime.manager.snapshot()
+        sensors = snapshot.get("sensors")
+        if not isinstance(sensors, dict):
+            return {}
+        thermal = sensors.get("thermal")
+        return thermal if isinstance(thermal, dict) else {}
+
+    @app.get("/api/lcd/thermal")
+    def api_lcd_thermal() -> dict[str, Any]:
+        frame = selected_runtime.manager.latest_thermal_frame()
+        return lcd_thermal_document(
+            selected_store.latest(),
+            frame,
+            thermal_state=latest_thermal_state(),
+        )
+
+    @app.get("/api/lcd/thermal/image.jpg")
+    def api_lcd_thermal_image(request: Request) -> Any:
+        frame = selected_runtime.manager.latest_thermal_frame()
+        if frame is None:
+            return Response(status_code=204, headers={"Cache-Control": "no-store"})
+        etag = f'"lcd-thermal-{frame.frame_sequence}"'
+        if request.headers.get("if-none-match") == etag:
+            return Response(
+                status_code=304,
+                headers={"ETag": etag, "Cache-Control": "no-store"},
+            )
+        try:
+            image = encode_thermal_jpeg(frame)
+        except ThermalImageDependencyError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        except ThermalImageError as error:
+            selected_store.record_runtime_error("thermal_image", error)
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        return Response(
+            content=image,
+            media_type="image/jpeg",
+            headers={
+                "ETag": etag,
+                "Cache-Control": "no-store",
+                "X-Thermal-Sequence": str(frame.frame_sequence),
+            },
         )
 
     @app.get("/api/qr/{space_id}.png")

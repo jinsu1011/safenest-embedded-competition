@@ -20,6 +20,9 @@ ROUTE_CONTRACTS = {
     "GET /api/qr/{space_id}.png": "QR code for the public single-space dashboard",
     "GET /api/portal/events": "authenticated event list for the administrator UI",
     "GET /dashboard": "responsive same-origin live monitoring dashboard",
+    "GET /display": "physical Raspberry Pi LCD thermal and AI view",
+    "GET /api/lcd/thermal": "latest LCD thermal frame and inference metadata",
+    "GET /api/lcd/thermal/image.jpg": "OpenCV-colorized latest thermal frame",
     "GET /api/status": "full current system, risk, and sensor view",
     "GET /api/sensors": "sensor state with AI and risk component overlays",
     "GET /api/events": "bounded newest-first transition events",
@@ -34,6 +37,13 @@ ROUTE_CONTRACTS = {
     "POST /api/client-connection": "log dashboard connection state transitions",
     "GET /health": "process liveness and runtime readiness",
     "WS /ws": "current status publication stream",
+}
+
+
+THERMAL_CLASS_LABELS = {
+    "NOT_HUMAN": "사람 없음",
+    "HUMAN_NORMAL": "사람 감지 · 정상 자세",
+    "HUMAN_FALL": "쓰러짐 의심",
 }
 
 
@@ -101,6 +111,74 @@ def sensors_document(publication: Mapping[str, Any] | None) -> dict[str, Any]:
             sensor_id: status[sensor_id]
             for sensor_id in ("mmwave", "thermal", "co2", "pir")
         },
+    }
+
+
+def lcd_thermal_document(
+    publication: Mapping[str, Any] | None,
+    frame: object | None,
+    *,
+    thermal_state: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the small frame/inference contract consumed by the physical LCD."""
+
+    status = status_document(publication)
+    thermal = _mapping(status.get("thermal"))
+    ai = _mapping(thermal.get("ai"))
+    metadata = _mapping(ai.get("metadata"))
+    state = _mapping(thermal_state) if thermal_state is not None else _mapping(
+        thermal.get("state")
+    )
+    sequence = getattr(frame, "frame_sequence", None)
+    sensor_status = str(state.get("status", "NO_DATA"))
+    current = sensor_status == "LIVE" and state.get("current") is True
+
+    if frame is None:
+        frame_document: dict[str, Any] = {
+            "available": False,
+            "current": False,
+            "sensor_status": sensor_status,
+            "sequence": None,
+            "image_url": None,
+        }
+    else:
+        frame_document = {
+            "available": True,
+            "current": current,
+            "sensor_status": sensor_status,
+            "sequence": sequence,
+            "width": getattr(frame, "width", None),
+            "height": getattr(frame, "height", None),
+            "source_uptime_ms": getattr(frame, "uptime_ms", None),
+            "raw_minimum": getattr(frame, "minimum_raw", None),
+            "raw_maximum": getattr(frame, "maximum_raw", None),
+            "temperature_calibrated": False,
+            "image_url": f"/api/lcd/thermal/image.jpg?sequence={sequence}",
+        }
+
+    inference_sequence = metadata.get("frame_sequence")
+    inference = {
+        "available": ai.get("available") is True,
+        "state": ai.get("state") if ai.get("available") is True else "INPUT_UNAVAILABLE",
+        "label_ko": THERMAL_CLASS_LABELS.get(str(ai.get("state")), "판정 대기"),
+        "confidence": ai.get("confidence"),
+        "latency_ms": ai.get("latency_ms"),
+        "model_id": ai.get("model_id"),
+        "model_version": ai.get("model_version"),
+        "error": ai.get("error"),
+        "probabilities": copy.deepcopy(metadata.get("probabilities")),
+        "frame_sequence": inference_sequence,
+        "matches_displayed_frame": (
+            sequence is not None
+            and inference_sequence is not None
+            and sequence == inference_sequence
+        ),
+    }
+    return {
+        "schema": "safenest.lcd.thermal.v1",
+        "timestamp": status.get("timestamp"),
+        "frame": frame_document,
+        "inference": inference,
     }
 
 

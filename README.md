@@ -42,6 +42,7 @@ Raspberry Pi에서 아래 한 명령으로 전체 SafeNest 런타임이 기동�
 | 관리자 웹 | `http://<pi-주소>:8000/admin` |
 | A01 방문자 열화상 | `http://<pi-주소>:8000/guest/dashboard/A01` |
 | 실시간 대시보드 | `http://<pi-주소>:8000/dashboard` |
+| 물리 LCD (열화상 + AI 판정) | `http://<pi-주소>:8000/display` |
 | 통합 상태 API | `http://<pi-주소>:8000/api/status` |
 | 센서 상세 | `http://<pi-주소>:8000/api/sensors` |
 | 이력 / 이벤트 | `/api/history`, `/api/events` |
@@ -131,8 +132,8 @@ ESP32 센서 노드
                                      backend/store.py → database/ (SQLite)  │
                                                                             ▼
                                             backend/app.py (FastAPI + /ws)
-                                                                            │
-                                                          RaspberryPi/Web 대시보드
+                                                      │                 │
+                         OpenCV thermal JPEG + LCD AI view       RaspberryPi/Web 대시보드
 ```
 
 활성 진입점은 하나뿐입니다: `RaspberryPi/Runtime/backend/run_backend.py`. 컴포넌트 간 경로는 전부 `RaspberryPi/Runtime/paths.py`가 해석합니다.
@@ -163,7 +164,7 @@ cd safenest-embedded-competition
 ./run_safenest.sh             # 실행
 ```
 
-의존성은 `RaspberryPi/Runtime/requirements-backend.txt`(FastAPI/uvicorn)와 `RaspberryPi/Ondevice_AI/requirements-pi.txt`(ai-edge-litert, numpy 등)에서 옵니다.
+의존성은 `RaspberryPi/Runtime/requirements-backend.txt`(FastAPI/uvicorn/OpenCV headless)와 `RaspberryPi/Ondevice_AI/requirements-pi.txt`(ai-edge-litert, numpy 등)에서 옵니다.
 
 ### 3. 선택: 비상 대응 설정
 
@@ -220,9 +221,9 @@ python -m hil.preflight                                   # Pi 환경 사전 점
 
 ## 주의사항
 
-### LCD는 단일 명령에 포함되지 않습니다
+### LCD는 통합 백엔드 화면을 사용합니다
 
-`RaspberryPi/LCD/server.py`는 **자체 TCP `:9000` 수신기와 자체 `state.json`을 가진 독립 구현**입니다. canonical 게이트웨이와 포트가 충돌하고 상태 소스가 이중화되므로 `run_safenest.sh`가 실행하지 않습니다. Pi의 물리 LCD는 브라우저로 `http://localhost:8000/dashboard`를 띄우는 방식을 권장합니다.
+`RaspberryPi/LCD/server.py`는 **자체 TCP `:9000` 수신기와 자체 `state.json`을 가진 독립 구현**입니다. canonical 게이트웨이와 포트가 충돌하고 상태 소스가 이중화되므로 `run_safenest.sh`가 실행하지 않습니다. Pi의 물리 LCD는 브라우저로 `http://localhost:8000/display`를 띄웁니다. 이 화면은 Runtime이 수신한 최신 80×62 프레임의 OpenCV 색상 영상과 동일 파이프라인의 Thermal TFLite 판정을 나란히 표시합니다. 원시값은 보정 온도로 오해하지 않도록 `RAW` 범위로만 표시합니다.
 
 같은 이유로 `research/co2_validation/pi/safenest_pi_service.py`(CO₂ 전용 `:9000` 수신기)도 런타임과 동시에 실행하면 안 됩니다.
 

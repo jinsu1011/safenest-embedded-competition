@@ -36,6 +36,7 @@ REQUIRED_RUNTIME_FILES = (
     "backend/app.py",
     "backend/runtime.py",
     "backend/runtime_status.py",
+    "backend/thermal_image.py",
     "backend/views.py",
     "deployment/run_pi.sh",
     "database/schema.sql",
@@ -126,7 +127,7 @@ def pi_start_document(root: Path = ROOT) -> dict[str, object]:
         _check("linux", sys.platform.startswith("linux"), sys.platform, required=False),
         _check("raspberry_pi", "raspberry pi" in _device_model().lower(), _device_model(), required=False),
     ]
-    for module in ("fastapi", "uvicorn", "numpy"):
+    for module in ("fastapi", "uvicorn", "numpy", "cv2"):
         checks.append(_check(f"module_{module}", importlib.util.find_spec(module) is not None, module))
     runtime_modules = ("ai_edge_litert", "tflite_runtime", "tensorflow")
     available_runtimes = [name for name in runtime_modules if importlib.util.find_spec(name) is not None]

@@ -1,3 +1,5 @@
 fastapi>=0.110,<1
 uvicorn[standard]>=0.29,<1
 qrcode[pil]>=7.4,<9
+# Keep compatibility with requirements-pi.txt's intentional NumPy <2 contract.
+opencv-python-headless>=4.8,<4.12

@@ -1,0 +1,7 @@
+.env
+.venv/
+logs/
+__pycache__/
+*.py[cod]
+RaspberryPi/Runtime/data/
+ESP32/Arduino/esp32_sensor_node/secrets.h

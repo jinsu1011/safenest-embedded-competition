@@ -123,6 +123,8 @@ class OnDeviceAIPipeline:
         except Exception as error:
             return self._model_error("thermal", now, error)
         metadata = {
+            "frame_sequence": frame.frame_sequence,
+            "source_uptime_ms": frame.uptime_ms,
             "raw_minimum": frame.minimum_raw,
             "raw_maximum": frame.maximum_raw,
             "temperature_calibrated": False,

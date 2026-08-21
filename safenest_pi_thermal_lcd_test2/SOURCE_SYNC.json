@@ -1,0 +1,28 @@
+{
+  "repository": "https://github.com/jinsu1011/safenest-embedded-competition.git",
+  "branch": "main",
+  "main_commit_at_sync": "5ac2910e4f7de8d19b6a010c9276a60ae9b20d24",
+  "raspberrypi_sync": {
+    "source": "remote main RaspberryPi tree",
+    "included": [
+      "RaspberryPi/Runtime",
+      "RaspberryPi/Web",
+      "RaspberryPi/LCD",
+      "RaspberryPi/Ondevice_AI runtime models, config, inference, and risk"
+    ]
+  },
+  "esp32_sketch": {
+    "path": "ESP32/Arduino/esp32_sensor_node/esp32_sensor_node.ino",
+    "git_blob_sha": "6773751eeae4cbea1012420542c8716f567b704f",
+    "firmware_version": "1.3.0"
+  },
+  "local_feature_overlay": [
+    "RaspberryPi/Runtime/backend/thermal_image.py",
+    "RaspberryPi/Runtime/backend/app.py LCD routes",
+    "RaspberryPi/Runtime/backend/views.py LCD thermal document",
+    "RaspberryPi/Runtime/ai/pipeline.py displayed-frame metadata",
+    "RaspberryPi/LCD/static/display.html OpenCV plus AI layout",
+    "opencv-python-headless dependency and cv2 preflight"
+  ],
+  "synced_on": "2026-08-21"
+}

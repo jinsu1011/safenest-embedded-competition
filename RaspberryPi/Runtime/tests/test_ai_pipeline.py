@@ -77,6 +77,8 @@ class AIPipelineTests(unittest.TestCase):
         self.assertEqual(result["score"], 1.0)
         self.assertEqual(thermal.calls[0][0].shape, (62, 80))
         self.assertFalse(result["metadata"]["temperature_calibrated"])
+        self.assertEqual(result["metadata"]["frame_sequence"], 1)
+        self.assertEqual(result["metadata"]["source_uptime_ms"], 10)
         preview = result["metadata"]["heatmap_preview"]
         self.assertEqual((preview["width"], preview["height"]), (20, 16))
         self.assertEqual(len(preview["values"]), 320)

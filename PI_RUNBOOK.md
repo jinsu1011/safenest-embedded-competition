@@ -183,23 +183,57 @@ ss -lunp | grep 5005 || echo "udp free"
 
 ## 3-B. 필드 모니터 (저장 / AI 입력 / 통신 / LCD)
 
-표로 한 화면에 요약한다. ESP 켜기 전·후에도 사용.
+표로 한 화면에 요약한다. ESP 켜기 전·후에도 사용.  
+파일: `RaspberryPi/Runtime/hil/pi_field_monitor.py`
 
-**Pi에서:**
+### 보는 법
+
+| 목적 | 명령 |
+|---|---|
+| **계속 보기** (실시간) | `--once` **없이** 실행 → 기본 4초마다 화면 갱신 |
+| 한 번만 스냅샷 | `--once` |
+| 갱신 간격 변경 | `--interval 2` (초) |
+| 종료 | 터미널에서 `Ctrl+C` |
+
+**Pi SSH 터미널에서 계속 보기 (권장):**
 
 ```bash
 cd /home/sandi/safenest-team-main/RaspberryPi/Runtime
-python3 hil/pi_field_monitor.py              # 계속 갱신 (기본 4초)
-python3 hil/pi_field_monitor.py --once       # Δ 한 번만 보고 종료
+python3 hil/pi_field_monitor.py
+```
+
+한 번만:
+
+```bash
+python3 hil/pi_field_monitor.py --once
+```
+
+2초 간격 지속:
+
+```bash
 python3 hil/pi_field_monitor.py --interval 2
 ```
 
-**맥에서 (원격):**
+**맥에서 Pi API를 원격으로 보기:**
 
 ```bash
-cd /path/to/safenest-integration
+# 팀 클론 또는 integration worktree에 동일 스크립트가 있으면
+python3 hil/pi_field_monitor.py --base http://192.168.0.3:8000
 python3 hil/pi_field_monitor.py --base http://192.168.0.3:8000 --once
 ```
+
+파이 경로 예:
+
+```bash
+python3 /home/sandi/safenest-team-main/RaspberryPi/Runtime/hil/pi_field_monitor.py
+```
+
+화면에 나오는 블록:
+
+1. **Verdict** — YES/NO 한눈에 (통신·저장·AI 입력·Risk·LCD)
+2. **Link & storage** — TCP/UDP 카운트, `written` Δ, DB 스냅샷
+3. **Sensors / AI / risk** — 센서별 status·ai_state·score
+4. **Risk / LCD** — `SAFENEST_RISK_V1`, LCD `state`
 
 Verdict 열 의미:
 
@@ -215,8 +249,9 @@ Verdict 열 의미:
 
 스크립트 위치:
 
-- 맥: `safenest-integration/hil/pi_field_monitor.py`
-- 파이: `…/safenest-team-main/RaspberryPi/Runtime/hil/pi_field_monitor.py`
+- 파이: `/home/sandi/safenest-team-main/RaspberryPi/Runtime/hil/pi_field_monitor.py`
+- 맥(팀 worktree): `safenest-team-pi-field/RaspberryPi/Runtime/hil/pi_field_monitor.py`
+- 맥(integration worktree): `safenest-pi-field-ops/hil/pi_field_monitor.py`
 
 ---
 

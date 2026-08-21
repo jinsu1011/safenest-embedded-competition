@@ -12,43 +12,43 @@
   },
   "coverage": {
     "breath_phase": {
-      "populated": 1799,
+      "populated": 2398,
       "ratio": 1.0
     },
     "breath_phase_std": {
-      "populated": 1798,
-      "ratio": 0.999444
+      "populated": 2398,
+      "ratio": 1.0
     },
     "breath_rate_filtered": {
-      "populated": 231,
-      "ratio": 0.128405
+      "populated": 1713,
+      "ratio": 0.714345
     },
     "breath_rate_raw": {
-      "populated": 1799,
+      "populated": 2398,
       "ratio": 1.0
     },
     "distance_cm_raw": {
-      "populated": 1799,
+      "populated": 2398,
       "ratio": 1.0
     },
     "distance_std_cm": {
-      "populated": 1786,
-      "ratio": 0.992774
+      "populated": 2374,
+      "ratio": 0.989992
     },
     "heart_phase": {
-      "populated": 1799,
+      "populated": 2398,
       "ratio": 1.0
     },
     "heart_rate_raw": {
-      "populated": 1799,
+      "populated": 2398,
       "ratio": 1.0
     },
     "human_detected_raw": {
-      "populated": 1799,
+      "populated": 2398,
       "ratio": 1.0
     },
     "human_detected_stable": {
-      "populated": 1799,
+      "populated": 2398,
       "ratio": 1.0
     },
     "sensor_firmware_version": {
@@ -56,13 +56,13 @@
       "ratio": 0.0
     },
     "total_phase": {
-      "populated": 1799,
+      "populated": 2398,
       "ratio": 1.0
     }
   },
   "error_code_counts": {
-    "BREATH_PHASE_LOW_AMPLITUDE": 1568,
-    "None": 231
+    "BREATH_PHASE_LOW_AMPLITUDE": 685,
+    "None": 1713
   },
   "freshness": {
     "exact_phase_frame_arrival_identity_available": false,
@@ -70,9 +70,9 @@
     "limitation": "phase_age_ms is staleness evidence, not an exact log of every 0x0A13 frame arrival.",
     "phase_age_ms": {
       "at_or_above_threshold": 0,
-      "count": 1799,
+      "count": 2398,
       "invalid": 0,
-      "max_ms": 17.0,
+      "max_ms": 18.0,
       "median_ms": 12.0,
       "min_ms": 0.0,
       "missing_or_null": 0,
@@ -101,96 +101,87 @@
   },
   "numeric_ranges": {
     "breath_phase": {
-      "count": 1799,
-      "max": 0.58,
-      "mean": 0.000534,
-      "median": -0.0,
-      "min": -0.73
+      "count": 2398,
+      "max": 0.66,
+      "mean": -0.001555,
+      "median": 0.02,
+      "min": -0.82
     },
     "breath_phase_std": {
-      "count": 1798,
-      "max": 0.28,
-      "mean": 0.154093,
-      "median": 0.15,
-      "min": 0.09
+      "count": 2398,
+      "max": 0.39,
+      "mean": 0.235142,
+      "median": 0.23,
+      "min": 0.15
     },
     "breath_rate_filtered": {
-      "count": 231,
-      "max": 23.43,
-      "mean": 19.619394,
-      "median": 20.4,
-      "min": 14.37
+      "count": 1713,
+      "max": 21.86,
+      "mean": 15.642358,
+      "median": 15.54,
+      "min": 11.06
     },
     "breath_rate_raw": {
-      "count": 1799,
-      "max": 32.0,
-      "mean": 22.674819,
-      "median": 23.0,
-      "min": 1.0
+      "count": 2398,
+      "max": 30.0,
+      "mean": 20.547957,
+      "median": 22.0,
+      "min": 2.0
     },
     "distance_cm_raw": {
-      "count": 1799,
-      "max": 91.84,
-      "mean": 63.714319,
-      "median": 51.66,
-      "min": 45.92
+      "count": 2398,
+      "max": 63.14,
+      "mean": 56.45211,
+      "median": 57.4,
+      "min": 51.66
     },
     "distance_std_cm": {
-      "count": 1786,
-      "max": 22.2,
-      "mean": 6.026652,
-      "median": 2.18,
-      "min": 0.0
+      "count": 2374,
+      "max": 4.45,
+      "mean": 2.283016,
+      "median": 2.24,
+      "min": 1.11
     },
     "heart_phase": {
-      "count": 1799,
-      "max": 1.01,
-      "mean": 0.0006,
-      "median": 0.0,
-      "min": -0.89
+      "count": 2398,
+      "max": 1.55,
+      "mean": 0.001393,
+      "median": -0.0,
+      "min": -1.35
     },
     "heart_rate_raw": {
-      "count": 1799,
-      "max": 118.0,
-      "mean": 89.804892,
-      "median": 88.0,
-      "min": 63.0
+      "count": 2398,
+      "max": 115.0,
+      "mean": 83.217264,
+      "median": 84.0,
+      "min": 58.0
     },
     "total_phase": {
-      "count": 1799,
-      "max": 2.81,
-      "mean": 0.010856,
-      "median": -0.01,
-      "min": -3.03
+      "count": 2398,
+      "max": 3.11,
+      "mean": -0.002164,
+      "median": -0.03,
+      "min": -3.11
     }
   },
   "qa_schema_version": "m-c0-physical-qa-1.2",
   "raw": {
-    "byte_count": 1837444,
+    "byte_count": 2410415,
     "malformed_line_count": 0,
     "malformed_lines": [],
-    "path": "pilot/M-C0-PILOT-STATIONARY-001.raw.jsonl",
-    "physical_lines": 1799,
-    "sha256": "e2b832fd3a72f18b4c3a370738c10e58c0269283dac218ae2d7d4dad48036f6f",
-    "valid_json_records": 1799
+    "path": "raw/M-C0-20260818-CAP2-S001-02.jsonl",
+    "physical_lines": 2398,
+    "sha256": "e46fc5cc94e83ed372420925297ca60dd425722672acc6b6042cf89251871a71",
+    "valid_json_records": 2398
   },
   "schema_conformance": {
-    "anomalous_record_count": 1,
-    "anomalous_record_indices": [
-      1030
-    ],
-    "inconsistent_key_counts": {
-      "breath_filtered_v_std": 1,
-      "breath_filtered_valid": 1798,
-      "breath_phase_std": 1798
-    },
-    "missing_required_key_counts": {
-      "breath_filtered_valid": 1,
-      "breath_phase_std": 1
-    },
+    "anomalous_record_count": 0,
+    "anomalous_record_indices": [],
+    "inconsistent_key_counts": {},
+    "missing_required_key_counts": {},
     "note": "Undeclared keys present on every record are current-firmware fields the schema has not declared; informational only. A key present on some records but not others indicates a truncated serial line that still parsed as JSON.",
-    "pass": false,
-    "record_count": 1799,
+    "pass": true,
+    "record_count": 2398,
     "schema": "raw_record.schema.json",
     "undeclared_keys_on_every_record": [
       "breath_age_ms",
@@ -208,34 +199,34 @@
     ]
   },
   "sensor_state_counts": {
-    "DEGRADED": 1568,
-    "VALID": 231
+    "DEGRADED": 685,
+    "VALID": 1713
   },
   "sequence": {
     "backwards": 0,
     "duplicates": 0,
-    "first": 19088,
+    "first": 14618,
     "gap_events": 0,
-    "last": 20886,
+    "last": 17015,
     "missing_sequences": 0
   },
-  "stream_integrity_pass": false,
+  "stream_integrity_pass": true,
   "timing": {
     "backward_timestamps": 0,
     "duplicate_timestamps": 0,
-    "duration_ms": 179920,
-    "effective_cadence_hz": 9.99333,
-    "first_ts_monotonic_ms": 1911293,
+    "duration_ms": 239922,
+    "effective_cadence_hz": 9.990747,
+    "first_ts_monotonic_ms": 1464176,
     "gap_over_500ms": 0,
-    "jitter_pstdev_ms": 0.307481,
-    "last_ts_monotonic_ms": 2091213,
-    "maximum_gap_ms": 102.0,
-    "mean_interval_ms": 100.066741,
+    "jitter_pstdev_ms": 0.406168,
+    "last_ts_monotonic_ms": 1704098,
+    "maximum_gap_ms": 103.0,
+    "mean_interval_ms": 100.092616,
     "median_interval_ms": 100.0,
     "minimum_interval_ms": 100.0,
-    "nominal_30s_windows": 5,
+    "nominal_30s_windows": 7,
     "p95_interval_ms": 101.0,
-    "telemetry_interval_count": 1798,
-    "telemetry_row_count": 1799
+    "telemetry_interval_count": 2397,
+    "telemetry_row_count": 2398
   }
 }

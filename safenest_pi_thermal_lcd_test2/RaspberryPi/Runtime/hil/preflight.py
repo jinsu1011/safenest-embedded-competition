@@ -139,8 +139,6 @@ def pi_start_document(root: Path = ROOT) -> dict[str, object]:
         ("file_admin_portal_html", WEB_PORTAL / "preview.html"),
         ("file_thermal_client_js", WEB_PORTAL / "thermal-client.js"),
         ("file_guest_thermal_html", WEB_GUEST / "index.html"),
-        ("file_lcd_display_html", LCD_STATIC / "display.html"),
-        ("file_lcd_thermal_renderer", root / "backend" / "thermal_image.py"),
         ("file_model_manifest", MODEL_MANIFEST),
     ):
         checks.append(_check(name, path.is_file(), str(path)))

@@ -28,6 +28,7 @@ from paths import DATA_ROOT, LCD_STATIC, WEB_GUEST, WEB_PORTAL, WEB_ROOT
 from services.buzzer import BuzzerProtocol, create_buzzer_from_env
 from services.emergency import EmergencyActionError, EmergencyActionService
 from services.sms_service import SMSProvider
+from paths import DATA_ROOT, WEB_GUEST, WEB_PORTAL, WEB_ROOT
 
 
 class BackendDependencyError(RuntimeError):

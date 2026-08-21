@@ -202,6 +202,15 @@ class RuntimeStoreTests(unittest.TestCase):
 class FastAPIContractTests(unittest.TestCase):
     def test_route_contracts_are_complete(self):
         expected = {
+            "GET /admin",
+            "POST /api/auth/login",
+            "GET/POST /api/spaces",
+            "GET/PATCH/DELETE /api/spaces/{space_id}",
+            "GET /guest/dashboard/{space_id}",
+            "GET /api/guest/spaces/{space_id}",
+            "GET /api/thermal/{space_id}",
+            "GET /api/qr/{space_id}.png",
+            "GET /api/portal/events",
             "GET /dashboard",
             "GET /display",
             "GET /api/lcd/thermal",
@@ -231,6 +240,11 @@ class FastAPIContractTests(unittest.TestCase):
         app = create_app(start_runtime=False)
         paths = {route.path for route in app.routes}
         for path in (
+            "/", "/admin", "/admin/", "/admin-api.js", "/thermal-client.js",
+            "/guest/dashboard/{space_id}", "/api/auth/login", "/api/spaces",
+            "/api/spaces/{space_id}", "/api/portal/events",
+            "/api/guest/spaces/{space_id}", "/api/thermal/{space_id}",
+            "/api/qr/{space_id}.png",
             "/dashboard", "/dashboard/", "/display", "/display/", "/common.css",
             "/api/lcd/thermal", "/api/lcd/thermal/image.jpg",
             "/api/status", "/api/sensors", "/api/events",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from paths import ONDEVICE_AI_ROOT, RUNTIME_ROOT
 import hashlib
 import json
 import unittest
@@ -10,8 +11,6 @@ from pathlib import Path
 import numpy as np
 
 
-from paths import ONDEVICE_AI_ROOT, RUNTIME_ROOT
-
 ROOT = RUNTIME_ROOT
 ONDEVICE = ONDEVICE_AI_ROOT
 B_COMPLETE = ONDEVICE / "models" / "rp_x0_b_complete"
@@ -19,7 +18,7 @@ PRODUCTION_MANIFEST = ONDEVICE / "models" / "model_manifest.json"
 PROVISIONING_MANIFEST = ROOT / "hil" / "rp_x0_b_complete_provisioning_manifest.json"
 INVENTORY = B_COMPLETE / "artifact_inventory.json"
 
-PRODUCTION_MANIFEST_SHA256 = "ad85a4abfd5940a81199695adb7446e92fd50bb4b32ec4689b5d668cec433786"
+PRODUCTION_MANIFEST_SHA256 = "ef9e9eea8dc4a9db139f7569b8d9579de3f5f5c06c69218a2e67a76ed0d8bf07"
 
 CO2_ARTIFACT = B_COMPLETE / "co2" / "C_B6_REDUCED_CO2_SLOPE_CANDIDATE_001_full_integer_int8.tflite"
 THERMAL_ARTIFACT = B_COMPLETE / "thermal" / "SMALL_CNN_BASELINE_V1_P1_full_int8.tflite"
@@ -82,7 +81,21 @@ class LockedBStageArtifactTests(unittest.TestCase):
         self.assertTrue(PRODUCTION_MANIFEST.is_file())
         self.assertEqual(sha256(PRODUCTION_MANIFEST), PRODUCTION_MANIFEST_SHA256)
         manifest = load_json(PRODUCTION_MANIFEST)
-        self.assertEqual(manifest["models"]["co2"]["path"], "models/co2/co2_occupancy_int8_v0.1.0.tflite")
+        # The CO2 selector is promoted to the C-B6 reduced-feature contract; the
+        # 3-feature v0.1.0 entry is retained as history under its own key.
+        self.assertEqual(
+            manifest["models"]["co2"]["path"], "models/co2/co2_occupancy_int8_v0.1.0.tflite"
+        )
+        self.assertEqual(manifest["models"]["co2"]["runtime_role"], "HISTORICAL_CO2_V0_1_0")
+        self.assertTrue(manifest["models"]["co2"]["HISTORICAL_NOT_ACTIVE"])
+        active_co2 = manifest["models"]["co2_occupancy_c_b6"]
+        self.assertEqual(active_co2["runtime_role"], "ACTIVE_C_B6")
+        self.assertEqual(active_co2["model_id"], "C_B6_REDUCED_CO2_SLOPE_CANDIDATE_001")
+        self.assertEqual(active_co2["path"], str(CO2_ARTIFACT.relative_to(ONDEVICE)))
+        self.assertEqual(active_co2["input"]["feature_order"], ["CO2", "CO2_slope"])
+        self.assertFalse(active_co2["input"]["humidity_included"])
+        self.assertEqual(active_co2["risk_semantic"], "NONE")
+        self.assertEqual(active_co2["safety_semantic"], "NONE")
         self.assertEqual(
             manifest["models"]["thermal"]["path"],
             "models/thermal/thermal_fall_int8_v0.1.0.tflite",
@@ -95,6 +108,7 @@ class LockedBStageArtifactTests(unittest.TestCase):
         self.assertEqual(active["input"]["shape"], [1, 240, 1])
         self.assertEqual(active["hardware_validation"], "NOT_PERFORMED")
         self.assertFalse(active["DEVICE_VALIDATED"])
+        self.assertTrue(active["runtime_adapter_compatible"])
         historical = manifest["models"]["mmwave_v0_1_0"]
         self.assertEqual(historical["runtime_role"], "HISTORICAL_V0_1_0")
         self.assertEqual(historical["path"], "models/mmwave/mmwave_resp_int8_v0.1.0.tflite")
@@ -135,7 +149,7 @@ class LockedBStageArtifactTests(unittest.TestCase):
             ),
         }
         for path, (digest, size) in expected.items():
-            with self.subTest(path=str(path)):
+            with self.subTest(path=str(path.relative_to(ROOT))):
                 self.assertTrue(path.is_file(), path)
                 self.assertEqual(path.stat().st_size, size)
                 self.assertEqual(sha256(path), digest)
@@ -253,36 +267,48 @@ class LockedBStageArtifactTests(unittest.TestCase):
         frozen = [
             path
             for path in snapshot.rglob("*")
-            if path.is_file() and overlay not in path.parents and path != overlay
+            if path.is_file() and path.suffix != ".pyc" and overlay not in path.parents and path != overlay
         ]
         overlay_files = [path for path in overlay.rglob("*") if path.is_file()]
+        self.assertEqual(provenance["ondevice_ai_snapshot"]["tracked_file_count"], 1076)
+        self.assertEqual(len(frozen), 1076)
         self.assertEqual(provenance["locked_b_stage_overlay"]["file_count"], 19)
         self.assertEqual(len(overlay_files), 19)
-        self.assertGreater(len(frozen), 0)
 
     def test_provisioning_manifest_is_non_production(self) -> None:
         manifest = load_json(PROVISIONING_MANIFEST)
         inventory = load_json(INVENTORY)
         self.assertTrue(manifest["not_a_production_model_manifest"])
-        self.assertFalse(manifest["production_selection_changed"])
+        # CO2 is the only promoted selector; the mmWave gate stays closed.
+        self.assertTrue(manifest["production_selection_changed"])
+        self.assertEqual(
+            manifest["production_selection_change_scope"], "CO2_ONLY_C_B6_REDUCED_FEATURE"
+        )
         self.assertEqual(manifest["mmwave_live_b_gate"], "CLOSED")
         self.assertFalse(manifest["thermal44_deployment_validated"])
-        self.assertFalse(inventory["production_selection_changed"])
+        self.assertTrue(inventory["production_selection_changed"])
+        self.assertEqual(
+            inventory["production_selection_change_scope"], "CO2_ONLY_C_B6_REDUCED_FEATURE"
+        )
         classified = {
             item["path"]: item["classification"] for item in inventory["artifacts"]
         }
-        self.assertIn("HISTORICAL", next(item["classification"] for item in inventory["artifacts"] if item["path"].endswith("co2_occupancy_int8_v0.1.0.tflite")))
+        self.assertIn("HISTORICAL", classified[str(HISTORICAL["co2"].relative_to(ROOT))])
+        self.assertIn(
+            "SUPERSEDED_BY_C_B6_REDUCED_FEATURE",
+            classified[str(HISTORICAL["co2"].relative_to(ROOT))],
+        )
         self.assertIn(
             "LOCKED_B_STAGE",
-            next(item["classification"] for item in inventory["artifacts"] if "C_B6_REDUCED_CO2_SLOPE" in item["path"]),
+            classified[str(CO2_ARTIFACT.relative_to(ROOT))],
         )
         self.assertIn(
             "NOT_THERMAL44_DEPLOYMENT_VALIDATED",
-            next(item["classification"] for item in inventory["artifacts"] if "SMALL_CNN_BASELINE_V1_P1_full_int8.tflite" in item["path"]),
+            classified[str(THERMAL_ARTIFACT.relative_to(ROOT))],
         )
         self.assertIn(
             "LIVE_B_GATE_CLOSED",
-            next(item["classification"] for item in inventory["artifacts"] if "M-B3_CONV1D_GAP_BASELINE_seed42_M-B5_CAL_CLASS_BALANCED_120_int8.tflite" in item["path"]),
+            classified[str(MMWAVE_ARTIFACT.relative_to(ROOT))],
         )
         active = load_json(PRODUCTION_MANIFEST)["models"]["mmwave"]
         self.assertEqual(active["runtime_role"], "ACTIVE_M_N9")

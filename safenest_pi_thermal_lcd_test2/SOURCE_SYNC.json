@@ -1,7 +1,8 @@
 {
   "repository": "https://github.com/jinsu1011/safenest-embedded-competition.git",
   "branch": "main",
-  "main_commit_at_sync": "5ac2910e4f7de8d19b6a010c9276a60ae9b20d24",
+  "main_commit_at_sync": "c3765ef14157991e1678e247d586d53e0aa57bcb",
+  "previous_main_commit": "5ac2910e4f7de8d19b6a010c9276a60ae9b20d24",
   "raspberrypi_sync": {
     "source": "remote main RaspberryPi tree",
     "included": [
@@ -22,7 +23,16 @@
     "RaspberryPi/Runtime/backend/views.py LCD thermal document",
     "RaspberryPi/Runtime/ai/pipeline.py displayed-frame metadata",
     "RaspberryPi/LCD/static/display.html OpenCV plus AI layout",
-    "opencv-python-headless dependency and cv2 preflight"
+    "opencv-python-headless dependency and cv2 preflight",
+    "bundle verifier coverage for canonical runtime dependencies",
+    "canonical paths.RISK_CONFIG adaptation for the Pi bundle layout",
+    "transfer-package provenance for the intentionally omitted upstream research snapshot"
   ],
-  "synced_on": "2026-08-21"
+  "main_updates_applied": [
+    "CO2 C-B6 canonical runtime adapter",
+    "mmWave M-N9 canonical and spectral runtime adapters",
+    "Risk Formula V1 engine and contract",
+    "preconnect runtime audit and updated runtime tests"
+  ],
+  "synced_on": "2026-08-22"
 }

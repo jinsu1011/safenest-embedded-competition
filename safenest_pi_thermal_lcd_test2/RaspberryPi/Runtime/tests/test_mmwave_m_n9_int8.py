@@ -6,6 +6,7 @@ HISTORICAL_B_STAGE / historical v0.1.0. Does not rewrite gateway runtime.
 
 from __future__ import annotations
 
+from paths import ONDEVICE_AI_ROOT, RUNTIME_ROOT
 import hashlib
 import json
 import sys
@@ -14,8 +15,6 @@ from pathlib import Path
 
 import numpy as np
 
-
-from paths import ONDEVICE_AI_ROOT, RUNTIME_ROOT
 
 ROOT = RUNTIME_ROOT
 ONDEVICE = ONDEVICE_AI_ROOT
@@ -106,6 +105,7 @@ class MN9Int8ArtifactTests(unittest.TestCase):
         self.assertEqual(active["hardware_validation"], "NOT_PERFORMED")
         self.assertFalse(active["DEVICE_VALIDATED"])
         self.assertTrue(active["PRESENCE_GATE_REQUIRED"])
+        self.assertTrue(active["runtime_adapter_compatible"])
         self.assertEqual(manifest["models"]["co2"]["path"], "models/co2/co2_occupancy_int8_v0.1.0.tflite")
         self.assertEqual(
             manifest["models"]["thermal"]["path"],

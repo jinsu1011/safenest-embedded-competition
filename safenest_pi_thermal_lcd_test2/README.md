@@ -5,8 +5,8 @@
 ## RaspberryPi 코드 기준
 
 - 저장소: `https://github.com/jinsu1011/safenest-embedded-competition.git`
-- 동기화 시 원격 `main`: `5ac2910e4f7de8d19b6a010c9276a60ae9b20d24`
-- 반영된 원격 기능: `/admin`, `/guest/dashboard/A01`, `/api/thermal/A01`, UDP 5005 preflight, `qrcode[pil]`, 웹·열화상 실행 runbook
+- 동기화 시 원격 `main`: `c3765ef14157991e1678e247d586d53e0aa57bcb`
+- 반영된 원격 기능: `/admin`, `/guest/dashboard/A01`, `/api/thermal/A01`, UDP 5005 preflight, CO₂ C-B6·mmWave M-N9 canonical runtime, mmWave spectral 처리, Risk Formula V1
 - 추가 유지 기능: `/display`, `/api/lcd/thermal`, `/api/lcd/thermal/image.jpg`, OpenCV `INFERNO` JPEG, Thermal AI 판정 패널
 - 상세 동기화 내역: `SOURCE_SYNC.json`
 
@@ -20,7 +20,7 @@ ESP32 통합 코드는 `https://github.com/jinsu1011/safenest-embedded-competiti
 - 펌웨어/스키마: `1.3.0` / `1.3`
 - `mmwave.human_detected_raw`를 `true`/`false`/`null` 3상태로 전송합니다.
 
-상세 출처는 `ESP32_SOURCE.json`, 변경 내용은 스케치 폴더의 `ESP32_UPDATE_CHANGELOG_KO.md`를 확인하십시오.
+상세 동기화 출처는 `SOURCE_SYNC.json`, 변경 내용은 스케치 폴더의 `ESP32_UPDATE_CHANGELOG_KO.md`를 확인하십시오.
 
 ## 통신 포트
 
@@ -32,12 +32,14 @@ ESP32 통합 코드는 `https://github.com/jinsu1011/safenest-embedded-competiti
 
 ESP32와 Pi는 같은 LAN에 있어야 하며, Pi IP는 `hostname -I`로 확인합니다.
 
-## 1. Raspberry Pi로 전송
+## 1. Raspberry Pi에서 Git clone
 
-VS Code Remote SSH 탐색기로 이 폴더 전체를 `/home/<사용자>/`에 옮기거나 로컬 PowerShell에서 실행합니다.
+VS Code Remote SSH로 Raspberry Pi에 접속한 뒤 팀 저장소의 기능 브랜치를 clone하고 이 폴더로 이동합니다.
 
-```powershell
-.\safenest_pi_thermal_lcd_test2\copy_to_pi.ps1 -PiHost 192.168.0.44 -PiUser pi
+```bash
+git clone --branch feature/thermal-lcd-ai-view \
+  https://github.com/jinsu1011/safenest-embedded-competition.git
+cd safenest-embedded-competition/safenest_pi_thermal_lcd_test2
 ```
 
 ## 2. Pi 환경 점검 및 설치
@@ -45,7 +47,6 @@ VS Code Remote SSH 탐색기로 이 폴더 전체를 `/home/<사용자>/`에 옮
 Raspberry Pi OS 64-bit, Python 3.10 이상을 권장합니다. 첫 설치에는 인터넷과 `sudo` 권한이 필요합니다.
 
 ```bash
-cd ~/safenest_pi_thermal_lcd_test2
 bash scripts/00_check_pi.sh
 bash scripts/01_install.sh
 bash scripts/00_check_pi.sh --after-install
@@ -92,7 +93,6 @@ Arduino IDE에서 `ESP32 Dev Module`을 선택해 업로드하고 Serial Monitor
 Pi Desktop이 LCD에 로그인된 상태에서 실행합니다.
 
 ```bash
-cd ~/safenest_pi_thermal_lcd_test2
 bash run_safenest.sh
 ```
 
@@ -113,7 +113,6 @@ bash run_safenest.sh --no-kiosk
 두 번째 SSH 터미널에서 실행합니다.
 
 ```bash
-cd ~/safenest_pi_thermal_lcd_test2
 bash scripts/04_status.sh
 bash scripts/05_smoke_test.sh
 ```

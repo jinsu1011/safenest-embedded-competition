@@ -183,77 +183,160 @@ ss -lunp | grep 5005 || echo "udp free"
 
 ## 3-B. 필드 모니터 (저장 / AI 입력 / 통신 / LCD)
 
-표로 한 화면에 요약한다. ESP 켜기 전·후에도 사용.  
-파일: `RaspberryPi/Runtime/hil/pi_field_monitor.py`
+표로 한 화면에 **통신·저장·AI 입력·Risk·LCD** 상태를 요약한다.  
+ESP 켜기 전(전부 NO여도 정상) / 켠 뒤(YES로 바뀌는지) 모두 쓴다.
 
-### 보는 법
-
-| 목적 | 명령 |
+| 항목 | 값 |
 |---|---|
-| **계속 보기** (실시간) | `--once` **없이** 실행 → 기본 4초마다 화면 갱신 |
-| 한 번만 스냅샷 | `--once` |
-| 갱신 간격 변경 | `--interval 2` (초) |
-| 종료 | 터미널에서 `Ctrl+C` |
+| 파일 | `RaspberryPi/Runtime/hil/pi_field_monitor.py` |
+| 읽는 API | `GET /health`, `/api/status`, `/api/state` (읽기 전용) |
+| 기본 갱신 | 4초 (`--interval`로 변경) |
+| 현재 Pi | `192.168.0.3` (IP 바뀌면 `--base` / 문서 IP만 갱신) |
 
-**Pi SSH 터미널에서 계속 보기 (권장):**
+### 전제
+
+1. 백엔드가 떠 있어야 한다 (`./run_safenest.sh` → `:8000` health 200).
+2. 모니터는 **LCD Chromium과 별개**다. 터미널에 표를 띄운다.
+3. 첫 화면은 Δ(증가량)를 위해 **한 주기 warm-up** 후 표가 나온다.
+
+---
+
+### 보는 법 (Pi에서 — 권장)
+
+#### 1) SSH로 파이 접속
+
+```bash
+ssh sandi@192.168.0.3
+```
+
+#### 2) 계속 보기 (실시간)
+
+`--once`를 **빼면** 지속 모드다. 기본 4초마다 화면을 지우고 표를 다시 그린다.
 
 ```bash
 cd /home/sandi/safenest-team-main/RaspberryPi/Runtime
 python3 hil/pi_field_monitor.py
 ```
 
-한 번만:
+- 종료: 터미널에서 **`Ctrl+C`**
+- 다른 작업할 SSH가 필요하면 창을 하나 더 열거나 `tmux`/`screen` 사용
+
+#### 3) 한 번만 스냅샷
+
+연결이 늘었는지 빠르게 확인할 때:
 
 ```bash
+cd /home/sandi/safenest-team-main/RaspberryPi/Runtime
 python3 hil/pi_field_monitor.py --once
 ```
 
-2초 간격 지속:
+약 4초(기본 interval) 대기 후 Δ 포함 표를 **한 번** 출력하고 종료한다.
+
+#### 4) 갱신 간격 바꾸기
 
 ```bash
+# 2초마다 계속 보기
 python3 hil/pi_field_monitor.py --interval 2
+
+# 2초 간격으로 한 번만
+python3 hil/pi_field_monitor.py --once --interval 2
 ```
 
-**맥에서 Pi API를 원격으로 보기:**
-
-```bash
-# 팀 클론 또는 integration worktree에 동일 스크립트가 있으면
-python3 hil/pi_field_monitor.py --base http://192.168.0.3:8000
-python3 hil/pi_field_monitor.py --base http://192.168.0.3:8000 --once
-```
-
-파이 경로 예:
+#### 5) 절대 경로로 실행 (cwd 상관없을 때)
 
 ```bash
 python3 /home/sandi/safenest-team-main/RaspberryPi/Runtime/hil/pi_field_monitor.py
+python3 /home/sandi/safenest-team-main/RaspberryPi/Runtime/hil/pi_field_monitor.py --once
 ```
 
-화면에 나오는 블록:
+#### 6) 옵션 요약
 
-1. **Verdict** — YES/NO 한눈에 (통신·저장·AI 입력·Risk·LCD)
-2. **Link & storage** — TCP/UDP 카운트, `written` Δ, DB 스냅샷
-3. **Sensors / AI / risk** — 센서별 status·ai_state·score
-4. **Risk / LCD** — `SAFENEST_RISK_V1`, LCD `state`
+| 옵션 | 의미 |
+|---|---|
+| (없음) | 계속 갱신 |
+| `--once` | Δ 한 번 찍고 종료 |
+| `--interval N` | 샘플 간격(초). 기본 `4` |
+| `--base URL` | API 주소. Pi 로컬 기본 `http://127.0.0.1:8000` |
+| `--timeout N` | HTTP 타임아웃(초). 기본 `5` |
+| `--no-clear` | 화면 clear 안 함 (로그로 흘릴 때) |
 
-Verdict 열 의미:
+---
+
+### 보는 법 (맥에서 — 원격)
+
+파이와 **같은 Wi‑Fi**에 맥이 있어야 `192.168.0.3:8000`에 닿는다.
+
+```bash
+# 팀 worktree 예
+cd "/Users/junwoo/Library/Mobile Documents/com~apple~CloudDocs/대학/2026/safenest-team-pi-field/RaspberryPi/Runtime"
+
+# 계속 보기
+python3 hil/pi_field_monitor.py --base http://192.168.0.3:8000
+
+# 한 번만
+python3 hil/pi_field_monitor.py --base http://192.168.0.3:8000 --once
+```
+
+integration worktree에 복사본이 있으면:
+
+```bash
+cd ".../safenest-pi-field-ops"
+python3 hil/pi_field_monitor.py --base http://192.168.0.3:8000
+```
+
+연결 실패 시: 파이 IP/방화벽, 백엔드 기동, 맥·파이 동일 SSID를 확인한다.
+
+---
+
+### 화면에 나오는 것 (읽는 순서)
+
+매번 위→아래 네 블록이다.
+
+1. **Verdict** (가장 중요)  
+   `ok?` 열의 `YES` / `NO`만 봐도 된다.  
+   - ESP 끄기 전: 대부분 `NO` + LCD `OFFLINE` → **정상**  
+   - ESP 켠 뒤 1~4분: `TCP telem` / `UDP thermal` / `Storage *` / `AI has usable input` 가 `YES`로 바뀌는지 본다
+
+2. **Link & storage**  
+   `now` = 누적값, `Δ` = 방금 간격 동안 증가량.  
+   `Δ`가 `0`이면 그 구간에는 패킷/저장이 안 들어온 것.
+
+3. **Sensors / AI / risk**  
+   센서별 `status`(`LIVE`/`NO_DATA`…), `ai_state`, `ai_err`, risk 성분.
+
+4. **Risk / LCD**  
+   `formula_id`가 `SAFENEST_RISK_V1`인지, LCD `state`(`offline` / `normal-empty` 등).
+
+#### Verdict 열 의미
 
 | check | YES 의미 |
 |---|---|
-| TCP telem flowing | `:9000` 텔레메트리 패킷 증가 |
+| TCP telem flowing | `:9000` 텔레메트리 패킷 증가 (ESP TCP 붙음) |
 | UDP thermal flowing | `:5005` 완성 프레임 증가 |
-| Storage * write | `sensor_logging.written` 증가 (파일 저장) |
+| Storage * write | `sensor_logging.written` 증가 (디스크 저장) |
 | DB snapshots grow | SQLite 스냅샷 증가 |
-| AI has usable input | 센서 LIVE/DEGRADED + AI가 `INPUT_UNAVAILABLE` 아님 |
-| Risk formula | `SAFENEST_RISK_V1` 동작 |
-| LCD state | `/api/state` 디스플레이 상태 |
+| Logging worker | 저장 워커 `running` |
+| AI has usable input | LIVE/DEGRADED + AI가 `INPUT_UNAVAILABLE` 아님 |
+| Risk formula | `SAFENEST_RISK_V1` 엔진 동작 중 |
+| LCD state | `/api/state` 디스플레이 상태 (값 자체 표시) |
 
-스크립트 위치:
+#### 자주 보는 패턴
 
-- 파이: `/home/sandi/safenest-team-main/RaspberryPi/Runtime/hil/pi_field_monitor.py`
-- 맥(팀 worktree): `safenest-team-pi-field/RaspberryPi/Runtime/hil/pi_field_monitor.py`
-- 맥(integration worktree): `safenest-pi-field-ops/hil/pi_field_monitor.py`
+| 증상 | 해석 | 다음 |
+|---|---|---|
+| 전부 NO, LCD OFFLINE | ESP 미연결 | ESP IP=`192.168.0.3`, 포트 9000/5005 |
+| TCP YES, Storage NO | 수신은 되나 로거 이슈 | `Logging worker`, `errors` 확인 |
+| Storage YES, AI NO | 데이터는 오는데 윈도우/모델 입력 부족 | warm-up 3~4분, `ai_err` 열 |
+| `cannot fetch` | 백엔드 다운/IP 틀림 | `curl http://…:8000/health` |
 
 ---
+
+### 스크립트 위치
+
+- 파이(배포): `/home/sandi/safenest-team-main/RaspberryPi/Runtime/hil/pi_field_monitor.py`
+- 맥 팀 worktree: `safenest-team-pi-field/RaspberryPi/Runtime/hil/pi_field_monitor.py`
+- 맥 integration worktree: `safenest-pi-field-ops/hil/pi_field_monitor.py`
+
 
 ## 4. ESP 켜기 전 / 후
 

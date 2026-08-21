@@ -7,7 +7,7 @@ import unittest
 from backend.views import ROUTE_CONTRACTS
 
 
-from paths import WEB_ROOT
+from paths import RUNTIME_ROOT, WEB_GUEST, WEB_PORTAL, WEB_ROOT
 
 DASHBOARD = WEB_ROOT
 
@@ -93,6 +93,22 @@ class DashboardStaticTests(unittest.TestCase):
     def test_layout_has_small_screen_and_reduced_motion_support(self):
         self.assertIn("@media (max-width: 700px)", self.css)
         self.assertIn("prefers-reduced-motion", self.css)
+
+    def test_portal_and_guest_thermal_assets_exist_in_canonical_web_root(self):
+        portal = (WEB_PORTAL / "preview.html").read_text(encoding="utf-8")
+        thermal_client = (WEB_PORTAL / "thermal-client.js").read_text(encoding="utf-8")
+        guest = (WEB_GUEST / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="thermalCanvas"', portal)
+        self.assertIn('id="thermalCanvas"', guest)
+        self.assertIn("/api/thermal/", thermal_client)
+        self.assertIn("const WIDTH = 80, HEIGHT = 62", thermal_client)
+
+    def test_backend_serves_assets_from_canonical_web_root(self):
+        backend = (RUNTIME_ROOT / "backend" / "app.py").read_text(encoding="utf-8")
+        self.assertIn("WEB_ROOT", backend)
+        self.assertIn("WEB_PORTAL", backend)
+        self.assertIn("WEB_GUEST", backend)
+        self.assertNotIn('repository_root / "web"', backend)
 
 
 if __name__ == "__main__":

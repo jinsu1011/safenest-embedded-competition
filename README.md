@@ -39,6 +39,8 @@ Raspberry Pi에서 아래 한 명령으로 전체 SafeNest 런타임이 기동�
 
 | 대상 | URL |
 | --- | --- |
+| 관리자 웹 | `http://<pi-주소>:8000/admin` |
+| A01 방문자 열화상 | `http://<pi-주소>:8000/guest/dashboard/A01` |
 | 실시간 대시보드 | `http://<pi-주소>:8000/dashboard` |
 | 통합 상태 API | `http://<pi-주소>:8000/api/status` |
 | 센서 상세 | `http://<pi-주소>:8000/api/sensors` |
@@ -47,6 +49,27 @@ Raspberry Pi에서 아래 한 명령으로 전체 SafeNest 런타임이 기동�
 | WebSocket | `ws://<pi-주소>:8000/ws` |
 
 포트를 바꾸려면 인자를 그대로 전달합니다: `./run_safenest.sh --api-port 8080 --sensor-port 9100`
+
+### 웹과 열화상 빠른 확인
+
+Raspberry Pi OS에서 최초 1회 OS 패키지를 설치한 뒤 SafeNest를 시작합니다.
+
+```bash
+sudo apt update
+sudo apt install -y python3-venv python3-pip python3-dev build-essential
+./run_safenest.sh --install
+```
+
+`--install`은 가상환경과 Python 의존성을 설치한 다음 사전 점검을 거쳐 런타임까지 시작합니다. 이후 실행은 `./run_safenest.sh`만 사용합니다. 방화벽을 사용하면 브라우저용 TCP `8000`, scalar telemetry용 TCP `9000`, Thermal UDP `5005`를 허용합니다.
+
+ESP32의 `secrets.h`에는 Pi의 실제 IP를 `RPI_HOST`로 넣고, 펌웨어의 `THERMAL_UDP_PORT`와 Pi의 `SAFENEST_THERMAL_UDP_PORT`를 동일한 `5005`로 유지합니다. 프레임 수신 여부는 다음처럼 확인합니다.
+
+```bash
+curl -fsS http://127.0.0.1:8000/health | python3 -m json.tool
+curl -sS -D - -o /dev/null http://127.0.0.1:8000/api/thermal/A01
+```
+
+열화상 API가 `200`과 `application/octet-stream`을 반환하면 웹이 그릴 수 있는 완성 프레임이 있습니다. 아직 프레임이 없으면 `204`가 정상적으로 반환됩니다. 자세한 순서는 [`RaspberryPi/Runtime/docs/WEB_THERMAL_RUNBOOK_KO.md`](RaspberryPi/Runtime/docs/WEB_THERMAL_RUNBOOK_KO.md)를 따릅니다.
 
 ---
 

@@ -42,6 +42,8 @@ Raspberry Pi에서 아래 한 명령으로 전체 SafeNest 런타임이 기동�
 | 관리자 웹 | `http://<pi-주소>:8000/admin` |
 | A01 방문자 열화상 | `http://<pi-주소>:8000/guest/dashboard/A01` |
 | 실시간 대시보드 | `http://<pi-주소>:8000/dashboard` |
+| LCD 표시 화면 | `http://<pi-주소>:8000/display` |
+| LCD 제어 화면 | `http://<pi-주소>:8000/control` |
 | 통합 상태 API | `http://<pi-주소>:8000/api/status` |
 | 센서 상세 | `http://<pi-주소>:8000/api/sensors` |
 | 이력 / 이벤트 | `/api/history`, `/api/events` |
@@ -220,9 +222,13 @@ python -m hil.preflight                                   # Pi 환경 사전 점
 
 ## 주의사항
 
-### LCD는 단일 명령에 포함되지 않습니다
+### LCD 경로
 
-`RaspberryPi/LCD/server.py`는 **자체 TCP `:9000` 수신기와 자체 `state.json`을 가진 독립 구현**입니다. canonical 게이트웨이와 포트가 충돌하고 상태 소스가 이중화되므로 `run_safenest.sh`가 실행하지 않습니다. Pi의 물리 LCD는 브라우저로 `http://localhost:8000/dashboard`를 띄우는 방식을 권장합니다.
+`run_safenest.sh`가 시작하는 FastAPI가 웹 대시보드와 LCD 화면을 함께 제공합니다. 물리 LCD에는 `http://localhost:8000/display`, 노트북 제어 화면에는 `http://<pi-주소>:8000/control`을 엽니다. LCD 정적 파일은 `RaspberryPi/LCD/static/`에서 `/lcd/assets/`로 제공되며, 기존 호환용 `/common.css` 별칭도 지원합니다. 화면은 `/api/state`를 통해 같은 센서 상태를 사용합니다.
+
+HTML 파일을 `file://`로 직접 열지 말고 위 HTTP 주소로 접속해야 CSS·JavaScript와 센서 API가 같은 origin으로 연결됩니다.
+
+`RaspberryPi/LCD/server.py`는 과거의 독립 구현으로 자체 TCP `:9000` 수신기와 `state.json`을 사용합니다. canonical 게이트웨이와 포트·상태가 중복되므로 `run_safenest.sh`와 동시에 실행하지 않습니다. 단독 점검이 필요할 때만 별도 포트로 실행합니다.
 
 같은 이유로 `research/co2_validation/pi/safenest_pi_service.py`(CO₂ 전용 `:9000` 수신기)도 런타임과 동시에 실행하면 안 됩니다.
 

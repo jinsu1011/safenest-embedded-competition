@@ -117,6 +117,7 @@ def create_app(
         StaticFiles(directory=str(dashboard_dir)),
         name="dashboard-assets",
     )
+    lcd_override: dict[str, str | None] = {"state": None, "room": room}
 
     @app.get("/dashboard", include_in_schema=False)
     @app.get("/dashboard/", include_in_schema=False)
@@ -126,13 +127,14 @@ def create_app(
     # LCD panel (RaspberryPi/LCD/static) — served by the same :8000 runtime
     if LCD_STATIC.is_dir():
         app.mount(
-            "/lcd-assets",
+            "/lcd/assets",
             StaticFiles(directory=str(LCD_STATIC)),
             name="lcd-assets",
         )
 
         @app.get("/display", include_in_schema=False)
         @app.get("/display/", include_in_schema=False)
+        @app.get("/display.html", include_in_schema=False)
         def lcd_display() -> Any:
             return FileResponse(LCD_STATIC / "display.html")
 
@@ -142,6 +144,7 @@ def create_app(
 
         @app.get("/control", include_in_schema=False)
         @app.get("/control/", include_in_schema=False)
+        @app.get("/control.html", include_in_schema=False)
         def lcd_control() -> Any:
             return FileResponse(LCD_STATIC / "control.html")
 
@@ -162,6 +165,30 @@ def create_app(
                     document[sensor_id]["state"] = sensors[sensor_id]
         document["system"] = snapshot.get("system", document.get("system"))
         document["timestamp"] = snapshot.get("timestamp", document.get("timestamp"))
+        return document
+
+    def lcd_state_document() -> dict[str, Any]:
+        document = legacy_state_document(
+            selected_store.latest(),
+            room=str(lcd_override["room"] or room),
+        )
+        if lcd_override["state"] is not None:
+            document["state"] = lcd_override["state"]
+        snapshot = selected_runtime.manager.snapshot()
+        current_sensors = snapshot.get("sensors")
+        if isinstance(current_sensors, dict):
+            sensors = document.setdefault("sensors", {})
+            for sensor_id in ("mmwave", "thermal", "co2", "pir"):
+                current = current_sensors.get(sensor_id)
+                if not isinstance(current, dict):
+                    continue
+                existing = sensors.get(sensor_id)
+                if not isinstance(existing, dict):
+                    existing = {}
+                    sensors[sensor_id] = existing
+                existing["state"] = current
+        document["revision"] = snapshot.get("revision", document.get("revision", 0))
+        document["updated_at"] = int(float(snapshot.get("timestamp", document.get("updated_at", 0))))
         return document
 
     def frontend_file(name: str) -> Any:
@@ -332,7 +359,29 @@ def create_app(
 
     @app.get("/api/state")
     def api_state_compatibility() -> dict[str, Any]:
-        return legacy_state_document(selected_store.latest(), room=room)
+        return lcd_state_document()
+
+    @app.post("/api/state")
+    async def api_state_update(request: Request) -> dict[str, Any]:
+        payload = await json_payload(request)
+        state = payload.get("state")
+        requested_room = payload.get("room")
+        allowed_states = {"normal-empty", "normal-occupied", "warning", "danger", "emergency", "offline"}
+        if state is not None and state not in allowed_states:
+            raise HTTPException(status_code=422, detail="지원하지 않는 LCD 상태입니다.")
+        if requested_room is not None and (not isinstance(requested_room, str) or not requested_room.strip()):
+            raise HTTPException(status_code=422, detail="공간 이름을 입력하세요.")
+        if state is None and requested_room is None:
+            raise HTTPException(status_code=422, detail="변경할 항목이 없습니다.")
+        if state is not None:
+            lcd_override["state"] = str(state)
+        if requested_room is not None:
+            lcd_override["room"] = str(requested_room).strip()[:24]
+        selected_store.record_event(
+            "LCD_STATE_UPDATED",
+            {"state": lcd_override["state"], "room": lcd_override["room"]},
+        )
+        return lcd_state_document()
 
     @app.get("/api/emergency/state")
     def api_emergency_state() -> dict[str, Any]:
@@ -392,6 +441,13 @@ def create_app(
             if isinstance(error, EmergencyActionError):
                 return action_error(error)
             return action_error(EmergencyActionError("DANGER_NOT_ACTIVE", str(error), status_code=409))
+
+    @app.post("/api/emergency/recovery/acknowledge", response_model=None)
+    def acknowledge_recovery() -> dict[str, Any] | JSONResponse:
+        try:
+            return selected_emergency.acknowledge_recovery()
+        except EmergencyActionError as error:
+            return action_error(error)
 
     @app.post("/api/emergency/voice", response_model=None)
     async def record_voice(request: Request) -> dict[str, Any] | JSONResponse:

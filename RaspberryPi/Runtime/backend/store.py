@@ -29,6 +29,10 @@ class RuntimeStore:
             "entered_at": None,
             "acknowledged": False,
             "acknowledged_at": None,
+            "cleared_at": None,
+            "cleared_to": None,
+            "recovery_pending": False,
+            "recovery_acknowledged_at": None,
             "buzzer_active": False,
             "latched_while_offline": False,
         }
@@ -123,6 +127,27 @@ class RuntimeStore:
                     "buzzer_was_active": was_active,
                     "transition_id": self._emergency_state["transition_id"],
                 },
+            )
+            snapshot = self.emergency_snapshot()
+            if self._latest is not None:
+                self._latest["emergency"] = copy.deepcopy(snapshot)
+            return snapshot | {"event_id": event["event_id"]}
+
+    def acknowledge_recovery(self) -> dict[str, Any]:
+        """Dismiss the recovered-sensor banner without changing risk state."""
+
+        with self._lock:
+            if self._emergency_state["active"]:
+                raise RuntimeError("active DANGER alarm cannot be dismissed as recovered")
+            if not self._emergency_state["recovery_pending"]:
+                raise RuntimeError("no recovered DANGER alarm to acknowledge")
+            acknowledged_at = time.time()
+            self._emergency_state["recovery_pending"] = False
+            self._emergency_state["recovery_acknowledged_at"] = acknowledged_at
+            event = self.record_event(
+                "EMERGENCY_RECOVERY_ACKNOWLEDGED",
+                {"transition_id": self._emergency_state["transition_id"]},
+                timestamp=acknowledged_at,
             )
             snapshot = self.emergency_snapshot()
             if self._latest is not None:
@@ -267,6 +292,10 @@ class RuntimeStore:
                         "entered_at": timestamp,
                         "acknowledged": False,
                         "acknowledged_at": None,
+                        "cleared_at": None,
+                        "cleared_to": None,
+                        "recovery_pending": False,
+                        "recovery_acknowledged_at": None,
                         "latched_while_offline": False,
                     }
                 )
@@ -288,8 +317,10 @@ class RuntimeStore:
             self._emergency_state.update(
                 {
                     "active": False,
-                    "acknowledged": False,
-                    "acknowledged_at": None,
+                    "cleared_at": timestamp,
+                    "cleared_to": current_level,
+                    "recovery_pending": True,
+                    "recovery_acknowledged_at": None,
                     "latched_while_offline": False,
                 }
             )

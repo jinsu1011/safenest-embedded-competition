@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SafeNest LCD</title>
-  <link rel="stylesheet" href="/common.css" />
+  <link rel="stylesheet" href="./common.css?v=20260822-4" />
   <style>
     html, body { height: 100%; overflow: hidden; background: #111820; cursor: none; }
     .display-frame { width: 100vw; height: 100vh; background: #fff; }
@@ -34,7 +34,13 @@
           <strong class="room-name" id="roomName">밀폐공간 A-01</strong>
         </div>
       </header>
-      <div class="availability" id="availability" aria-label="runtime availability"></div>
+      <section class="emergency-banner" id="emergencyBanner" data-phase="active" role="alert" aria-live="assertive" hidden>
+        <div class="emergency-banner-copy">
+          <strong id="emergencyBannerTitle">🚨 긴급 상황 — 작업자 상태를 즉시 확인하세요</strong>
+          <span id="emergencyBannerTime">발생 --:--:--</span>
+        </div>
+        <button class="emergency-confirm" id="emergencyConfirm" type="button">확인</button>
+      </section>
       <div class="main-state"><div>
         <div class="status-pill" id="statusPill">정상 · 미재실</div>
         <h1 class="state-title" id="stateTitle">정상</h1>
@@ -83,7 +89,10 @@
     const lcd = document.getElementById("lcd");
     const roomName = document.getElementById("roomName");
     const sensorStatus = document.getElementById("sensorStatus");
-    const availability = document.getElementById("availability");
+    const emergencyBanner = document.getElementById("emergencyBanner");
+    const emergencyBannerTitle = document.getElementById("emergencyBannerTitle");
+    const emergencyBannerTime = document.getElementById("emergencyBannerTime");
+    const emergencyConfirm = document.getElementById("emergencyConfirm");
     const statusPill = document.getElementById("statusPill");
     const stateTitle = document.getElementById("stateTitle");
     const stateSubtitle = document.getElementById("stateSubtitle");
@@ -91,6 +100,7 @@
     const comment = document.getElementById("comment");
     const connection = document.getElementById("connection");
     let failed = false;
+    let emergencyActionPending = false;
 
     const LCD_SENSOR_SHORT = {
       AVAILABLE: "OK",
@@ -290,10 +300,11 @@
       sensorStatus.textContent = labels[status];
     }
 
-    function renderAvailability(payload) {
+    function renderAvailabilityMetadata(payload) {
       const runtime = runtimeDocument(payload);
       if (!runtime.status) {
-        availability.replaceChildren();
+        sensorStatus.removeAttribute("title");
+        sensorStatus.removeAttribute("aria-label");
         return;
       }
       const sensors = runtime.sensors || {};
@@ -302,32 +313,68 @@
         ["THM", sensors.thermal],
         ["PIR", sensors.pir],
       ];
-      const nodes = rows.map(([code, entry]) => {
-        const item = document.createElement("div");
-        item.className = "availability-item";
-        const name = document.createElement("span");
-        name.textContent = code;
-        const value = document.createElement("strong");
+      const details = rows.map(([code, entry]) => {
         const sensor = lcdSensorShort(entry?.sensor_status);
         const ai = lcdAiShort(entry?.ai_status);
-        value.textContent = `S:${sensor} AI:${ai}`;
-        item.append(name, value);
-        return item;
+        return `${code} S:${sensor} AI:${ai}`;
       });
-      const system = document.createElement("div");
-      system.className = "availability-item";
-      const systemName = document.createElement("span");
-      systemName.textContent = "SYS";
-      const systemValue = document.createElement("strong");
       const globalStatus = runtime.status;
-      systemValue.textContent = {
+      const system = {
         READY: "READY",
         READY_WITH_LIMITATIONS: "LIMITED",
         DEGRADED: "DEGRADED",
         NOT_READY: "NOT READY"
       }[globalStatus] || "?";
-      system.append(systemName, systemValue);
-      availability.replaceChildren(...nodes, system);
+      const metadata = [...details, `SYS ${system}`].join(" · ");
+      sensorStatus.title = metadata;
+      sensorStatus.setAttribute("aria-label", `${sensorStatus.textContent}. ${metadata}`);
+    }
+
+    function clockText(timestamp) {
+      const numeric = Number(timestamp);
+      if (!Number.isFinite(numeric)) return "--:--:--";
+      return new Intl.DateTimeFormat("ko-KR", {
+        hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+      }).format(new Date(numeric * 1000));
+    }
+
+    function renderEmergencyBanner(payload, stateName) {
+      const emergency = payload?.emergency && typeof payload.emergency === "object"
+        ? payload.emergency
+        : {};
+      const active = stateName === "emergency" || emergency.active === true;
+      const recovered = !active && emergency.recovery_pending === true;
+      const visible = active || recovered;
+      emergencyBanner.hidden = !visible;
+      lcd.classList.toggle("has-alert-banner", visible);
+      if (!visible) return;
+
+      if (recovered) {
+        emergencyBanner.dataset.phase = "recovered";
+        emergencyBannerTitle.textContent = "✓ 센서 정상 복귀 — 정상 모니터링으로 전환되었습니다";
+        emergencyBannerTime.textContent = `복귀 ${clockText(emergency.cleared_at)}`;
+        emergencyConfirm.dataset.action = "recovery";
+        emergencyConfirm.textContent = emergencyActionPending ? "처리 중…" : "종료 확인";
+        emergencyConfirm.disabled = emergencyActionPending;
+        return;
+      }
+
+      if (emergency.acknowledged === true) {
+        emergencyBanner.dataset.phase = "acknowledged";
+        emergencyBannerTitle.textContent = "✓ 관리자 확인 완료 — 현장 대응을 계속하세요";
+        emergencyBannerTime.textContent = `확인 ${clockText(emergency.acknowledged_at)}`;
+        emergencyConfirm.dataset.action = "acknowledged";
+        emergencyConfirm.textContent = "확인됨";
+        emergencyConfirm.disabled = true;
+        return;
+      }
+
+      emergencyBanner.dataset.phase = "active";
+      emergencyBannerTitle.textContent = "🚨 긴급 상황 — 작업자 상태를 즉시 확인하세요";
+      emergencyBannerTime.textContent = `발생 ${clockText(emergency.entered_at ?? payload.updated_at)}`;
+      emergencyConfirm.dataset.action = "emergency";
+      emergencyConfirm.textContent = emergencyActionPending ? "처리 중…" : "확인";
+      emergencyConfirm.disabled = emergencyActionPending;
     }
 
     function render(payload = {}) {
@@ -340,9 +387,10 @@
       stateTitle.textContent = scenario.title;
       stateSubtitle.textContent = scenario.subtitle;
       comment.textContent = scenario.comment;
+      renderEmergencyBanner(safePayload, stateName);
       const sensors = normalizeSensors(safePayload.sensors);
       renderSensorStatus(safePayload, sensors);
-      renderAvailability(safePayload);
+      renderAvailabilityMetadata(safePayload);
       metrics.replaceChildren(...sensorMetrics(sensors).map(([label, value]) => {
         const item = document.createElement("div");
         item.className = "metric";
@@ -356,6 +404,26 @@
         return item;
       }));
     }
+
+    emergencyConfirm.addEventListener("click", async () => {
+      const action = emergencyConfirm.dataset.action;
+      if (emergencyActionPending || !["emergency", "recovery"].includes(action)) return;
+      emergencyActionPending = true;
+      emergencyConfirm.disabled = true;
+      emergencyConfirm.textContent = "처리 중…";
+      const endpoint = action === "recovery"
+        ? "/api/emergency/recovery/acknowledge"
+        : "/api/emergency/acknowledge";
+      try {
+        const response = await fetch(endpoint, { method: "POST", cache: "no-store" });
+        if (!response.ok) throw new Error("acknowledgement failed");
+        await sync();
+      } catch (error) {
+        emergencyConfirm.textContent = "다시 시도";
+      } finally {
+        emergencyActionPending = false;
+      }
+    });
 
     async function sync() {
       try {

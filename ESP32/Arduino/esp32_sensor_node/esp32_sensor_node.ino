@@ -849,7 +849,7 @@ bool sendThermalUdp(WiFiUDP &udp, const ThermalTxFrame &frame) {
 
   for (uint16_t chunkIndex = 0; chunkIndex < THERMAL_UDP_CHUNK_COUNT;
        ++chunkIndex) {
-    const uint32_t offset = chunkIndex * THERMAL_UDP_CHUNK_SIZE;
+    const size_t offset = chunkIndex * THERMAL_UDP_CHUNK_SIZE;
     const uint16_t length = static_cast<uint16_t>(
         min(THERMAL_UDP_CHUNK_SIZE, THERMAL_PAYLOAD_SIZE - offset));
     uint8_t *header = thermalUdpDatagram;

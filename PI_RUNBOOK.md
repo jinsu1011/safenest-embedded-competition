@@ -183,159 +183,144 @@ ss -lunp | grep 5005 || echo "udp free"
 
 ## 3-B. 필드 모니터 (저장 / AI 입력 / 통신 / LCD)
 
-표로 한 화면에 **통신·저장·AI 입력·Risk·LCD** 상태를 요약한다.  
-ESP 켜기 전(전부 NO여도 정상) / 켠 뒤(YES로 바뀌는지) 모두 쓴다.
+파일: `RaspberryPi/Runtime/hil/pi_field_monitor.py`  
+실행(계속): `cd …/RaspberryPi/Runtime && python3 hil/pi_field_monitor.py`  
+실행(한 번): 같은 명령 + `--once` / 종료: `Ctrl+C` / 맥 원격: `--base http://192.168.0.3:8000`
 
-| 항목 | 값 |
+아래는 **화면에 나오는 표 4개를 읽는 법**이다. 위→아래 순서로 본다.
+
+공통 기호:
+
+| 기호 | 의미 |
 |---|---|
-| 파일 | `RaspberryPi/Runtime/hil/pi_field_monitor.py` |
-| 읽는 API | `GET /health`, `/api/status`, `/api/state` (읽기 전용) |
-| 기본 갱신 | 4초 (`--interval`로 변경) |
-| 현재 Pi | `192.168.0.3` (IP 바뀌면 `--base` / 문서 IP만 갱신) |
+| `Δ` | 직전 샘플 대비 **이번 간격(기본 4초) 동안 증가량**. `+12`면 늘었음, `0`이면 그 구간 유입 없음 |
+| `-` | 값 없음 / 해당 없음 |
+| `…` | 칸이 좁아 잘린 문자열 (중요하면 터미널을 넓히거나 그 행 `detail`/`note`를 본다) |
+| 헤더 `Δ window Ns` | 지금 표의 Δ가 몇 초 간격인지 |
 
-### 전제
-
-1. 백엔드가 떠 있어야 한다 (`./run_safenest.sh` → `:8000` health 200).
-2. 모니터는 **LCD Chromium과 별개**다. 터미널에 표를 띄운다.
-3. 첫 화면은 Δ(증가량)를 위해 **한 주기 warm-up** 후 표가 나온다.
+ESP 끄기 전: Verdict가 대부분 `NO` / LCD `OFFLINE`인 것이 정상이다.  
+ESP 켠 뒤: **Δ가 양수인지**를 먼저 보면 된다.
 
 ---
 
-### 보는 법 (Pi에서 — 권장)
+### 표 1) `## Verdict` — 한눈에 YES/NO
 
-#### 1) SSH로 파이 접속
+열:
 
-```bash
-ssh sandi@192.168.0.3
-```
-
-#### 2) 계속 보기 (실시간)
-
-`--once`를 **빼면** 지속 모드다. 기본 4초마다 화면을 지우고 표를 다시 그린다.
-
-```bash
-cd /home/sandi/safenest-team-main/RaspberryPi/Runtime
-python3 hil/pi_field_monitor.py
-```
-
-- 종료: 터미널에서 **`Ctrl+C`**
-- 다른 작업할 SSH가 필요하면 창을 하나 더 열거나 `tmux`/`screen` 사용
-
-#### 3) 한 번만 스냅샷
-
-연결이 늘었는지 빠르게 확인할 때:
-
-```bash
-cd /home/sandi/safenest-team-main/RaspberryPi/Runtime
-python3 hil/pi_field_monitor.py --once
-```
-
-약 4초(기본 interval) 대기 후 Δ 포함 표를 **한 번** 출력하고 종료한다.
-
-#### 4) 갱신 간격 바꾸기
-
-```bash
-# 2초마다 계속 보기
-python3 hil/pi_field_monitor.py --interval 2
-
-# 2초 간격으로 한 번만
-python3 hil/pi_field_monitor.py --once --interval 2
-```
-
-#### 5) 절대 경로로 실행 (cwd 상관없을 때)
-
-```bash
-python3 /home/sandi/safenest-team-main/RaspberryPi/Runtime/hil/pi_field_monitor.py
-python3 /home/sandi/safenest-team-main/RaspberryPi/Runtime/hil/pi_field_monitor.py --once
-```
-
-#### 6) 옵션 요약
-
-| 옵션 | 의미 |
+| 열 | 읽는 법 |
 |---|---|
-| (없음) | 계속 갱신 |
-| `--once` | Δ 한 번 찍고 종료 |
-| `--interval N` | 샘플 간격(초). 기본 `4` |
-| `--base URL` | API 주소. Pi 로컬 기본 `http://127.0.0.1:8000` |
-| `--timeout N` | HTTP 타임아웃(초). 기본 `5` |
-| `--no-clear` | 화면 clear 안 함 (로그로 흘릴 때) |
+| `check` | 무엇을 판정했는지 |
+| `ok?` | 판정 결과. 대부분 `YES`/`NO`. **LCD state 행만** 상태 문자열(`OFFLINE`, `NORMAL-EMPTY` 등) |
+| `detail` | 판정에 쓰인 숫자·부가 설명 (`conn=`, `telem=`, `Δ=`, `fail=` …) |
 
----
+행별로:
 
-### 보는 법 (맥에서 — 원격)
-
-파이와 **같은 Wi‑Fi**에 맥이 있어야 `192.168.0.3:8000`에 닿는다.
-
-```bash
-# 팀 worktree 예
-cd "/Users/junwoo/Library/Mobile Documents/com~apple~CloudDocs/대학/2026/safenest-team-pi-field/RaspberryPi/Runtime"
-
-# 계속 보기
-python3 hil/pi_field_monitor.py --base http://192.168.0.3:8000
-
-# 한 번만
-python3 hil/pi_field_monitor.py --base http://192.168.0.3:8000 --once
-```
-
-integration worktree에 복사본이 있으면:
-
-```bash
-cd ".../safenest-pi-field-ops"
-python3 hil/pi_field_monitor.py --base http://192.168.0.3:8000
-```
-
-연결 실패 시: 파이 IP/방화벽, 백엔드 기동, 맥·파이 동일 SSID를 확인한다.
-
----
-
-### 화면에 나오는 것 (읽는 순서)
-
-매번 위→아래 네 블록이다.
-
-1. **Verdict** (가장 중요)  
-   `ok?` 열의 `YES` / `NO`만 봐도 된다.  
-   - ESP 끄기 전: 대부분 `NO` + LCD `OFFLINE` → **정상**  
-   - ESP 켠 뒤 1~4분: `TCP telem` / `UDP thermal` / `Storage *` / `AI has usable input` 가 `YES`로 바뀌는지 본다
-
-2. **Link & storage**  
-   `now` = 누적값, `Δ` = 방금 간격 동안 증가량.  
-   `Δ`가 `0`이면 그 구간에는 패킷/저장이 안 들어온 것.
-
-3. **Sensors / AI / risk**  
-   센서별 `status`(`LIVE`/`NO_DATA`…), `ai_state`, `ai_err`, risk 성분.
-
-4. **Risk / LCD**  
-   `formula_id`가 `SAFENEST_RISK_V1`인지, LCD `state`(`offline` / `normal-empty` 등).
-
-#### Verdict 열 의미
-
-| check | YES 의미 |
-|---|---|
-| TCP telem flowing | `:9000` 텔레메트리 패킷 증가 (ESP TCP 붙음) |
-| UDP thermal flowing | `:5005` 완성 프레임 증가 |
-| Storage * write | `sensor_logging.written` 증가 (디스크 저장) |
-| DB snapshots grow | SQLite 스냅샷 증가 |
-| Logging worker | 저장 워커 `running` |
-| AI has usable input | LIVE/DEGRADED + AI가 `INPUT_UNAVAILABLE` 아님 |
-| Risk formula | `SAFENEST_RISK_V1` 엔진 동작 중 |
-| LCD state | `/api/state` 디스플레이 상태 (값 자체 표시) |
-
-#### 자주 보는 패턴
-
-| 증상 | 해석 | 다음 |
+| check | ok? 읽는 법 | detail에서 볼 것 |
 |---|---|---|
-| 전부 NO, LCD OFFLINE | ESP 미연결 | ESP IP=`192.168.0.3`, 포트 9000/5005 |
-| TCP YES, Storage NO | 수신은 되나 로거 이슈 | `Logging worker`, `errors` 확인 |
-| Storage YES, AI NO | 데이터는 오는데 윈도우/모델 입력 부족 | warm-up 3~4분, `ai_err` 열 |
-| `cannot fetch` | 백엔드 다운/IP 틀림 | `curl http://…:8000/health` |
+| `TCP telem flowing` | `YES` = 이번 구간에 ESP TCP 텔레메트리 패킷이 **증가** | `conn` 연결 수, `telem` 누적, `Δ` |
+| `UDP thermal flowing` | `YES` = 열화상 **완성 프레임** 증가 | `frames`, `Δ` |
+| `Storage mmWave write` | `YES` = mmWave가 디스크에 **써짐** | `written`, `Δ` |
+| `Storage CO2 write` | 위와 동일 (CO₂) | `written`, `Δ` |
+| `Storage thermal write` | 위와 동일 (thermal) | `written`, `Δ` |
+| `DB snapshots grow` | `YES` = SQLite 스냅샷 행 증가 | `snapshots`, `events`, `Δsnap` |
+| `Logging worker` | `YES` = 저장 워커 살아 있음 | `enabled`, 큐 `q=현재/용량`, `err` |
+| `AI has usable input` | `YES` = 센서 중 하나라도 LIVE/DEGRADED 이면서 AI가 `INPUT_UNAVAILABLE`이 **아님** | `ok=mmwave,co2…` 또는 `fail=센서:status/ai_state` |
+| `Risk formula` | `YES` = `formula_id`가 `SAFENEST_RISK_V1` | `score`, `level`, `evid`(증거 충분 여부) |
+| `LCD state` | LCD가 보여주는 상태(대문자) | `room`, `rev` |
+
+읽는 팁: 이상하면 **`ok?`가 NO인 행만** 보고, 그 행 `detail`의 `Δ=0`인지 `conn=0`인지부터 확인한다.
 
 ---
 
-### 스크립트 위치
+### 표 2) `## Link & storage` — 통신·저장 수치
 
-- 파이(배포): `/home/sandi/safenest-team-main/RaspberryPi/Runtime/hil/pi_field_monitor.py`
-- 맥 팀 worktree: `safenest-team-pi-field/RaspberryPi/Runtime/hil/pi_field_monitor.py`
-- 맥 integration worktree: `safenest-pi-field-ops/hil/pi_field_monitor.py`
+열:
+
+| 열 | 읽는 법 |
+|---|---|
+| `metric` | 항목 이름 |
+| `now` | **지금 누적값** (또는 현재 상태 문자열) |
+| `Δ` | 이번 간격 증가량. 흐름 판정의 핵심 |
+| `note` | 부가 카운터·경로 |
+
+행별로:
+
+| metric | now | Δ가 의미하는 것 | note에서 볼 것 |
+|---|---|---|---|
+| `system` | `ONLINE/…` 또는 `OFFLINE/FAILED` | (보통 `-`) | `ready`, `offline` |
+| `tcp:9000 conn` | ESP TCP 동시 연결 수 | 연결이 늘/줄었는지 | `disc` 끊김, `gaps` 시퀀스 갭, `proto_err` |
+| `telemetry pkts` | 스칼라 텔레메트리 누적 패킷 | 패킷이 들어오는지 | unexpected thermal-on-TCP 등 |
+| `udp:5005 frames` | 조립 완료된 열화상 프레임 누적 | 프레임이 들어오는지 | `dgram`, `incomplete`, `fps` |
+| `log written mm/co2/thm` | 센서별 파일 기록 누적 | 저장이 도는지 | `accepted` vs `dropped` (드롭 많으면 큐/부하) |
+| `db snapshots` | DB 스냅샷 개수 | 런타임이 주기적으로 기록하는지 | DB 경로 |
+| `db events` | 이벤트 개수 | 이벤트 적재 | `schema`, `avail` |
+
+읽는 팁:
+
+- **흐름**은 `now`보다 **`Δ`** 를 본다. `now`만 크고 `Δ=0`이면 “예전에 쌓였고 지금은 안 들어옴”.
+- `conn≥1`인데 `telemetry Δ=0`이면 소켓만 있고 페이로드가 안 오는 경우.
+- `written Δ>0`이면 “AI 입력 전 단계인 저장”은 통과.
+
+---
+
+### 표 3) `## Sensors / AI / risk component` — 센서 한 줄씩
+
+센서마다 한 행 (`mmwave` / `thermal` / `co2` / `pir`).
+
+| 열 | 의미 | 좋은 예 | 나쁜 예 |
+|---|---|---|---|
+| `sensor` | 센서 ID | — | — |
+| `status` | 센서 상태 머신 | `LIVE`, (허용) `DEGRADED` | `NO_DATA`, `STALE` |
+| `age_s` | 마지막 유효 데이터 나이(초) | TTL 안쪽(작을수록 신선) | `null`/`-` 또는 큰 값 |
+| `ai_state` | AI/룰 출력 상태 | 센서별 정상 라벨(예: presence 계열) | `INPUT_UNAVAILABLE` |
+| `ai_err` | AI가 막힌 이유 | `-` | `SENSOR_NO_DATA`, `SENSOR_UNAVAILABLE` 등 |
+| `ai_score` | AI/컴포넌트 점수 | 숫자 | `-` |
+| `ai_ms` | 추론 지연(ms) | 작은 숫자 | `-` (입력 없으면 흔함) |
+| `risk_st` | Risk 성분 상태 | `AVAILABLE` 계열 | `UNAVAILABLE` |
+| `risk_sc` | Risk 성분 점수 | 숫자 | `-` |
+| `values` | 요약 값 힌트 | `co2_ppm=…`, `presence=…`, `human_detected_raw=…`, `canon=…` | `-` |
+
+읽는 팁:
+
+- **왼쪽→오른쪽**: `status`가 살아 있는지 → `ai_state`/`ai_err`로 AI가 입력을 먹는지 → `risk_st`/`risk_sc`로 위험도 성분 반영 → `values`로 원시 힌트.
+- Verdict의 `AI has usable input = YES`여도, **센서별로** `NO_DATA`인 줄이 남을 수 있다 (일부만 LIVE여도 Verdict YES 가능).
+- `ai_err=SENSOR_NO_DATA`이면 모델 문제가 아니라 **센서 미수신**이다.
+
+---
+
+### 표 4) `## Risk / LCD (display)` — 위험도·LCD 문구
+
+키-값 표. LCD 화면과 맞춰 볼 때 쓴다.
+
+| field | 읽는 법 |
+|---|---|
+| `formula_id` | `SAFENEST_RISK_V1`이어야 함 |
+| `formula_version` | 공식 버전 문자열 |
+| `risk_score / level` | 점수 / 레벨(`warning`·`danger` 등). 센서 없으면 `None` |
+| `effective_weight` | 가용 성분 가중 합. `0`이면 성분 없음 |
+| `evidence_sufficient` | 증거 충분한지 (`True`/`False`) |
+| `presence` | 재실 판정과 출처 (`UNCONFIRMED` 등) |
+| `degraded_mode` | 저하 모드 여부 |
+| `reasons` | Risk가 그렇게 나온 **이유 코드** 나열 (디버그 핵심) |
+| `LCD state` | LCD가 쓰는 상태 키 (`offline`, `normal-empty`, `warning` …) — 물리 LCD와 동일해야 함 |
+| `LCD room` | 표시 공간 이름 |
+| `LCD revision` | LCD 상태 revision |
+| `pub_revision` | 백엔드 publication revision (내부 갱신 카운트) |
+
+읽는 팁:
+
+- LCD에 “통신 오류”면 여기 `LCD state=offline` + `reasons`에 `*_SENSOR_NO_DATA`가 같이 있는 경우가 많다.
+- `formula_id`는 YES인데 `risk_score=None`이면 **엔진은 떠 있고 입력만 없는** 상태.
+
+---
+
+### 네 표를 이어서 읽는 짧은 순서
+
+1. **Verdict**에서 NO인 행만 고른다.  
+2. 통신 NO → **Link & storage**의 `tcp:9000 conn` / `telemetry`·`udp frames`의 **Δ**.  
+3. 저장 NO → 같은 표의 `log written *` **Δ** / `Logging worker`.  
+4. AI NO → **Sensors** 표에서 해당 센서 `status`·`ai_err`.  
+5. LCD 문구 이상 → **Risk / LCD**의 `LCD state` + `reasons`.
 
 
 ## 4. ESP 켜기 전 / 후

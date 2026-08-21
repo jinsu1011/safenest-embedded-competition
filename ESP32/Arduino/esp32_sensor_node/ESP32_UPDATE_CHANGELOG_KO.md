@@ -83,3 +83,61 @@
 - main 브랜치의 기존 `.ino`와 로컬 수정본을 정적 비교하고, 병합 후 required marker/필드 및 중복 frame sequence를 확인했습니다.
 - 실제 ESP32 컴파일, flash, Pi live capture 및 hardware acceptance는 이 변경 작업에서 수행하지 않았습니다.
 - 로컬 `secrets.h`는 커밋하지 않았으며, flash 전에 대상 환경의 secrets를 별도로 준비해야 합니다.
+
+
+---
+
+# 1.3.0 — `mmwave.human_detected_raw` 발행 (B1)
+
+`NODE_FIRMWARE_VERSION` `1.2.0` → `1.3.0`, `MMWAVE_SCHEMA_VERSION` `1.2` → `1.3`.
+
+## 왜 필요했는가
+
+Pi 런타임의 `ai/pipeline.py::_mmwave`는 재실이 확인되지 않으면 M-N9 추론을 차단한다
+(의도된 안전 게이트, `PRESENCE_GATE_REQUIRED`). 이 `.ino`가 `human_detected_raw`를
+보내지 않았기 때문에 **센서를 연결해도 mmWave AI가 영구히 억제되는** 상태였다.
+프로토콜·상태 계층은 이미 이 필드를 읽도록 준비되어 있었다.
+
+## 변경 내용
+
+- 중첩 `mmwave` 객체에 `"human_detected_raw"` 추가. `safenest.telemetry.v1`의 선택
+  필드이므로 후방 호환 확장이며, 1.3 미만 노드도 계속 수용된다.
+- 3-상태로 발행한다: `true` / `false` / `null`.
+  `null`은 "최근 0x0F09 보고 없음"이며 **부재 주장이 아니다.**
+- `PRESENCE_MAX_AGE_MS = 5000`. 보고가 끊기면 `null`로 떨어진다. `isFresh()`가
+  `timestamp != 0`도 검사하므로 한 번도 보고가 없던 노드는 `false`가 아니라 `null`을 낸다.
+
+### 라이브러리 게터를 쓰지 않은 이유
+
+`SEEED_MR60BHA2::isHumanDetected()`는 "빈 방"과 "아직 보고 없음"을 **둘 다 `false`로**
+반환하고 읽는 순간 유효 플래그를 스스로 지운다. 계약이 요구하는 3-상태를 표현할 수
+없어서, `SafeNestMR60BHA2`가 `handleType()`을 오버라이드해 0x0F09를 직접 받는다.
+기반 클래스가 헤더·데이터 체크섬을 모두 검증한 뒤 호출하므로 UART 프레이밍을
+재구현하지 않는다. 벤더 핸들러가 무검사로 읽는 `data[0]`도 길이 검사로 막는다.
+
+### 하지 않은 것
+
+- 재실 게이트 우회·비활성화 없음.
+- 호흡수 등 다른 신호로 재실을 추론하지 않음. occupancy 임계값 도입 없음.
+- 참조 펌웨어의 `updateStablePresence()` 다수결 안정화 **미도입** — 와이어 계약은
+  raw 불리언만 요구한다.
+
+## 함께 수정 — 이 파일은 컴파일이 안 되고 있었다
+
+커밋 `177db97`이 `formatNullableFloat` → `formatNullablePhase`로 이름을 바꾸며
+(`%.2f` → `%.6f`) **호출 지점 3곳을 남겨** 미정의 함수 호출 상태였다. 즉 2026-08-17
+이후 이 스케치는 플래시 자체가 불가능했다. `%.2f` 헬퍼를 복원했다(호출부를
+`formatNullablePhase`로 돌리면 호흡·심박 정밀도가 조용히 바뀌므로).
+
+## 검증 및 제한
+
+- 헬퍼 4개와 `sendTelemetry()`를 `.ino`에서 텍스트 추출해 호스트에서 컴파일:
+  `g++ -Wformat=2 -Werror` 통과(포맷/인자 일치), 최악 payload **1109 B** <
+  `char json[1536]`, 절단 방어(`length >= sizeof(json)`) 유지.
+- 컴파일된 실물 빌더의 출력 바이트를 `decode_telemetry` → `SensorStateManager`에
+  통과시켜 `true`/`false`/`null`이 `presence_available`로 정확히 사상됨을 확인.
+- **실제 ESP32 컴파일·flash·MR60 실기 확인은 수행하지 않았다.** 따라서
+  `PRESENCE_MAX_AGE_MS`의 근거가 되는 0x0F09 보고 주기는 미측정이고,
+  `DEVICE_VALIDATED`는 `NO`, `PI_SMOKE`는 `NOT_PERFORMED`로 유지된다.
+- 커밋된 mmWave 캡처는 전부 `1.2.0` 스탬프라 이 필드가 없다. 감사 도구를
+  `--inject-presence` 없이 통과시키려면 `>=1.3.0` 펌웨어로 재캡처해야 한다.

@@ -19,7 +19,15 @@ import re
 import socket
 import sys
 
-from paths import LCD_STATIC, MODEL_MANIFEST, ONDEVICE_AI_ROOT, RUNTIME_ROOT, WEB_ROOT
+from paths import (
+    LCD_STATIC,
+    MODEL_MANIFEST,
+    ONDEVICE_AI_ROOT,
+    RUNTIME_ROOT,
+    WEB_GUEST,
+    WEB_PORTAL,
+    WEB_ROOT,
+)
 
 ROOT = RUNTIME_ROOT
 
@@ -44,6 +52,10 @@ CANONICAL_EXTERNAL_FILES = (
     ("web/dashboard/index.html", WEB_ROOT / "index.html"),
     ("web/dashboard/app.js", WEB_ROOT / "app.js"),
     ("web/dashboard/styles.css", WEB_ROOT / "styles.css"),
+    ("web/portal/preview.html", WEB_PORTAL / "preview.html"),
+    ("web/portal/admin-api.js", WEB_PORTAL / "admin-api.js"),
+    ("web/portal/thermal-client.js", WEB_PORTAL / "thermal-client.js"),
+    ("web/guest/index.html", WEB_GUEST / "index.html"),
     ("sources/display-test2/raspberry_pi_lcd/static/display.html", LCD_STATIC / "display.html"),
     ("sources/display-test2/raspberry_pi_lcd/static/common.css", LCD_STATIC / "common.css"),
     ("sources/ondevice_ai/models/model_manifest.json", MODEL_MANIFEST),
@@ -119,16 +131,23 @@ def pi_start_document(root: Path = ROOT) -> dict[str, object]:
     runtime_modules = ("ai_edge_litert", "tflite_runtime", "tensorflow")
     available_runtimes = [name for name in runtime_modules if importlib.util.find_spec(name) is not None]
     checks.append(_check("tflite_runtime", bool(available_runtimes), available_runtimes))
-    for path in (
-        root / "backend" / "run_backend.py",
-        root / "database" / "schema.sql",
-        WEB_ROOT / "index.html",
-        MODEL_MANIFEST,
+    for name, path in (
+        ("file_backend_entrypoint", root / "backend" / "run_backend.py"),
+        ("file_database_schema", root / "database" / "schema.sql"),
+        ("file_dashboard_html", WEB_ROOT / "index.html"),
+        ("file_admin_portal_html", WEB_PORTAL / "preview.html"),
+        ("file_thermal_client_js", WEB_PORTAL / "thermal-client.js"),
+        ("file_guest_thermal_html", WEB_GUEST / "index.html"),
+        ("file_model_manifest", MODEL_MANIFEST),
     ):
-        checks.append(_check(f"file_{path.name}", path.is_file(), str(path)))
-    for port in (8000, 9000):
-        available, detail = _port_available(port)
-        checks.append(_check(f"port_{port}_available", available, detail))
+        checks.append(_check(name, path.is_file(), str(path)))
+    for name, port, socket_type in (
+        ("port_8000_tcp_available", 8000, socket.SOCK_STREAM),
+        ("port_9000_tcp_available", 9000, socket.SOCK_STREAM),
+        ("port_5005_udp_available", 5005, socket.SOCK_DGRAM),
+    ):
+        available, detail = _port_available(port, socket_type)
+        checks.append(_check(name, available, detail))
     checks.extend(_model_hash_checks(root))
     failed = [check for check in checks if check["required"] and not check["passed"]]
     return {"ok": not failed, "mode": "PI_START_PREFLIGHT", "checks": checks}
@@ -389,13 +408,14 @@ def _device_model() -> str:
         return "unavailable"
 
 
-def _port_available(port: int) -> tuple[bool, str]:
+def _port_available(port: int, socket_type: int = socket.SOCK_STREAM) -> tuple[bool, str]:
+    protocol = "udp" if socket_type == socket.SOCK_DGRAM else "tcp"
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+        with socket.socket(socket.AF_INET, socket_type) as listener:
             listener.bind(("0.0.0.0", port))
-        return True, "available"
+        return True, f"{protocol}:{port} available"
     except OSError as error:
-        return False, f"{type(error).__name__}: {error}"
+        return False, f"{protocol}:{port} {type(error).__name__}: {error}"
 
 
 def _model_hash_checks(root: Path = ROOT) -> list[dict[str, object]]:

@@ -21,6 +21,7 @@ from backend.views import (
 from services.buzzer import BuzzerProtocol, create_buzzer_from_env
 from services.emergency import EmergencyActionError, EmergencyActionService
 from services.sms_service import SMSProvider
+from paths import DATA_ROOT, WEB_GUEST, WEB_PORTAL, WEB_ROOT
 
 
 class BackendDependencyError(RuntimeError):
@@ -99,19 +100,18 @@ def create_app(
     app.state.safenest_store = selected_store
     app.state.safenest_emergency = selected_emergency
 
-    repository_root = Path(__file__).resolve().parent.parent
     frontend_dir = Path(
-        os.getenv("SAFENEST_WEB_DIR", str(repository_root / "web" / "portal"))
+        os.getenv("SAFENEST_WEB_DIR", str(WEB_PORTAL))
     ).resolve()
     portal_store = PortalStore(
-        os.getenv("SAFENEST_SPACES_FILE", str(repository_root / "data" / "web" / "spaces.json"))
+        os.getenv("SAFENEST_SPACES_FILE", str(DATA_ROOT / "web" / "spaces.json"))
     )
     portal_auth = PortalAuth()
     offline_grace = _float_env("SAFENEST_PORTAL_OFFLINE_SECONDS", 30.0)
     app.state.safenest_portal_store = portal_store
     app.state.safenest_portal_auth = portal_auth
 
-    dashboard_dir = Path(__file__).resolve().parent.parent / "web" / "dashboard"
+    dashboard_dir = WEB_ROOT
     app.mount(
         "/dashboard/assets",
         StaticFiles(directory=str(dashboard_dir)),
@@ -170,7 +170,7 @@ def create_app(
     def guest_dashboard(space_id: str) -> Any:
         if portal_store.get(space_id) is None:
             raise HTTPException(status_code=404, detail="등록되지 않은 공간입니다.")
-        return FileResponse(repository_root / "web" / "guest" / "index.html")
+        return FileResponse(WEB_GUEST / "index.html")
 
     @app.get("/")
     def root() -> Any:

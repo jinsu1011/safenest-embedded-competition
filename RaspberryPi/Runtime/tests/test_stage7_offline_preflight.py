@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 import json
+import socket
 import sys
 import unittest
 
@@ -15,6 +16,7 @@ from deployment.verify_bundle import verify
 from hil.preflight import (
     EXPECTED_ENV_KEYS,
     _mmwave_selector_contract_checks,
+    _port_available,
     _runtime_import_check,
     offline_preflight_document,
 )
@@ -50,6 +52,14 @@ class Stage7OfflinePreflightTests(unittest.TestCase):
         self.assertTrue(names["tcp_default_port_9000"]["passed"])
         self.assertTrue(names["udp_default_port_5005"]["passed"])
         self.assertTrue(names["http_default_port_8000"]["passed"])
+
+    def test_port_availability_probe_supports_tcp_and_udp(self) -> None:
+        tcp_available, tcp_detail = _port_available(0, socket.SOCK_STREAM)
+        udp_available, udp_detail = _port_available(0, socket.SOCK_DGRAM)
+        self.assertTrue(tcp_available, tcp_detail)
+        self.assertTrue(udp_available, udp_detail)
+        self.assertIn("tcp:0", tcp_detail)
+        self.assertIn("udp:0", udp_detail)
 
     def test_artifact_selection_does_not_silently_activate_tb5_or_old_b(self) -> None:
         names = {item["name"]: item for item in self.document["checks"]}

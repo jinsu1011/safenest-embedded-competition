@@ -12,7 +12,7 @@
 #   - Rule / Risk engine                 (frozen V4 risk contract)
 #   - SQLite persistence                 (RaspberryPi/Runtime/data/safenest.db)
 #   - FastAPI backend + WebSocket        (:8000)
-#   - Real-time web dashboard            (http://<pi>:8000/dashboard)
+#   - Administrator and guest web UIs    (http://<pi>:8000/admin)
 set -euo pipefail
 
 REPOSITORY_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

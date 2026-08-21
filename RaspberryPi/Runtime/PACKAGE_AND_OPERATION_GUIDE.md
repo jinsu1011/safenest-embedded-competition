@@ -21,12 +21,12 @@ UDP frame은 9개 datagram으로 나뉘며 일부 chunk가 없거나 CRC32/shape
 
 - SafeNest TCP v1 Pi receiver와 strict parser
 - Sensor State Manager와 freshness 처리
-- 최신 `ondevice_ai/` 전체 snapshot, primary 모델 3개, mmWave candidate/experiment evidence와 inference adapter
+- `RaspberryPi/Ondevice_AI/` 전체 snapshot, primary 모델과 mmWave candidate/experiment evidence, inference adapter
 - Risk Engine과 rule fallback
 - FastAPI, WebSocket, SQLite repository
 - 실시간 웹 대시보드
 - loopback E2E 및 HIL 증거 수집 도구
-- ESP-WROOM-32용 통합 ESP32 firmware와 `secrets.example.h`
+- ESP-WROOM-32용 통합 ESP32 firmware와 `ESP32/secret.h.example`
 - PHASE 1~10 및 HIL 상세 문서
 - Pi 설치·점검·실행 스크립트
 
@@ -78,26 +78,29 @@ ESP32 scalar → TCP 9000 ─┐
 ESP32 Thermal → UDP 5005 ├→ SafeNest Runtime
                          ├─ FastAPI / WebSocket :8000
                          ├─ SQLite data/safenest.db
+                         ├─ Admin /admin
+                         ├─ Guest Thermal /guest/dashboard/A01
                          └─ Dashboard /dashboard
 ```
 
 ## 4. 받는 사람의 최초 설치 순서
 
-### 4.1 압축 해제
+### 4.1 저장소 받기
 
-전달받은 `integration_package.zip`을 Raspberry Pi home에 복사한다.
+Raspberry Pi에서 canonical 저장소의 최신 `main`을 받는다.
 
 [Raspberry Pi에서 실행]
 
 ```bash
 cd ~
-unzip integration_package.zip
-test -f ~/integration/deployment/run_pi.sh
+git clone https://github.com/jinsu1011/safenest-embedded-competition.git
+cd safenest-embedded-competition
+test -f ./run_safenest.sh
 ```
 
-압축 해제 결과가 `~/integration/`인지 확인한다.
+이미 clone한 폴더라면 `git pull --ff-only`로 최신 내용을 받은 뒤 진행한다.
 
-Windows에서 먼저 확인할 경우 최신 mmWave 실험 파일 중 경로가 긴 항목이 있으므로, ZIP을 드라이브 루트에 가까운 짧은 경로(예: `C:\safenest`)에 7-Zip 또는 Python `python -m zipfile -e`로 푼다. Windows 기본 `Expand-Archive`는 긴 경로에서 중단될 수 있다. Raspberry Pi의 위 `unzip` 절차에는 해당 Windows 경로 제한이 없다.
+Windows에서 먼저 확인할 경우 최신 mmWave 실험 파일 중 경로가 긴 항목이 있으므로 드라이브 루트에 가까운 짧은 clone 경로(예: `C:\safenest`)를 사용하고 Git의 `core.longpaths`를 활성화한다. Raspberry Pi에는 Windows 경로 길이 제한이 없다.
 
 ### 4.2 OS 기본 package
 
@@ -109,9 +112,8 @@ sudo apt install -y python3-venv python3-pip python3-dev build-essential unzip
 ### 4.3 Python 의존성 설치와 최초 실행
 
 ```bash
-cd ~
-cd ~/integration
-bash deployment/run_pi.sh --install
+cd ~/safenest-embedded-competition
+./run_safenest.sh --install
 ```
 
 이 명령은 다음을 순서대로 수행한다.
@@ -122,23 +124,23 @@ bash deployment/run_pi.sh --install
 4. manifest에 등록된 primary 3개와 보존된 후보 artifact의 SHA-256 확인
 
 최신 mmWave BPF+Z-score 경로는 `runtime_manifest_path`를 명시적으로 전달하는 phase 전용 기능이다. 현재 SafeNest 통합은 운영 primary manifest를 사용하며, `deployment_ready=false` 오프라인 후보를 자동 선택하지 않는다. phase 후보를 별도로 실험할 때만 `scipy`와 해당 runtime manifest 계약을 추가 설치·검증한다.
-5. TCP 9000과 HTTP 8000 포트 확인
+5. TCP 8000·9000과 UDP 5005 포트 확인
 6. FastAPI와 전체 sensor runtime 실행
 
 설치 또는 LiteRT package가 Pi의 Python version에서 실패하면 그 오류를 해결하기 전에는 실행 완료로 간주하지 않는다.
 
 ## 5. ESP32 최초 준비
 
-canonical flash source에 비밀번호 파일을 추가하지 말고 Arduino sketch 작업 복사본을 만든다. `sources/ondevice_ai/integrated_node/esp32_sensor_node.ino`는 동결 참고 사본이므로 플래시하지 않는다.
+canonical flash source에 비밀번호를 직접 기록하지 말고 Arduino sketch 작업 복사본을 만든다. 플래시 원본은 `ESP32/Arduino/esp32_sensor_node/esp32_sensor_node.ino`다.
 
 [Windows 노트북 PowerShell에서 실행]
 
 ```powershell
-$repo = "압축을_푼_폴더의_상위_경로"
-$source = Join-Path $repo "sources\display-test2\esp32_sensor_node"
+$repo = "safenest-embedded-competition_경로"
+$source = Join-Path $repo "ESP32\Arduino\esp32_sensor_node"
 $sketch = Join-Path $HOME "Documents\Arduino\esp32_sensor_node"
 Copy-Item -LiteralPath $source -Destination $sketch -Recurse
-Copy-Item -LiteralPath (Join-Path $sketch "secrets.example.h") -Destination (Join-Path $sketch "secrets.h")
+Copy-Item -LiteralPath (Join-Path $repo "ESP32\secret.h.example") -Destination (Join-Path $sketch "secrets.h")
 ```
 
 `secrets.h`를 다음처럼 실제 환경에 맞춘다.
@@ -175,22 +177,22 @@ Pi는 source의 `uptime_ms`와 sensor event monotonic time을 그대로 보존�
 6. Raspberry Pi 통합 프로그램을 실행한다.
 
 ```bash
-cd ~
-cd ~/integration
-bash deployment/run_pi.sh
+cd ~/safenest-embedded-competition
+./run_safenest.sh
 ```
 
-7. 터미널에서 Uvicorn HTTP 8000과 sensor TCP 9000 listener가 시작됐는지 확인한다.
+7. 터미널에서 Uvicorn TCP 8000, sensor TCP 9000, Thermal UDP 5005 listener가 시작됐는지 확인한다.
 8. ESP-WROOM-32와 센서 전원을 켠다.
 9. ESP32 Serial Monitor 또는 Pi 로그에서 TCP 연결과 telemetry 수신을 확인한다.
 10. 노트북 브라우저에서 다음 주소를 연다.
 
 ```text
-통합 웹 대시보드: http://RPI_IP:8000/dashboard
-통합 LCD 화면:     http://RPI_IP:8000/display
-상태 API:         http://RPI_IP:8000/api/status
-시스템 진단:      http://RPI_IP:8000/health
-API 문서:         http://RPI_IP:8000/docs
+관리자 웹:          http://RPI_IP:8000/admin
+A01 방문자 열화상:  http://RPI_IP:8000/guest/dashboard/A01
+통합 웹 대시보드:  http://RPI_IP:8000/dashboard
+상태 API:           http://RPI_IP:8000/api/status
+시스템 진단:        http://RPI_IP:8000/health
+API 문서:           http://RPI_IP:8000/docs
 ```
 
 11. 대시보드에서 `ONLINE`, 센서별 `LIVE`, 현재 값, risk와 최근 갱신 시각을 확인한다.
@@ -198,7 +200,7 @@ API 문서:         http://RPI_IP:8000/docs
 ## 7. 프로그램 종료 순서
 
 1. 브라우저 사용을 종료한다.
-2. `run_pi.sh`가 실행 중인 Pi 터미널에서 `Ctrl+C`를 한 번 누른다.
+2. `run_safenest.sh`가 실행 중인 Pi 터미널에서 `Ctrl+C`를 한 번 누른다.
 3. Uvicorn shutdown과 backend 종료 메시지가 끝날 때까지 기다린다.
 4. ESP32와 센서 전원을 분리한다.
 5. Raspberry Pi에서 안전 종료를 실행한다.
@@ -217,8 +219,9 @@ sudo shutdown -h now
 [Raspberry Pi의 별도 SSH 터미널에서 실행]
 
 ```bash
-curl -fsS http://127.0.0.1:8000/health | python -m json.tool
-curl -fsS http://127.0.0.1:8000/api/status | python -m json.tool
+curl -fsS http://127.0.0.1:8000/health | python3 -m json.tool
+curl -fsS http://127.0.0.1:8000/api/status | python3 -m json.tool
+curl -sS -D - -o /dev/null http://127.0.0.1:8000/api/thermal/A01
 ```
 
 필수 확인 항목:
@@ -226,6 +229,7 @@ curl -fsS http://127.0.0.1:8000/api/status | python -m json.tool
 - `/health`의 `ok`가 `true`
 - database `available`이 `true`
 - receiver `connections`가 1 이상
+- receiver `thermal_udp`의 완료 frame과 effective FPS가 증가
 - `/api/status`의 `ready`가 `true`
 - 센서 연결 후 system `ONLINE`
 - SQLite snapshot count가 계속 증가
@@ -245,10 +249,10 @@ curl -fsS http://127.0.0.1:8000/api/status | python -m json.tool
 
 ## 10. 전달 전 체크리스트
 
-- 저장소 루트에 `README.md`, `ai/`, `backend/`, `gateway/`, `sources/`, `tests/`, `web/`가 있는가?
-- `PACKAGE_AND_OPERATION_GUIDE.md`와 `INTEGRATION_PHASE_SUMMARY.md`가 있는가?
-- `sources/ondevice_ai/models/`와 manifest 등록 primary/candidate artifact가 있는가?
-- `requirements-backend.txt`와 `requirements-pi.txt`가 있는가?
+- 저장소 루트에 `README.md`, `run_safenest.sh`, `ESP32/`, `RaspberryPi/`가 있는가?
+- `RaspberryPi/Runtime/PACKAGE_AND_OPERATION_GUIDE.md`와 `INTEGRATION_PHASE_SUMMARY.md`가 있는가?
+- `RaspberryPi/Ondevice_AI/models/`와 manifest 등록 primary/candidate artifact가 있는가?
+- Runtime의 `requirements-backend.txt`와 Ondevice_AI의 `requirements-pi.txt`가 있는가?
 - 실제 `secrets.h`, `.venv`, DB, SSH key가 포함되지 않았는가?
 - 받는 사람이 WROOM-32와 XIAO C6 제한을 이해했는가?
 - 실제 장비 HIL 미완료와 TEST 4/6 제약을 전달했는가?
@@ -302,15 +306,15 @@ PRESENCE_GATE_REQUIRED = true
 
 아래는 Stage 7의 hardware boundary이며 Stage 9 live-sensor smoke가 아니다.
 
-1. 검토된 integration commit을 checkout한다. 현재 권위 저장소는 `yuname121/integration`의 검토된 `main`이다.
-2. Raspberry Pi에서 지원 Python(3.10+)과 `bash deployment/run_pi.sh --install`을 사용한다.
+1. `jinsu1011/safenest-embedded-competition`의 검토된 `main` commit을 checkout한다.
+2. Raspberry Pi에서 지원 Python(3.10+)과 `./run_safenest.sh --install`을 사용한다.
 3. `.env.example`을 참고해 필요한 env/config를 적용한다. 개발자 Mac 절대경로를 넣지 않는다. venv 기본은 `<repository>/.venv` (`SAFENEST_VENV_PATH`로 재정의).
 4. Thermal/CO2 production path는 역사적 v0.1.0을 유지한다. T-B5를 켜지 않는다. mmWave primary selector는 PR #22의 M-N9 FULL_INT8이며 옛 B live gate가 아니다. Stage 7 preflight는 그 M-N9 selector identity를 검사하며 `deployment_allowed=true`를 Pi/device validation으로 읽지 않는다. `STAGE7_PREFLIGHT_MMWAVE_SELECTOR_DRIFT = RESOLVED_IN_CODE`.
-5. `bash deployment/run_pi.sh`로 runtime을 시작한다. 진입점은 `deployment/run_pi.sh → backend/run_backend.py`다.
+5. `./run_safenest.sh`로 runtime을 시작한다. 진입점은 `run_safenest.sh → RaspberryPi/Runtime/deployment/run_pi.sh → backend/run_backend.py`다.
 6. process가 살아 있는지 확인한다.
 7. 기대 포트: HTTP `:8000`, TCP `:9000`, UDP `:5005`.
 8. `curl -fsS http://127.0.0.1:8000/health` 와 `/api/status`로 backend health를 확인한다.
-9. LCD `http://<pi-ip>:8000/display` 와 Web `http://<pi-ip>:8000/dashboard` 도달을 확인한다.
+9. Admin `/admin`, A01 guest thermal `/guest/dashboard/A01`, Dashboard `/dashboard` 도달을 확인한다. Pi LCD도 별도 서버 대신 `/dashboard`를 연다.
 
 그 다음 Stage 9 minimal live smoke만 수행한다. 30분 soak는 기본이 아니다.
 
@@ -320,7 +324,7 @@ DANGER 전환 시 터치 화면에 긴급 오버레이가 열리고, 서버의 a
 
 담당자 SMS와 GPIO 설정은 [`docs/EMERGENCY_HMI_AND_OPERATIONS_KO.md`](docs/EMERGENCY_HMI_AND_OPERATIONS_KO.md)의 `.env` 표를 따른다. 실제 SMS 자격증명이 없을 때는 요청을 성공으로 처리하지 않고 `SMS_NOT_CONFIGURED`를 반환한다. 개발 PC에서는 `SAFENEST_GPIO_MODE=mock`을 사용하고, Raspberry Pi에서는 BCM buzzer 핀과 전원 회로를 실제 배선과 대조한다.
 
-화면에 사용할 한국어 음성 파일의 이름과 위치는 [`web/dashboard/audio/README.md`](web/dashboard/audio/README.md)에 있다. 음성 파일이 없거나 autoplay가 차단되어도 API와 터치 동작은 중단되지 않는다.
+화면에 사용할 한국어 음성 파일의 이름과 위치는 [`../../Web/audio/README.md`](../../Web/audio/README.md)에 있다. 음성 파일이 없거나 autoplay가 차단되어도 API와 터치 동작은 중단되지 않는다.
 
 ## 13. Stage 9 minimal live-smoke tooling
 

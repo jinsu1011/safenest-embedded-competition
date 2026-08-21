@@ -16,11 +16,20 @@ fi
 
 if [[ "${1:-}" == "--install" ]]; then
   shift
-  python3 -m venv "${VENV_PATH}"
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "python3 was not found. Install Python 3.10 or newer first." >&2
+    exit 2
+  fi
+  if ! python3 -m venv "${VENV_PATH}"; then
+    echo "Failed to create ${VENV_PATH}. On Raspberry Pi OS run:" >&2
+    echo "  sudo apt install -y python3-venv python3-pip python3-dev build-essential" >&2
+    exit 2
+  fi
   "${VENV_PATH}/bin/python" -m pip install --upgrade pip
   "${VENV_PATH}/bin/python" -m pip install \
     -r "${RUNTIME_ROOT}/requirements-backend.txt" \
     -r "${RASPBERRY_PI_ROOT}/Ondevice_AI/requirements-pi.txt"
+  "${VENV_PATH}/bin/python" -c "import fastapi, qrcode, uvicorn"
 fi
 
 if [[ ! -x "${VENV_PATH}/bin/python" ]]; then

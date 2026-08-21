@@ -202,8 +202,16 @@ class RuntimeStoreTests(unittest.TestCase):
 class FastAPIContractTests(unittest.TestCase):
     def test_route_contracts_are_complete(self):
         self.assertEqual(set(ROUTE_CONTRACTS), {
+            "GET /admin",
+            "POST /api/auth/login",
+            "GET/POST /api/spaces",
+            "GET/PATCH/DELETE /api/spaces/{space_id}",
+            "GET /guest/dashboard/{space_id}",
+            "GET /api/guest/spaces/{space_id}",
+            "GET /api/thermal/{space_id}",
+            "GET /api/qr/{space_id}.png",
+            "GET /api/portal/events",
             "GET /dashboard",
-            "GET /display",
             "GET /api/status",
             "GET /api/sensors",
             "GET /api/events",
@@ -228,7 +236,12 @@ class FastAPIContractTests(unittest.TestCase):
         app = create_app(start_runtime=False)
         paths = {route.path for route in app.routes}
         for path in (
-            "/dashboard", "/dashboard/", "/display", "/display/", "/common.css",
+            "/", "/admin", "/admin/", "/admin-api.js", "/thermal-client.js",
+            "/guest/dashboard/{space_id}", "/api/auth/login", "/api/spaces",
+            "/api/spaces/{space_id}", "/api/portal/events",
+            "/api/guest/spaces/{space_id}", "/api/thermal/{space_id}",
+            "/api/qr/{space_id}.png",
+            "/dashboard", "/dashboard/",
             "/api/status", "/api/sensors", "/api/events",
             "/api/history", "/api/state", "/api/emergency/state",
             "/api/emergency/119/simulation/start", "/api/emergency/119/simulation/complete",

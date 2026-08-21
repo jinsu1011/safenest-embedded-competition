@@ -32,11 +32,27 @@ ALLOWED_STATES = {
     "emergency",
     "offline",
 }
+
+
+def empty_emergency_state() -> dict[str, object]:
+    return {
+        "active": False,
+        "entered_at": None,
+        "acknowledged": False,
+        "acknowledged_at": None,
+        "cleared_at": None,
+        "cleared_to": None,
+        "recovery_pending": False,
+        "recovery_acknowledged_at": None,
+    }
+
+
 DEFAULT_STATE = {
     "state": "normal-empty",
     "room": "밀폐공간 A-01",
     "revision": 1,
     "updated_at": int(time.time()),
+    "emergency": empty_emergency_state(),
 }
 STATE_LOCK = threading.Lock()
 
@@ -348,11 +364,18 @@ def load_state() -> dict[str, object]:
         state = saved.get("state")
         room = str(saved.get("room", "")).strip()
         if state in ALLOWED_STATES and room:
+            emergency = empty_emergency_state()
+            saved_emergency = saved.get("emergency")
+            if isinstance(saved_emergency, dict):
+                for key in emergency:
+                    if key in saved_emergency:
+                        emergency[key] = saved_emergency[key]
             return {
                 "state": state,
                 "room": room[:24],
                 "revision": int(saved.get("revision", 1)),
                 "updated_at": int(saved.get("updated_at", time.time())),
+                "emergency": emergency,
             }
     except (OSError, ValueError, TypeError, json.JSONDecodeError):
         pass
@@ -379,17 +402,58 @@ def apply_state_change(
 ) -> dict[str, object]:
     """Persist one state update and keep the audible alarm in sync with it."""
     with STATE_LOCK:
+        previous_state = str(APP_STATE["state"])
+        changed_at = int(time.time())
         if new_state is not None:
             APP_STATE["state"] = new_state
         if new_room is not None:
             APP_STATE["room"] = new_room
         APP_STATE["revision"] = int(APP_STATE["revision"]) + 1
-        APP_STATE["updated_at"] = int(time.time())
+        APP_STATE["updated_at"] = changed_at
+        emergency = APP_STATE.setdefault("emergency", empty_emergency_state())
+        if new_state == "emergency" and previous_state != "emergency":
+            emergency.update(empty_emergency_state())
+            emergency.update({"active": True, "entered_at": changed_at})
+        elif new_state is not None and previous_state == "emergency" and new_state != "emergency":
+            emergency.update({
+                "active": False,
+                "cleared_at": changed_at,
+                "cleared_to": new_state,
+                "recovery_pending": True,
+                "recovery_acknowledged_at": None,
+            })
         try:
             persist_state()
         except OSError as error:
             print(f"상태 파일 저장 실패: {error}")
-        buzzer.set_emergency(APP_STATE["state"] == "emergency")
+        buzzer.set_emergency(
+            APP_STATE["state"] == "emergency" and emergency.get("acknowledged") is not True
+        )
+        return APP_STATE.copy()
+
+
+def acknowledge_display_emergency(buzzer: BuzzerController) -> dict[str, object]:
+    with STATE_LOCK:
+        emergency = APP_STATE.setdefault("emergency", empty_emergency_state())
+        if APP_STATE["state"] != "emergency" or emergency.get("active") is not True:
+            raise RuntimeError("확인할 긴급 경보가 없습니다.")
+        emergency["acknowledged"] = True
+        emergency["acknowledged_at"] = int(time.time())
+        APP_STATE["revision"] = int(APP_STATE["revision"]) + 1
+        persist_state()
+        buzzer.set_emergency(False)
+        return APP_STATE.copy()
+
+
+def acknowledge_display_recovery() -> dict[str, object]:
+    with STATE_LOCK:
+        emergency = APP_STATE.setdefault("emergency", empty_emergency_state())
+        if emergency.get("recovery_pending") is not True:
+            raise RuntimeError("확인할 정상 복귀 상태가 없습니다.")
+        emergency["recovery_pending"] = False
+        emergency["recovery_acknowledged_at"] = int(time.time())
+        APP_STATE["revision"] = int(APP_STATE["revision"]) + 1
+        persist_state()
         return APP_STATE.copy()
 
 
@@ -443,6 +507,10 @@ class SafeNestHandler(BaseHTTPRequestHandler):
             path = "/control.html"
         elif path == "/display":
             path = "/display.html"
+        elif path.startswith("/lcd/assets/"):
+            # Keep the legacy standalone LCD server compatible with the
+            # canonical FastAPI-served LCD pages.
+            path = path[len("/lcd/assets/") - 1 :]
         elif path in {"/api/state", "/health"}:
             if path == "/health":
                 self.send_json(
@@ -477,7 +545,24 @@ class SafeNestHandler(BaseHTTPRequestHandler):
         self.send_bytes(requested.read_bytes(), content_type)
 
     def do_POST(self) -> None:  # noqa: N802
-        if urlparse(self.path).path != "/api/state":
+        request_path = urlparse(self.path).path
+        if request_path == "/api/emergency/acknowledge":
+            try:
+                acknowledge_display_emergency(self.server.buzzer)
+            except RuntimeError as error:
+                self.send_json({"ok": False, "message": str(error)}, HTTPStatus.CONFLICT)
+                return
+            self.send_json({"ok": True, "emergency": build_state_response(self.server.sensor_store)["emergency"]})
+            return
+        if request_path == "/api/emergency/recovery/acknowledge":
+            try:
+                acknowledge_display_recovery()
+            except RuntimeError as error:
+                self.send_json({"ok": False, "message": str(error)}, HTTPStatus.CONFLICT)
+                return
+            self.send_json({"ok": True, "emergency": build_state_response(self.server.sensor_store)["emergency"]})
+            return
+        if request_path != "/api/state":
             self.send_error(HTTPStatus.NOT_FOUND)
             return
 

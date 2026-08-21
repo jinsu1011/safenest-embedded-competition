@@ -10,6 +10,9 @@ from backend.runtime_status import runtime_status_document
 
 
 ROUTE_CONTRACTS = {
+    "GET /display": "integrated LCD display page",
+    "GET /control": "integrated LCD control page",
+    "GET /lcd/assets/{asset}": "LCD static asset",
     "GET /admin": "integrated administrator login and management UI",
     "POST /api/auth/login": "administrator credential exchange for a signed token",
     "GET/POST /api/spaces": "authenticated space registry",
@@ -24,12 +27,13 @@ ROUTE_CONTRACTS = {
     "GET /api/sensors": "sensor state with AI and risk component overlays",
     "GET /api/events": "bounded newest-first transition events",
     "GET /api/history": "newest-first persisted sensor and risk snapshots",
-    "GET /api/state": "read-only compatibility view for the existing LCD server",
+    "GET/POST /api/state": "LCD compatibility state view and manual state update",
     "GET /api/emergency/state": "current alarm latch and buzzer state",
     "POST /api/emergency/119/simulation/start": "competition-only mock 119 countdown start",
     "POST /api/emergency/119/simulation/complete": "competition-only mock 119 completion",
     "POST /api/emergency/contact": "server-side configured manager SMS request",
     "POST /api/emergency/acknowledge": "silence alarm without clearing risk",
+    "POST /api/emergency/recovery/acknowledge": "dismiss recovered alarm banner without changing risk",
     "POST /api/emergency/voice": "log local voice guidance action",
     "POST /api/client-connection": "log dashboard connection state transitions",
     "GET /health": "process liveness and runtime readiness",
@@ -132,6 +136,7 @@ def legacy_state_document(
         "updated_at": int(float(status["timestamp"])),
         "sensors": sensors_document(publication)["sensors"],
         "risk": copy.deepcopy(dict(risk)),
+        "emergency": copy.deepcopy(dict(_mapping(status.get("emergency")))),
         "runtime_status": copy.deepcopy(status["runtime_status"]),
     }
 
@@ -184,6 +189,10 @@ def _empty_emergency() -> dict[str, Any]:
         "entered_at": None,
         "acknowledged": False,
         "acknowledged_at": None,
+        "cleared_at": None,
+        "cleared_to": None,
+        "recovery_pending": False,
+        "recovery_acknowledged_at": None,
         "buzzer_active": False,
         "latched_while_offline": False,
         "buzzer": {

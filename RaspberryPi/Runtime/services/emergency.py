@@ -136,6 +136,13 @@ class EmergencyActionService:
         snapshot = self.store.acknowledge_alarm()
         return {"ok": True, "emergency": snapshot, "message": "경고가 확인되었습니다."}
 
+    def acknowledge_recovery(self) -> dict[str, Any]:
+        try:
+            snapshot = self.store.acknowledge_recovery()
+        except RuntimeError as error:
+            raise EmergencyActionError("RECOVERY_NOT_PENDING", str(error), status_code=409) from error
+        return {"ok": True, "emergency": snapshot, "message": "센서 정상 복귀를 확인했습니다."}
+
     def send_manager_sms(self, *, idempotency_key: str | None = None) -> dict[str, Any]:
         self._require_active_danger()
         key = _clean_idempotency_key(idempotency_key)

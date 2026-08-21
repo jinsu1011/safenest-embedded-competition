@@ -139,6 +139,7 @@ class RuntimeStoreTests(unittest.TestCase):
         self.assertEqual(legacy["state"], "emergency")
         self.assertEqual(legacy["room"], "A-01")
         self.assertIn("updated_at", legacy)
+        self.assertTrue(legacy["emergency"]["active"])
         self.assertEqual(legacy["runtime_status"]["status"], "READY_WITH_LIMITATIONS")
         self.assertEqual(legacy["sensors"]["thermal"]["runtime_status"]["ai_status"], "BLOCKED")
 
@@ -163,6 +164,11 @@ class RuntimeStoreTests(unittest.TestCase):
 
         cleared = store.publish(*documents(timestamp=103.0, risk_level="WARNING"))
         self.assertFalse(cleared["emergency"]["active"])
+        self.assertTrue(cleared["emergency"]["recovery_pending"])
+        self.assertEqual(cleared["emergency"]["cleared_at"], 103.0)
+        recovered = store.acknowledge_recovery()
+        self.assertFalse(recovered["recovery_pending"])
+        self.assertIsNotNone(recovered["recovery_acknowledged_at"])
 
     def test_concurrent_publish_and_read_are_safe(self):
         store = RuntimeStore()
@@ -202,6 +208,9 @@ class RuntimeStoreTests(unittest.TestCase):
 class FastAPIContractTests(unittest.TestCase):
     def test_route_contracts_are_complete(self):
         self.assertEqual(set(ROUTE_CONTRACTS), {
+            "GET /display",
+            "GET /control",
+            "GET /lcd/assets/{asset}",
             "GET /admin",
             "POST /api/auth/login",
             "GET/POST /api/spaces",
@@ -216,12 +225,13 @@ class FastAPIContractTests(unittest.TestCase):
             "GET /api/sensors",
             "GET /api/events",
             "GET /api/history",
-            "GET /api/state",
+            "GET/POST /api/state",
             "GET /api/emergency/state",
             "POST /api/emergency/119/simulation/start",
             "POST /api/emergency/119/simulation/complete",
             "POST /api/emergency/contact",
             "POST /api/emergency/acknowledge",
+            "POST /api/emergency/recovery/acknowledge",
             "POST /api/emergency/voice",
             "POST /api/client-connection",
             "GET /health",
@@ -242,10 +252,13 @@ class FastAPIContractTests(unittest.TestCase):
             "/api/guest/spaces/{space_id}", "/api/thermal/{space_id}",
             "/api/qr/{space_id}.png",
             "/dashboard", "/dashboard/",
+            "/display", "/display/", "/display.html",
+            "/control", "/control/", "/control.html", "/lcd/assets",
             "/api/status", "/api/sensors", "/api/events",
             "/api/history", "/api/state", "/api/emergency/state",
             "/api/emergency/119/simulation/start", "/api/emergency/119/simulation/complete",
             "/api/emergency/contact", "/api/emergency/acknowledge", "/api/emergency/voice",
+            "/api/emergency/recovery/acknowledge",
             "/api/client-connection", "/health", "/ws",
         ):
             self.assertIn(path, paths)

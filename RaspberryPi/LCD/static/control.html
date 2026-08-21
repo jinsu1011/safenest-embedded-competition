@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SafeNest LCD 원격 제어</title>
-  <link rel="stylesheet" href="/common.css" />
+  <link rel="stylesheet" href="./common.css?v=20260822-4" />
   <style>
     body { padding: 24px; }
     .control-app { width: min(1120px, 100%); margin: 0 auto; }
@@ -105,6 +105,13 @@
               <strong class="room-name" id="previewRoom">밀폐공간 A-01</strong>
             </div>
           </header>
+          <section class="emergency-banner" id="previewEmergencyBanner" data-phase="active" hidden>
+            <div class="emergency-banner-copy">
+              <strong id="previewEmergencyTitle">🚨 긴급 상황 — 작업자 상태를 즉시 확인하세요</strong>
+              <span id="previewEmergencyTime">발생 --:--:--</span>
+            </div>
+            <button class="emergency-confirm" id="previewEmergencyConfirm" type="button" disabled>확인</button>
+          </section>
           <div class="main-state"><div>
             <div class="status-pill" id="previewPill">정상 · 미재실</div>
             <h2 class="state-title" id="previewTitle">정상</h2>
@@ -155,6 +162,10 @@
     const preview = document.getElementById("preview");
     const previewRoom = document.getElementById("previewRoom");
     const previewSensorStatus = document.getElementById("previewSensorStatus");
+    const previewEmergencyBanner = document.getElementById("previewEmergencyBanner");
+    const previewEmergencyTitle = document.getElementById("previewEmergencyTitle");
+    const previewEmergencyTime = document.getElementById("previewEmergencyTime");
+    const previewEmergencyConfirm = document.getElementById("previewEmergencyConfirm");
     const previewPill = document.getElementById("previewPill");
     const previewTitle = document.getElementById("previewTitle");
     const previewSubtitle = document.getElementById("previewSubtitle");
@@ -211,6 +222,27 @@
       previewTitle.textContent = scenario.title;
       previewSubtitle.textContent = scenario.subtitle;
       previewComment.textContent = scenario.comment;
+      const emergency = payload.emergency || {};
+      const activeEmergency = currentState === "emergency" || emergency.active === true;
+      const recoveredEmergency = !activeEmergency && emergency.recovery_pending === true;
+      previewEmergencyBanner.hidden = !(activeEmergency || recoveredEmergency);
+      preview.classList.toggle("has-alert-banner", activeEmergency || recoveredEmergency);
+      if (recoveredEmergency) {
+        previewEmergencyBanner.dataset.phase = "recovered";
+        previewEmergencyTitle.textContent = "✓ 센서 정상 복귀 — 정상 모니터링으로 전환되었습니다";
+        previewEmergencyTime.textContent = "복귀 완료";
+        previewEmergencyConfirm.textContent = "종료 확인";
+      } else if (emergency.acknowledged === true) {
+        previewEmergencyBanner.dataset.phase = "acknowledged";
+        previewEmergencyTitle.textContent = "✓ 관리자 확인 완료 — 현장 대응을 계속하세요";
+        previewEmergencyTime.textContent = "관리자 확인됨";
+        previewEmergencyConfirm.textContent = "확인됨";
+      } else {
+        previewEmergencyBanner.dataset.phase = "active";
+        previewEmergencyTitle.textContent = "🚨 긴급 상황 — 작업자 상태를 즉시 확인하세요";
+        previewEmergencyTime.textContent = "발생 시각 표시";
+        previewEmergencyConfirm.textContent = "확인";
+      }
       renderSensorStatus(payload.sensors);
       previewMetrics.replaceChildren(...sensorMetrics(payload.sensors).map(([label, value]) => {
         const item = document.createElement("div");

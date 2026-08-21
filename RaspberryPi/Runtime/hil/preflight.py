@@ -57,6 +57,7 @@ CANONICAL_EXTERNAL_FILES = (
     ("web/portal/thermal-client.js", WEB_PORTAL / "thermal-client.js"),
     ("web/guest/index.html", WEB_GUEST / "index.html"),
     ("sources/display-test2/raspberry_pi_lcd/static/display.html", LCD_STATIC / "display.html"),
+    ("sources/display-test2/raspberry_pi_lcd/static/control.html", LCD_STATIC / "control.html"),
     ("sources/display-test2/raspberry_pi_lcd/static/common.css", LCD_STATIC / "common.css"),
     ("sources/ondevice_ai/models/model_manifest.json", MODEL_MANIFEST),
 )
@@ -138,6 +139,9 @@ def pi_start_document(root: Path = ROOT) -> dict[str, object]:
         ("file_admin_portal_html", WEB_PORTAL / "preview.html"),
         ("file_thermal_client_js", WEB_PORTAL / "thermal-client.js"),
         ("file_guest_thermal_html", WEB_GUEST / "index.html"),
+        ("file_lcd_display_html", LCD_STATIC / "display.html"),
+        ("file_lcd_control_html", LCD_STATIC / "control.html"),
+        ("file_lcd_common_css", LCD_STATIC / "common.css"),
         ("file_model_manifest", MODEL_MANIFEST),
     ):
         checks.append(_check(name, path.is_file(), str(path)))

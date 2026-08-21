@@ -21,7 +21,7 @@ from backend.views import (
 from services.buzzer import BuzzerProtocol, create_buzzer_from_env
 from services.emergency import EmergencyActionError, EmergencyActionService
 from services.sms_service import SMSProvider
-from paths import DATA_ROOT, WEB_GUEST, WEB_PORTAL, WEB_ROOT
+from paths import DATA_ROOT, LCD_STATIC, WEB_GUEST, WEB_PORTAL, WEB_ROOT
 
 
 class BackendDependencyError(RuntimeError):
@@ -122,6 +122,28 @@ def create_app(
     @app.get("/dashboard/", include_in_schema=False)
     def dashboard() -> Any:
         return FileResponse(dashboard_dir / "index.html")
+
+    # LCD panel (RaspberryPi/LCD/static) — served by the same :8000 runtime
+    if LCD_STATIC.is_dir():
+        app.mount(
+            "/lcd-assets",
+            StaticFiles(directory=str(LCD_STATIC)),
+            name="lcd-assets",
+        )
+
+        @app.get("/display", include_in_schema=False)
+        @app.get("/display/", include_in_schema=False)
+        def lcd_display() -> Any:
+            return FileResponse(LCD_STATIC / "display.html")
+
+        @app.get("/common.css", include_in_schema=False)
+        def lcd_common_css() -> Any:
+            return FileResponse(LCD_STATIC / "common.css")
+
+        @app.get("/control", include_in_schema=False)
+        @app.get("/control/", include_in_schema=False)
+        def lcd_control() -> Any:
+            return FileResponse(LCD_STATIC / "control.html")
 
     def require_admin(request: Request) -> None:
         authorization = request.headers.get("authorization", "")

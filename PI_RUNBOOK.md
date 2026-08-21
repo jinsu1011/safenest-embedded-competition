@@ -9,6 +9,23 @@
 
 ---
 
+## 필드 모니터 (바로 실행)
+
+`--once`를 **빼면** 계속 갱신, 넣으면 한 번만 보고 종료.
+
+```bash
+cd /home/sandi/safenest-team-main/RaspberryPi/Runtime
+python3 hil/pi_field_monitor.py                 # 계속 보기 (기본 4초)
+python3 hil/pi_field_monitor.py --once          # 한 번만
+python3 hil/pi_field_monitor.py --interval 2    # 2초 간격 계속
+# 종료: Ctrl+C
+# 맥에서: python3 hil/pi_field_monitor.py --base http://192.168.0.3:8000
+```
+
+표 읽는 법 → **3-B**.
+
+---
+
 ## 개발 규칙 (필수)
 
 Pi에 손대기 전에 **로컬 worktree 브랜치 → GitHub PR → merge → Pi pull** 순서로 한다.

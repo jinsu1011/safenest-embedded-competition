@@ -1,0 +1,39 @@
+{
+  "schema": "safenest.thermal_b5.proposed_acceptance_criteria.v1",
+  "status": "PROPOSED_NOT_APPROVED",
+  "production_decision_must_not_use_until_approved": true,
+  "accuracy": {
+    "independent_subject_session_locked_split_required": true,
+    "overall_accuracy_min": 0.90,
+    "macro_f1_min": 0.90,
+    "per_class_recall_min": 0.90,
+    "human_fall_lying_proxy_recall_min": 0.95,
+    "not_human_false_positive_rate_max": 0.05,
+    "basis": "conservative proposal for a safety-influencing posture proxy; no project threshold currently exists"
+  },
+  "float_int8_equivalence": {
+    "top1_agreement_min": 0.99,
+    "human_fall_to_not_human_mismatch_max": 0,
+    "saturation_rule": "no unexplained degradation by saturation bin; all frames with low-side saturation over 0.50 reviewed",
+    "basis": "T-B4 VALIDATION reference was 0.997125; the documented 0.95 overlay was not an approved AI threshold"
+  },
+  "pi_saved_frame_benchmark": {
+    "p95_latency_ms_max": 100.0,
+    "p99_latency_ms_max": 150.0,
+    "inference_only_fps_min": 6.25,
+    "invalid_rate_max": 0.0,
+    "basis": "firmware requests about 6.25 FPS; proposed latency leaves transport and fusion headroom"
+  },
+  "live_hil": {
+    "scenario_repetitions_min": 3,
+    "soak_minutes_min": 30,
+    "new_logger_drop_count_max": 0,
+    "automatic_recovery_required": true,
+    "cpu_memory_temperature_budget": "OWNER_MUST_DEFINE_AFTER_BASELINE_MEASUREMENT"
+  },
+  "approval_needed_from": [
+    "Thermal model owner",
+    "SafeNest risk/safety owner",
+    "Raspberry Pi operations owner"
+  ]
+}

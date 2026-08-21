@@ -22,7 +22,7 @@ class FakeThermalModel:
 
 
 class GatewayRiskPipelineTests(unittest.TestCase):
-    def test_packets_flow_to_emergency_risk_without_other_ai_models(self):
+    def test_thermal_fall_with_pir_corroboration_stays_normal_below_threshold(self):
         manager = SensorStateManager()
         telemetry = TelemetryPayload(
             header=PacketHeader(1, 1, 100),
@@ -45,12 +45,15 @@ class GatewayRiskPipelineTests(unittest.TestCase):
         ai = OnDeviceAIPipeline(manager, {"thermal": FakeThermalModel()}).evaluate(state, thermal)
         risk = SafeNestRiskEngine().evaluate(state, ai)
 
-        self.assertEqual(risk.risk_level, "DANGER")
-        self.assertEqual(risk.risk_score, 100.0)
-        self.assertTrue(risk.is_emergency)
+        self.assertEqual(risk.risk_level, "NORMAL")
+        self.assertAlmostEqual(risk.risk_score, 27.75)
+        self.assertFalse(risk.is_emergency)
         self.assertEqual(risk.component_status["mmwave"], "RULE_FALLBACK")
         self.assertEqual(risk.component_status["co2"], "RULE_FALLBACK")
-        self.assertIn("EMERGENCY_HUMAN_FALL", risk.reasons)
+        self.assertIn(
+            "THERMAL_FALL_PROXY_CORROBORATED_BY_PIR",
+            risk.reasons,
+        )
 
 
 if __name__ == "__main__":

@@ -273,6 +273,8 @@ def decode_thermal(header: PacketHeader, payload: bytes) -> ThermalFrame:
     actual_min = 0xFFFF
     actual_max = 0
     for (pixel,) in struct.iter_unpack("!H", pixel_bytes):
+        if pixel == 0xFFFF:
+            raise ProtocolError("thermal frame contains invalid 0xFFFF pixel sentinel")
         actual_min = min(actual_min, pixel)
         actual_max = max(actual_max, pixel)
     if (minimum_raw, maximum_raw) != (actual_min, actual_max):

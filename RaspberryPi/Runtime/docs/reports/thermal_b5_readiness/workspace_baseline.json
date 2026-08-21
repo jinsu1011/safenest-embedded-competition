@@ -1,0 +1,43 @@
+{
+  "schema": "safenest.thermal_b5.workspace_baseline.v1",
+  "date": "2026-08-21",
+  "repositories": [
+    {
+      "name": "Embedded_대회",
+      "git_repository": false,
+      "branch": null,
+      "head": null,
+      "dirty": null,
+      "role": "pre-integration sensor test and calibration evidence"
+    },
+    {
+      "name": "New_Thermal_OnDevice",
+      "git_repository": false,
+      "branch": null,
+      "head": null,
+      "dirty": null,
+      "role": "historical Raspberry Pi on-device validation evidence"
+    },
+    {
+      "name": "personal-safenest-thermal-ai",
+      "git_repository": true,
+      "branch": "experiment/thermal-v1-contract-sync",
+      "head": "294531a0c57c28fe1be88f95755f06851217ac80",
+      "dirty": true,
+      "modified_count": 16,
+      "untracked_count": 2,
+      "preserved_without_edits": true
+    },
+    {
+      "name": "team-safenest-embedded",
+      "git_repository": true,
+      "baseline_branch": "main",
+      "work_branch": "feature/thermal-b5-readiness",
+      "head": "8a8fcfbfa36087fa17b1fa06205f3a9c526a1539",
+      "pull_ff_only": "ALREADY_UP_TO_DATE",
+      "baseline_clean": true,
+      "production_selector_changed": false,
+      "commit_or_push_performed": false
+    }
+  ]
+}

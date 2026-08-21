@@ -95,6 +95,20 @@ class SafeNestRiskEngine:
         self.co2_warning = float(config["co2"]["warning_ppm"])
         self.co2_danger = float(config["co2"]["danger_ppm"])
         self.co2_slope_warning = float(config["co2"]["slope_warning_ppm_per_min"])
+        thermal_policy = config["risk"].get("thermal_fall_policy", {})
+        self.thermal_fall_requires_corroboration = bool(
+            thermal_policy.get("requires_nonthermal_corroboration_for_danger", True)
+        )
+        self.thermal_corroboration_min_score = float(
+            thermal_policy.get("corroboration_min_component_score", 0.5)
+        )
+        self.thermal_renormalize_without_corroboration = bool(
+            thermal_policy.get(
+                "renormalize_missing_sensors_without_corroboration", False
+            )
+        )
+        if not 0.0 <= self.thermal_corroboration_min_score <= 1.0:
+            raise ValueError("invalid Thermal corroboration score")
         self.config_status = str(config.get("status", "UNKNOWN"))
         self._no_motion_started_at: float | None = None
         self._co2_history: deque[tuple[float, float]] = deque(maxlen=30)
@@ -160,16 +174,24 @@ class SafeNestRiskEngine:
             reasons.extend(item.reasons)
         reasons = list(dict.fromkeys(reasons))
 
-        emergency = False
         thermal = ordered["thermal"]
-        if (
-            thermal.available
-            and thermal.state == "HUMAN_FALL"
-            and _finite_number(thermal.metadata.get("confidence"))
-            and float(thermal.metadata["confidence"]) >= 0.8
-        ):
-            emergency = True
-            reasons.insert(0, "EMERGENCY_HUMAN_FALL")
+        thermal_fall_proxy = thermal.available and thermal.state == "HUMAN_FALL"
+        thermal_corroborators = [
+            name
+            for name in ("mmwave", "co2", "pir")
+            if ordered[name].available
+            and _finite_number(ordered[name].score)
+            and float(ordered[name].score) >= self.thermal_corroboration_min_score
+        ]
+        if thermal_fall_proxy and thermal_corroborators:
+            reasons.append(
+                "THERMAL_FALL_PROXY_CORROBORATED_BY_"
+                + "_".join(name.upper() for name in thermal_corroborators)
+            )
+        elif thermal_fall_proxy:
+            reasons.append("THERMAL_FALL_PROXY_REQUIRES_NONTHERMAL_CORROBORATION")
+
+        emergency = False
         mmwave = ordered["mmwave"]
         if mmwave.available and mmwave.state == "APNEA" and mmwave.metadata.get("apnea_verified") is True:
             emergency = True
@@ -192,6 +214,18 @@ class SafeNestRiskEngine:
                 float(ordered[name].score) * self.weights[name] / valid_weight
                 for name in available
             )
+            if (
+                self.thermal_fall_requires_corroboration
+                and thermal_fall_proxy
+                and not thermal_corroborators
+                and not self.thermal_renormalize_without_corroboration
+            ):
+                # HUMAN_FALL is a static LYING-derived compatibility proxy.
+                # Missing sensors must not renormalize that proxy into DANGER.
+                score = 100.0 * sum(
+                    float(ordered[name].score) * self.weights[name]
+                    for name in available
+                )
             score = min(100.0, max(0.0, score))
             level = self.classify(score)
             health = "DEGRADED" if unavailable or fallback else "HEALTHY"

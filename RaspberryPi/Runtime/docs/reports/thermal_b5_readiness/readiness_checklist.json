@@ -1,0 +1,22 @@
+{
+  "schema": "safenest.thermal_b5.production_readiness.v1",
+  "date": "2026-08-21",
+  "classification": "BLOCKED",
+  "production_default_change_allowed": false,
+  "local_integration_readiness": "PASS_WITH_LIMITATIONS",
+  "gates": [
+    {"id": "G01_MODEL_IDENTITY", "required": true, "status": "PASS", "evidence": "model_contract.json"},
+    {"id": "G02_TENSOR_CONTRACT", "required": true, "status": "PASS", "evidence": "model_contract.json"},
+    {"id": "G03_PREPROCESSING_PARITY", "required": true, "status": "PASS_WITH_LIMITATIONS", "reason": "P1 code and constants verified; live sensor unit/orientation not hardware-verified"},
+    {"id": "G04_TRANSPORT_INTEGRITY", "required": true, "status": "PASS_WITH_LIMITATIONS", "reason": "SNTU v1 passes; Raw V1 blind chunks are refused and cannot prove loss/reorder integrity"},
+    {"id": "G05_INDEPENDENT_LABELED_ACCURACY", "required": true, "status": "BLOCKED", "reason": "no pristine labeled locked test and acceptance criteria are pending owner approval", "evidence": "proposed_acceptance_criteria.json"},
+    {"id": "G06_FLOAT_INT8_EQUIVALENCE", "required": true, "status": "BLOCKED", "reason": "139/154 top-1 agreement and saturation review required"},
+    {"id": "G07_RASPBERRY_PI_LATENCY_RESOURCE", "required": true, "status": "NOT_RUN", "reason": "Pi unavailable"},
+    {"id": "G08_LIVE_SENSOR_30_MIN_SOAK", "required": true, "status": "NOT_RUN", "reason": "Pi and sensors unavailable"},
+    {"id": "G09_RISK_POLICY_LOCAL", "required": true, "status": "PASS", "evidence": "risk_validation.json"},
+    {"id": "G10_HIL_EIGHT_SCENARIOS", "required": true, "status": "NOT_RUN", "evidence": "scenario_evidence.csv"},
+    {"id": "G11_ROLLBACK_DRILL", "required": true, "status": "NOT_RUN", "evidence": "rollback_runbook.md"},
+    {"id": "G12_REQUIRED_REGRESSION_GREEN", "required": true, "status": "BLOCKED", "reason": "258 tests: 23 failures, 17 errors, 1 skipped; focused 49 tests pass"},
+    {"id": "G13_PRODUCTION_SELECTOR_UNCHANGED", "required": true, "status": "PASS", "evidence": "production_selector.diff"}
+  ]
+}

@@ -1,0 +1,6 @@
+# NOT APPLIED — production readiness gates are blocked.
+# Command:
+# git diff -- RaspberryPi/Ondevice_AI/config/models.yaml RaspberryPi/Ondevice_AI/models/model_manifest.json
+# Result on 2026-08-21: empty output.
+# Current production selection remains models/thermal/thermal_fall_int8_v0.1.0.tflite.
+# Candidate SMALL_CNN_BASELINE_V1_P1_full_int8.tflite is diagnostic/HIL only.

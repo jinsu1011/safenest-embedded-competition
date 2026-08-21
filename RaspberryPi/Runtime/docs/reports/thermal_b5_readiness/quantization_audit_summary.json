@@ -1,0 +1,78 @@
+{
+  "schema": "safenest.thermal_b5.quantization_readiness_summary.v1",
+  "status": "INT8_QUANTIZATION_REVIEW_REQUIRED",
+  "source": "../rp_x0_thermal_real_field_float_int8_equivalence_summary.json",
+  "rerun_in_this_session": false,
+  "rerun_blockers": [
+    "FLOAT reference binary not present in current workspace",
+    "original real snapshot not present in current workspace",
+    "no TFLite interpreter installed on this host"
+  ],
+  "frames": 154,
+  "readable_source_frames": 23788,
+  "top1_agreement_count": 139,
+  "top1_agreement_rate": 0.9025974025974026,
+  "top1_mismatch_count": 15,
+  "ranking_agreement_rate": 0.9025974025974026,
+  "probability_mae": {
+    "median": 0.0013020833333333333,
+    "p90": 0.07700778937402783,
+    "p95": 0.6628249587746748,
+    "maximum": 0.6653645833333334
+  },
+  "confidence_difference": {
+    "status": "NOT_PRESERVED_FOR_ALL_154_FRAMES",
+    "available_proxy": "int8_top1_margin_minus_float_top1_margin",
+    "margin_difference_median": -0.00390625,
+    "margin_difference_p95": -0.0039062466918869387,
+    "maximum_absolute_margin_difference": 0.5078124999999838,
+    "action": "rerun O2.6 with explicit top1 confidence delta fields"
+  },
+  "transition_matrix_float_rows_int8_columns": {
+    "NOT_HUMAN": {"NOT_HUMAN": 0, "HUMAN_NORMAL": 1, "HUMAN_FALL": 0},
+    "HUMAN_NORMAL": {"NOT_HUMAN": 1, "HUMAN_NORMAL": 17, "HUMAN_FALL": 3},
+    "HUMAN_FALL": {"NOT_HUMAN": 2, "HUMAN_NORMAL": 8, "HUMAN_FALL": 122}
+  },
+  "mismatch_count_by_float_class": {
+    "NOT_HUMAN": 1,
+    "HUMAN_NORMAL": 4,
+    "HUMAN_FALL": 10
+  },
+  "low_side_saturation_fraction_median": 0.434,
+  "low_side_saturation_fraction_p95": 0.831,
+  "high_side_saturation_fraction": 0.0,
+  "agreement_by_increasing_saturation_bin": [0.971, 0.958, 0.843, 0.789],
+  "cause_review": {
+    "model_lineage_mismatch": "NOT_OBSERVED",
+    "celsius_p1_quantizer_reproduction": "MATCHED_LOCK",
+    "unit_or_orientation_causation": "NOT_ESTABLISHED",
+    "calibration_or_quantization_association": "STRONG_ASSOCIATION_OBSERVED_NOT_CAUSATION",
+    "decision": "INT8_QUANTIZATION_REVIEW_REQUIRED"
+  },
+  "mismatch_frames": [
+    {"file": "20260817_070525_222075_0000011646-0000011658.npz", "frame_index": 2, "transition": "HUMAN_NORMAL->HUMAN_FALL"},
+    {"file": "20260817_070942_406446_0000013263-0000013263.npz", "frame_index": 0, "transition": "HUMAN_NORMAL->HUMAN_FALL"},
+    {"file": "20260817_073425_084933_0000001128-0000001140.npz", "frame_index": 0, "transition": "HUMAN_NORMAL->HUMAN_FALL"},
+    {"file": "20260817_073538_080834_0000001589-0000001601.npz", "frame_index": 5, "transition": "HUMAN_FALL->HUMAN_NORMAL"},
+    {"file": "20260817_080530_061583_0000000428-0000000441.npz", "frame_index": 2, "transition": "HUMAN_FALL->HUMAN_NORMAL"},
+    {"file": "20260817_082413_127537_0000007454-0000007466.npz", "frame_index": 9, "transition": "HUMAN_FALL->NOT_HUMAN"},
+    {"file": "20260817_082830_583652_0000009003-0000009015.npz", "frame_index": 7, "transition": "HUMAN_FALL->HUMAN_NORMAL"},
+    {"file": "20260817_082957_837969_0000009510-0000009522.npz", "frame_index": 2, "transition": "HUMAN_FALL->HUMAN_NORMAL"},
+    {"file": "20260817_083631_007615_0000011771-0000011786.npz", "frame_index": 10, "transition": "HUMAN_FALL->HUMAN_NORMAL"},
+    {"file": "20260817_083927_639092_0000012767-0000012779.npz", "frame_index": 7, "transition": "HUMAN_NORMAL->NOT_HUMAN"},
+    {"file": "20260817_083931_690175_0000012792-0000012804.npz", "frame_index": 5, "transition": "NOT_HUMAN->HUMAN_NORMAL"},
+    {"file": "20260817_091538_965704_0000024767-0000024779.npz", "frame_index": 9, "transition": "HUMAN_FALL->HUMAN_NORMAL"},
+    {"file": "20260817_091547_000751_0000024818-0000024830.npz", "frame_index": 12, "transition": "HUMAN_FALL->HUMAN_NORMAL"},
+    {"file": "20260817_092318_026942_0000027527-0000027539.npz", "frame_index": 9, "transition": "HUMAN_FALL->NOT_HUMAN"},
+    {"file": "20260817_092454_650511_0000028111-0000028123.npz", "frame_index": 4, "transition": "HUMAN_FALL->HUMAN_NORMAL"}
+  ],
+  "accuracy_claim_allowed": false,
+  "reason": "frames are unlabeled; this is equivalence evidence, not classification accuracy",
+  "required_float": {
+    "filename": "SMALL_CNN_BASELINE_V1_P1_float32.tflite",
+    "sha256": "fbe891520f07e0534b1a7074dc819d8ed44bca58b27e35c78916c3ddae73a779",
+    "size_bytes": 1252048,
+    "logical_source": "T-B4/artifacts/SMALL_CNN_BASELINE_V1_P1_float32.tflite",
+    "approved_runtime_path": "/var/lib/safenest/artifacts/thermal/SMALL_CNN_BASELINE_V1_P1_float32.tflite"
+  }
+}

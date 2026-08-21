@@ -130,6 +130,27 @@ class ThermalUDPReassemblyTests(unittest.TestCase):
         self.assertIsNone(result)
         self.assertEqual(reassembler.snapshot()["checksum_failures"], 1)
 
+    def test_invalid_ffff_pixel_is_rejected_before_state_or_inference(self) -> None:
+        count = THERMAL_WIDTH * THERMAL_HEIGHT
+        pixels = [1000] * count
+        pixels[17] = 0xFFFF
+        source = THERMAL_META.pack(
+            THERMAL_WIDTH,
+            THERMAL_HEIGHT,
+            15,
+            1500,
+            1000,
+            0xFFFF,
+        ) + struct.pack(f"!{count}H", *pixels)
+        reassembler = ThermalUDPReassembler()
+        result = None
+        for datagram in encode_thermal_udp_frame(source, 15):
+            result = reassembler.accept(datagram, PEER) or result
+        self.assertIsNone(result)
+        stats = reassembler.snapshot()
+        self.assertEqual(stats["completed_frames"], 0)
+        self.assertEqual(stats["parser_failures"], 1)
+
     def test_pending_memory_is_bounded_and_continuous_frames_leave_no_buffers(self) -> None:
         reassembler = ThermalUDPReassembler(max_pending_frames=2)
         for sequence in (1, 2, 3):

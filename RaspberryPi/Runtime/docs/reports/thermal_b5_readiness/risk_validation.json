@@ -1,0 +1,32 @@
+{
+  "schema": "safenest.thermal_b5.risk_validation.v1",
+  "status": "PASS_WITH_LIMITATIONS",
+  "local_tests": "49/49 focused tests passed",
+  "policy": {
+    "human_fall_semantic": "LYING_DERIVED_POSTURE_PROXY",
+    "thermal_emergency_override": false,
+    "danger_requires_nonthermal_corroboration": true,
+    "corroboration_min_component_score": 0.5,
+    "verified_mmwave_apnea_override_preserved": true
+  },
+  "scenarios": [
+    {
+      "id": "THERMAL_ONLY",
+      "risk_score": 20.25,
+      "risk_level": "NORMAL",
+      "is_emergency": false,
+      "reason": "THERMAL_FALL_PROXY_REQUIRES_NONTHERMAL_CORROBORATION"
+    },
+    {
+      "id": "THERMAL_WITH_MMWAVE_CO2_PIR",
+      "risk_score": 66.25,
+      "risk_level": "DANGER",
+      "is_emergency": false,
+      "reason": "THERMAL_FALL_PROXY_CORROBORATED_BY_MMWAVE_CO2_PIR"
+    }
+  ],
+  "limitations": [
+    "local synthetic/state fixtures only",
+    "live HIL and alert-output verification not run"
+  ]
+}

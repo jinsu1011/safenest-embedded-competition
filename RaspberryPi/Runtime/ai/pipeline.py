@@ -62,6 +62,21 @@ class OnDeviceAIPipeline:
             return unavailable
         if frame is None:
             return self._unavailable("thermal", now, "THERMAL_FRAME_MISSING")
+        sample_timestamp = (
+            float(sensor["last_update"])
+            if _finite_number(sensor.get("last_update"))
+            else now
+        )
+        age_seconds = (
+            float(sensor["age_seconds"])
+            if _finite_number(sensor.get("age_seconds"))
+            else max(0.0, now - sample_timestamp)
+        )
+        ttl_seconds = (
+            float(sensor["ttl_seconds"])
+            if _finite_number(sensor.get("ttl_seconds"))
+            else None
+        )
         try:
             import numpy as np
 
@@ -69,22 +84,52 @@ class OnDeviceAIPipeline:
             pixels = pixels.reshape(frame.height, frame.width)
         except Exception as error:
             return self._model_error("thermal", now, error)
-        metadata = {
+        model = self.models["thermal"]
+        declared_metadata = getattr(model, "runtime_metadata", {})
+        if not isinstance(declared_metadata, Mapping):
+            declared_metadata = {}
+        metadata: dict[str, object] = {
             "raw_minimum": frame.minimum_raw,
             "raw_maximum": frame.maximum_raw,
-            "temperature_calibrated": False,
-            "preprocessing": "per_frame_minmax",
+            "validity": True,
+            "freshness": "FRESH",
+            "sensor_status": str(sensor.get("status", "UNKNOWN")),
+            "sensor_age_seconds": age_seconds,
+            "sensor_ttl_seconds": ttl_seconds,
+            "frame_sequence": frame.frame_sequence,
+            "source_uptime_ms": frame.uptime_ms,
+            "temperature_calibrated": bool(
+                declared_metadata.get("temperature_calibrated", False)
+            ),
+            "preprocessing": str(
+                declared_metadata.get(
+                    "preprocessing_identity", "LEGACY_PER_FRAME_MINMAX_V0_1_0"
+                )
+            ),
+            **dict(declared_metadata),
             "heatmap_preview": _thermal_preview(pixels),
         }
         try:
-            prediction = self.models["thermal"].predict(pixels)
+            prediction = model.predict(pixels)
+            prediction_metadata = getattr(prediction, "metadata", {})
+            if not isinstance(prediction_metadata, Mapping):
+                prediction_metadata = {}
             return self._prediction_result(
                 "thermal",
                 prediction,
-                now,
+                sample_timestamp,
                 score=1.0 if prediction.class_name == "HUMAN_FALL" else 0.0,
                 metadata={
                     **metadata,
+                    **dict(prediction_metadata),
+                    "model_identity": str(
+                        prediction_metadata.get("model_identity", prediction.model_id)
+                    ),
+                    "preprocessing": str(
+                        prediction_metadata.get(
+                            "preprocessing_identity", metadata["preprocessing"]
+                        )
+                    ),
                     "probabilities": list(prediction.probabilities),
                 },
             )

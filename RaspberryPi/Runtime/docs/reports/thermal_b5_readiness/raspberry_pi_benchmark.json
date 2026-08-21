@@ -1,0 +1,25 @@
+{
+  "schema": "safenest.thermal_b5.pi_benchmark.v1",
+  "status": "NOT_RUN_HARDWARE_REQUIRED",
+  "live_sensor": false,
+  "end_to_end": false,
+  "host": null,
+  "model_sha256": "fa9730c29535477a3994c11e664474a0ca0116afaaa172889f47446ab2ac46be",
+  "frame_count": null,
+  "latency_ms": {"mean": null, "p50": null, "p95": null, "p99": null},
+  "inference_only_fps": null,
+  "process_cpu_percent_of_one_core": null,
+  "rss_kb": {"before": null, "after": null, "peak": null},
+  "soc_temperature_c": null,
+  "low_saturation_fraction": {"median": null, "p95": null},
+  "high_saturation_fraction": {"median": null, "p95": null},
+  "transport_drop_rate": null,
+  "required_input": "/var/lib/safenest/validation/thermal_b5/saved_runtime_frames.npz",
+  "required_input_contract": {
+    "frames": "uint16[N,62,80]",
+    "timestamps": "float64[N]",
+    "frame_sequences": "uint32[N]"
+  },
+  "output_json": "/var/lib/safenest/validation/thermal_b5/results/pi_benchmark.json",
+  "output_csv": "/var/lib/safenest/validation/thermal_b5/results/pi_benchmark.csv"
+}

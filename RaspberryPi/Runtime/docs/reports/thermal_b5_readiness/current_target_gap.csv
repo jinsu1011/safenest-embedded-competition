@@ -1,0 +1,9 @@
+area,current_state,production_target,gap_status
+model_selector,thermal_fall_int8_v0.1.0,B5 FULL_INT8 plus P1,NOT_CHANGED_BLOCKED
+preprocessing,legacy per-frame minmax,Celsius plus P1 global zscore plus locked INT8,CANDIDATE_PATH_ONLY
+transport,SNTU v1 production and separate Raw V1,verified unit orientation CRC sequence single contract,RAW_V1_EVIDENCE_MISSING
+accuracy,no independent locked labels,owner-approved locked overall and per-class criteria,BLOCKED_CRITERIA_PENDING
+quantization,90.26 percent top1 agreement and low saturation,approved equivalence and saturation criteria,BLOCKED
+pi_performance,not measured,latency FPS drop CPU RAM temperature budgets,NOT_RUN
+risk,local policy tests pass,live normal warning danger stale invalid HIL,PARTIAL
+rollback,runbook only,verified rollback drill,NOT_RUN

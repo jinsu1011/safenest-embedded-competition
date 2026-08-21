@@ -1,0 +1,7 @@
+2026-08-21
+COMMAND: python -m unittest tests.test_thermal_b5_readiness tests.test_thermal_udp tests.test_ai_pipeline tests.test_risk_engine tests.test_gateway_risk_pipeline -q
+RESULT: exit 0
+----------------------------------------------------------------------
+Ran 49 tests in 0.212s
+
+OK

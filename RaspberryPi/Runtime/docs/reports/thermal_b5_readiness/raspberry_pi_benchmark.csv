@@ -1,0 +1,2 @@
+status,host,model_sha256,frame_index,class_name,confidence,latency_ms,low_saturation_fraction,high_saturation_fraction,rss_bytes,soc_temperature_c
+NOT_RUN_HARDWARE_REQUIRED,,fa9730c29535477a3994c11e664474a0ca0116afaaa172889f47446ab2ac46be,,,,,,,,

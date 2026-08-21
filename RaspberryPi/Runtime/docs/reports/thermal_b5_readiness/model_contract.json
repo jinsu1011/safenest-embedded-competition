@@ -1,0 +1,37 @@
+{
+  "schema": "safenest.thermal_b5.tflite_contract.v1",
+  "verification": "DIRECT_FLATBUFFER_PARSE_WITHOUT_INTERPRETER",
+  "model": "SMALL_CNN_BASELINE_V1_P1_full_int8.tflite",
+  "path": "RaspberryPi/Ondevice_AI/models/rp_x0_b_complete/thermal/SMALL_CNN_BASELINE_V1_P1_full_int8.tflite",
+  "size_bytes": 318280,
+  "sha256": "fa9730c29535477a3994c11e664474a0ca0116afaaa172889f47446ab2ac46be",
+  "flatbuffer_identifier": "TFL3",
+  "subgraph_count": 1,
+  "input": {
+    "tensor_index": 0,
+    "name": "serving_default_input_frame:0",
+    "shape": [1, 62, 80, 1],
+    "dtype": "INT8",
+    "scale": 0.31791284680366516,
+    "zero_point": -125
+  },
+  "output": {
+    "tensor_index": 17,
+    "name": "StatefulPartitionedCall_1:0",
+    "shape": [1, 3],
+    "dtype": "INT8",
+    "scale": 0.00390625,
+    "zero_point": -128
+  },
+  "classes": ["NOT_HUMAN", "HUMAN_NORMAL", "HUMAN_FALL"],
+  "preprocessing": {
+    "profile": "P1_TRAIN_FITTED_GLOBAL_ZSCORE",
+    "celsius_mean": 22.769290618485442,
+    "celsius_std": 2.8684523405441222,
+    "raw_to_celsius": "raw_uint16 / 10.0 - 273.15"
+  },
+  "limitations": [
+    "FlatBuffer parsing proves structure, not successful invoke on Raspberry Pi",
+    "physical unit and orientation require hardware/firmware evidence"
+  ]
+}

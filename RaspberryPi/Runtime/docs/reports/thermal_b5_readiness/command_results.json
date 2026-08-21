@@ -1,0 +1,24 @@
+{
+  "schema": "safenest.thermal_b5.command_results.v1",
+  "date": "2026-08-21",
+  "commands": [
+    {"command": "git pull --ff-only", "exit": 0, "summary": "Already up to date"},
+    {"command": "python -m unittest tests.test_thermal_b5_readiness tests.test_thermal_udp tests.test_ai_pipeline tests.test_risk_engine tests.test_gateway_risk_pipeline -q", "exit": 0, "summary": "Ran 49 tests; OK"},
+    {"command": "python -m compileall -q ai gateway risk tests hil", "exit": 0, "summary": "PASS"},
+    {"command": "python hil/thermal_b5_pi_benchmark.py --help", "exit": 0, "summary": "CLI contract printed"},
+    {"command": "python hil/thermal_b5_scenario_capture.py --help", "exit": 0, "summary": "eight-scenario OpenCV/terminal/raw/JSON capture CLI contract printed"},
+    {"command": "node inspect_tflite_contract.mjs MODEL", "exit": 0, "summary": "SHA/size/input/output contract matched locks"},
+    {"command": "python -m unittest discover -s tests -q", "exit": 1, "summary": "258 tests; 23 failures, 17 errors, 1 skipped"},
+    {"command": "git diff --check", "exit": 0, "summary": "no whitespace errors; CRLF conversion warnings only"},
+    {"command": "git diff -- RaspberryPi/Ondevice_AI/config/models.yaml RaspberryPi/Ondevice_AI/models/model_manifest.json", "exit": 0, "summary": "empty; production selector unchanged"}
+  ],
+  "not_run": [
+    "real TFLite interpreter invoke on current host",
+    "Raspberry Pi benchmark",
+    "live sensor soak",
+    "independent labeled accuracy",
+    "production selector change",
+    "service restart",
+    "commit/push/PR"
+  ]
+}

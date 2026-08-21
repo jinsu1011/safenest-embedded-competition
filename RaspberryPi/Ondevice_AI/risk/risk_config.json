@@ -29,11 +29,16 @@
     "emergency_override": {
       "enabled": true,
       "confirmed_conditions": [
-        "mmwave_apnea",
-        "thermal_fall_confidence_gte_0.8"
+        "mmwave_apnea"
       ],
       "effective_risk_score": 100.0,
       "preserve_weighted_risk_score": true
+    },
+    "thermal_fall_policy": {
+      "semantic": "LYING_DERIVED_POSTURE_PROXY",
+      "requires_nonthermal_corroboration_for_danger": true,
+      "corroboration_min_component_score": 0.5,
+      "renormalize_missing_sensors_without_corroboration": false
     },
     "fallback_budget_ms": 1.0,
     "last_good_ttl_seconds": {

@@ -1,0 +1,12 @@
+2026-08-21
+COMMAND: python -m unittest discover -s tests -q
+RESULT: exit 1
+----------------------------------------------------------------------
+Ran 258 tests in 1.891s
+
+FAILED (failures=23, errors=17, skipped=1)
+
+NOTES:
+- This repository-wide result includes dashboard, backend, Stage 7/9, and unavailable local interpreter failures outside the focused Thermal B5 suite.
+- It is retained as a blocking production gate; it is not reported as green.
+- Focused Thermal B5/transport/AI/risk tests are recorded separately in focused_test.txt.

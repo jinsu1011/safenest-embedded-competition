@@ -77,7 +77,16 @@ class AIPipelineTests(unittest.TestCase):
         self.assertEqual(result["state"], "HUMAN_FALL")
         self.assertEqual(result["score"], 1.0)
         self.assertEqual(thermal.calls[0][0].shape, (62, 80))
+        self.assertEqual(result["timestamp"], 100.0)
         self.assertFalse(result["metadata"]["temperature_calibrated"])
+        self.assertTrue(result["metadata"]["validity"])
+        self.assertEqual(result["metadata"]["freshness"], "FRESH")
+        self.assertEqual(result["metadata"]["sensor_status"], "LIVE")
+        self.assertEqual(result["metadata"]["model_identity"], "test_model")
+        self.assertEqual(
+            result["metadata"]["preprocessing"],
+            "LEGACY_PER_FRAME_MINMAX_V0_1_0",
+        )
         preview = result["metadata"]["heatmap_preview"]
         self.assertEqual((preview["width"], preview["height"]), (20, 16))
         self.assertEqual(len(preview["values"]), 320)

@@ -81,15 +81,18 @@ class RiskEngineTests(unittest.TestCase):
         self.assertEqual(result.system_health, "FAILED")
         self.assertIn("ALL_RISK_COMPONENTS_UNAVAILABLE", result.reasons)
 
-    def test_thermal_fall_confidence_override(self):
+    def test_thermal_fall_proxy_alone_never_emergency_overrides(self):
         state, ai = inputs(ai={
             "thermal": ai_result("thermal", score=1.0, state="HUMAN_FALL", confidence=0.91)
         })
         result = self.engine.evaluate(state, ai)
-        self.assertEqual(result.risk_score, 100.0)
-        self.assertEqual(result.risk_level, "DANGER")
-        self.assertTrue(result.is_emergency)
-        self.assertIn("EMERGENCY_HUMAN_FALL", result.reasons)
+        self.assertAlmostEqual(result.risk_score, 20.25)
+        self.assertEqual(result.risk_level, "NORMAL")
+        self.assertFalse(result.is_emergency)
+        self.assertIn(
+            "THERMAL_FALL_PROXY_REQUIRES_NONTHERMAL_CORROBORATION",
+            result.reasons,
+        )
 
     def test_low_confidence_fall_has_no_emergency_override(self):
         state, ai = inputs(ai={
@@ -98,6 +101,29 @@ class RiskEngineTests(unittest.TestCase):
         result = self.engine.evaluate(state, ai)
         self.assertFalse(result.is_emergency)
         self.assertNotEqual(result.risk_score, 100.0)
+
+    def test_thermal_fall_proxy_can_reach_danger_only_with_nonthermal_risk(self):
+        state, ai = inputs(
+            sensors={
+                "co2": sensor(values={"ppm": 1500.0}),
+                "pir": sensor(values={"motion": False}),
+            },
+            ai={
+                "mmwave": ai_result(
+                    "mmwave", score=0.75, state="RAPID_OR_ABNORMAL"
+                ),
+                "thermal": ai_result(
+                    "thermal", score=1.0, state="HUMAN_FALL", confidence=0.91
+                ),
+            },
+        )
+        result = self.engine.evaluate(state, ai)
+        self.assertEqual(result.risk_level, "DANGER")
+        self.assertFalse(result.is_emergency)
+        self.assertIn(
+            "THERMAL_FALL_PROXY_CORROBORATED_BY_MMWAVE_CO2_PIR",
+            result.reasons,
+        )
 
     def test_unverified_apnea_does_not_emergency_override(self):
         state, ai = inputs(ai={

@@ -282,28 +282,141 @@ ESP 켠 뒤: **Δ가 양수인지**를 먼저 보면 된다.
 
 ### 표 3) `## Sensors / AI / risk component` — 센서 한 줄씩
 
-센서마다 한 행 (`mmwave` / `thermal` / `co2` / `pir`).
+센서마다 한 행 (`mmwave` / `thermal` / `co2` / `pir`).  
+**이 열에 뜨는 문자열은 코드에 정해진 집합**이다. 아래 “경우별”을 보면 된다.
 
 | 열 | 의미 | 좋은 예 | 나쁜 예 |
 |---|---|---|---|
 | `sensor` | 센서 ID | — | — |
-| `status` | 센서 상태 머신 | `LIVE`, (허용) `DEGRADED` | `NO_DATA`, `STALE` |
-| `age_s` | 마지막 유효 데이터 나이(초) | TTL 안쪽(작을수록 신선) | `null`/`-` 또는 큰 값 |
-| `ai_state` | AI/룰 출력 상태 | 센서별 정상 라벨(예: presence 계열) | `INPUT_UNAVAILABLE` |
-| `ai_err` | AI가 막힌 이유 | `-` | `SENSOR_NO_DATA`, `SENSOR_UNAVAILABLE` 등 |
-| `ai_score` | AI/컴포넌트 점수 | 숫자 | `-` |
-| `ai_ms` | 추론 지연(ms) | 작은 숫자 | `-` (입력 없으면 흔함) |
-| `risk_st` | Risk 성분 상태 | `AVAILABLE` 계열 | `UNAVAILABLE` |
+| `status` | 센서 수신/신선도 상태 | `LIVE` (허용 `DEGRADED`는 시스템 쪽) | `NO_DATA`, `STALE`, `DISCONNECTED`, `INVALID` |
+| `age_s` | 마지막 유효 데이터 나이(초) | TTL 안쪽 | `-` / 큰 값 |
+| `ai_state` | AI·룰 **출력 라벨** (센서별 집합 다름) | 아래 센서별 표 | `INPUT_UNAVAILABLE` |
+| `ai_err` | AI가 막힌 이유 코드 | `-` | `SENSOR_NO_DATA`, `WINDOW_CONTAINS_LARGE_GAP` … |
+| `ai_score` | AI/성분 점수 | 숫자 | `-` |
+| `ai_ms` | 추론 지연(ms) | 작은 숫자 | `-` |
+| `risk_st` | Risk **성분 state** (formula_v1이 붙인 라벨) | 센서별 risk 표 | `UNAVAILABLE` |
 | `risk_sc` | Risk 성분 점수 | 숫자 | `-` |
-| `values` | 요약 값 힌트 | `co2_ppm=…`, `presence=…`, `human_detected_raw=…`, `canon=…` | `-` |
+| `values` | 원시 힌트 | `presence=…`, `co2_ppm=…` | `-` |
 
-읽는 팁:
-
-- **왼쪽→오른쪽**: `status`가 살아 있는지 → `ai_state`/`ai_err`로 AI가 입력을 먹는지 → `risk_st`/`risk_sc`로 위험도 성분 반영 → `values`로 원시 힌트.
-- Verdict의 `AI has usable input = YES`여도, **센서별로** `NO_DATA`인 줄이 남을 수 있다 (일부만 LIVE여도 Verdict YES 가능).
-- `ai_err=SENSOR_NO_DATA`이면 모델 문제가 아니라 **센서 미수신**이다.
+읽는 팁: 왼쪽→오른쪽 `status` → `ai_state`/`ai_err` → `risk_st`/`risk_sc` → `values`.
 
 ---
+
+#### 표 3 · `status` (모든 센서 공통)
+
+| 값 | 의미 |
+|---|---|
+| `LIVE` | 최근 TTL 안 유효 데이터 수신 |
+| `NO_DATA` | 아직/전혀 유효 샘플 없음 (ESP 미연결·미수신) |
+| `STALE` | 예전에 왔지만 TTL 초과로 신선하지 않음 |
+| `DISCONNECTED` | 연결 끊김으로 표시 |
+| `INVALID` | 수신은 됐으나 유효성 실패 |
+
+---
+
+#### 표 3 · `ai_state` — **thermal** (모델 `thermal_fall_int8`, 3클래스)
+
+`probabilities` 순서 = `[NOT_HUMAN, HUMAN_NORMAL, HUMAN_FALL]`.
+
+| ai_state | 의미 | 필드에서 흔한 상황 |
+|---|---|---|
+| `NOT_HUMAN` | 배경/비인간으로 분류 (class 0) | 사람 없음·화각 밖·대비 약함·도메인 미보정 시 **자주** |
+| `HUMAN_NORMAL` | 사람 정상 자세 (class 1) | 서 있/앉아 있는 사람 |
+| `HUMAN_FALL` | 전도/누움 위험 (class 2) | 낙상·누운 자세로 모델이 판단 |
+| `INPUT_UNAVAILABLE` | 모델 입력 없음 | `status`가 LIVE가 아니거나 프레임 불가 |
+
+---
+
+#### 표 3 · `ai_state` — **co2** (C-B6, 2클래스)
+
+| ai_state | 의미 |
+|---|---|
+| `VACANT` | 공실 쪽 분류 |
+| `OCCUPIED` | 재실 쪽 분류 |
+| `INPUT_UNAVAILABLE` | CO₂ 입력/윈도우 불가 |
+
+---
+
+#### 표 3 · `ai_state` — **mmwave** (M-N9 / 호흡 계열)
+
+| ai_state | 의미 |
+|---|---|
+| `NORMAL` | 호흡 정상 쪽 분류 (모델 출력이 있을 때) |
+| `RAPID_OR_ABNORMAL` | 빠름/이상 호흡 쪽 |
+| `APNEA` | 무호흡 쪽 |
+| `WINDOW_UNAVAILABLE` | 30s 등 **정규 윈도우 미구성** (갭·샘플 부족). LIVE여도 흔함 → Risk는 룰 폴백 |
+| `INPUT_UNAVAILABLE` | 센서 입력 자체 없음 |
+
+`ai_err` 예: `WINDOW_CONTAINS_LARGE_GAP` = 윈도우 안 큰 간격 때문에 정규 추론 스킵.
+
+---
+
+#### 표 3 · `ai_state` — **pir** (룰, 모델 없음)
+
+| ai_state | 의미 |
+|---|---|
+| `MOTION` | 움직임 감지 |
+| `NO_MOTION` | 움직임 없음 |
+| `INPUT_UNAVAILABLE` | PIR 입력 없음 |
+
+---
+
+#### 표 3 · `risk_st` — Risk 성분이 붙이는 state (formula_v1)
+
+모니터 `risk_st`는 주로 **성분 state**다. (Verdict의 `component_status`의 `AI`/`RULE`/`RULE_FALLBACK`과는 별개 열.)
+
+**thermal**
+
+| risk_st | 의미 |
+|---|---|
+| `NOT_HUMAN` / `HUMAN_NORMAL` / `HUMAN_FALL` | AI `ai_state`를 그대로 성분 state로 사용 |
+| `UNAVAILABLE` | 센서 비LIVE 또는 AI 차단/미지 클래스 |
+
+**mmwave**
+
+| risk_st | 의미 |
+|---|---|
+| `RESPIRATION_NORMAL` | 호흡 정상으로 점수화 (AI 또는 룰 폴백) |
+| `RESPIRATION_ABNORMAL` | 호흡 이상 |
+| `UNAVAILABLE` | 입력 부족 |
+
+필드에서 mmWave AI가 `WINDOW_UNAVAILABLE`이면 Risk는 **`RULE_FALLBACK` 경로**로 `RESPIRATION_*`를 내는 경우가 많다 (허용된 DEGRADED).
+
+**co2**
+
+| risk_st | 의미 |
+|---|---|
+| `CO2_NORMAL` | ppm·기울기 정상 구간 |
+| `CO2_WARNING` | 경고 구간 (`HIGH_CO2_WARNING` 등) |
+| `CO2_DANGER` | 위험 구간 |
+| `CO2_IMMEDIATE_DANGER` | 즉시 위험 |
+| `UNAVAILABLE` | CO₂ 입력 없음 |
+
+**pir**
+
+| risk_st | 의미 |
+|---|---|
+| `MOTION` | 움직임 있음 → 위험 기여 낮음 |
+| `NO_MOTION` | 단시간 무움직임 |
+| `NO_MOTION_RISING` | 무움직임이 위험 쪽으로 점수 상승 중 |
+| `LONG_NO_MOTION` | 장시간 무움직임 (고위험 쪽) |
+| `UNAVAILABLE` | PIR 입력 없음 |
+
+---
+
+#### 표 3 · 지금 필드에서 자주 보는 조합
+
+| 행 | status | ai_state | risk_st | 해석 |
+|---|---|---|---|---|
+| thermal | `LIVE` | `NOT_HUMAN` | `NOT_HUMAN` | 프레임은 오는데 모델이 비인간. 통신 OK, **분류 결과** |
+| thermal | `LIVE` | `HUMAN_NORMAL` | `HUMAN_NORMAL` | 열화상 재실·정상 |
+| thermal | `LIVE` | `HUMAN_FALL` | `HUMAN_FALL` | 열화상 전도/고위험 클래스 |
+| mmwave | `LIVE` | `WINDOW_UNAVAILABLE` | `RESPIRATION_NORMAL` 등 | 텔레메트리는 LIVE, 정규 AI 윈도우만 실패 → 룰 폴백 |
+| co2 | `LIVE` | `OCCUPIED` | `CO2_WARNING` | 재실 AI + ppm 경고 구간 동시 |
+| pir | `LIVE` | `NO_MOTION` | `NO_MOTION_RISING` | 움직임 없음이 위험 점수로 반영 중 |
+| * | `NO_DATA` | `INPUT_UNAVAILABLE` | `UNAVAILABLE` | ESP/해당 채널 미수신 |
+
+`ai_err=SENSOR_NO_DATA` 이면 모델 버그가 아니라 **센서 미수신**이다.
 
 ### 표 4) `## Risk / LCD (display)` — 위험도·LCD 문구
 

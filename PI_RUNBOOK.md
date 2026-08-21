@@ -5,7 +5,7 @@
 기준 커밋: 팀 `main` (`jinsu1011/safenest-embedded-competition`, Risk V1 / M-N9 포함본)
 
 > Pi IP가 바뀌면 아래 `PI_IP`만 바꿔 읽으면 된다.  
-> 현재 필드 IP: **`192.168.1.44`**
+> 현재 필드 IP: **`192.168.0.3`**
 
 ---
 
@@ -115,12 +115,12 @@ ss -lunp | grep 5005
 
 URL:
 
-- LCD / display: `http://192.168.1.44:8000/display`
-- Admin: `http://192.168.1.44:8000/admin`
-- Dashboard: `http://192.168.1.44:8000/dashboard`
-- Health: `http://192.168.1.44:8000/health`
-- Status: `http://192.168.1.44:8000/api/status`
-- LCD state API: `http://192.168.1.44:8000/api/state`
+- LCD / display: `http://192.168.0.3:8000/display`
+- Admin: `http://192.168.0.3:8000/admin`
+- Dashboard: `http://192.168.0.3:8000/dashboard`
+- Health: `http://192.168.0.3:8000/health`
+- Status: `http://192.168.0.3:8000/api/status`
+- LCD state API: `http://192.168.0.3:8000/api/state`
 
 ### 2-B. LCD에 화면 띄우기 (Chromium 키오스크)
 
@@ -198,7 +198,7 @@ python3 hil/pi_field_monitor.py --interval 2
 
 ```bash
 cd /path/to/safenest-integration
-python3 hil/pi_field_monitor.py --base http://192.168.1.44:8000 --once
+python3 hil/pi_field_monitor.py --base http://192.168.0.3:8000 --once
 ```
 
 Verdict 열 의미:
@@ -233,8 +233,8 @@ Verdict 열 의미:
 ESP 펌웨어 / 설정의 Pi 주소를 **현재 Pi IP**로 맞춘다.
 
 ```text
-TCP  → 192.168.1.44:9000
-UDP  → 192.168.1.44:5005
+TCP  → 192.168.0.3:9000
+UDP  → 192.168.0.3:5005
 ```
 
 IP가 또 바뀌면 ESP 쪽도 같이 갱신한다.
@@ -354,5 +354,5 @@ DISPLAY=:0 XDG_RUNTIME_DIR=/run/user/1000 \
   chromium --kiosk --ozone-platform=x11 \
   --user-data-dir=/tmp/safenest-chromium-display \
   http://127.0.0.1:8000/display &
-# ESP → 192.168.1.44:9000 / :5005
+# ESP → 192.168.0.3:9000 / :5005
 ```

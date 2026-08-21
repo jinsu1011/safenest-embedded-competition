@@ -28,7 +28,7 @@ Raspberry Pi에서 아래 한 명령으로 전체 SafeNest 런타임이 기동�
 | SafeNest Thermal UDP v1 수신기 (`:5005`) | 80×62 열화상 프레임 chunk 재조립 |
 | Sensor State Manager | 센서별 최신값·freshness·유효성·device health |
 | On-device AI 파이프라인 | `RaspberryPi/Ondevice_AI`의 TFLite 어댑터 지연 로드 |
-| Rule / Risk Engine | 동결된 V4 risk 계약으로 `NORMAL/WARNING/DANGER` 판정 |
+| Rule / Risk Engine | SAFENEST_RISK_V1(+필요 시 V4 호환)으로 `NORMAL/WARNING/DANGER` 판정 |
 | SQLite | `RaspberryPi/Runtime/data/safenest.db` 스냅샷·이벤트 영속화 |
 | FastAPI + WebSocket (`:8000`) | 통합 상태 API와 실시간 push |
 | 실시간 웹 대시보드 | `http://<pi-주소>:8000/dashboard` |

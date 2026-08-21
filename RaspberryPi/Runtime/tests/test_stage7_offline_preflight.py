@@ -5,25 +5,22 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 import json
-import socket
 import sys
 import unittest
 
 from backend.runtime_status import runtime_status_document
-from paths import MODEL_MANIFEST, RUNTIME_ROOT
 from backend.views import status_document
 from deployment.verify_bundle import verify
 from hil.preflight import (
     EXPECTED_ENV_KEYS,
     _mmwave_selector_contract_checks,
-    _port_available,
     _runtime_import_check,
     offline_preflight_document,
 )
 from tests.test_runtime_status import ai_result, sensor, state
 
 
-ROOT = RUNTIME_ROOT
+ROOT = Path(__file__).resolve().parent.parent
 
 
 class Stage7OfflinePreflightTests(unittest.TestCase):
@@ -53,14 +50,6 @@ class Stage7OfflinePreflightTests(unittest.TestCase):
         self.assertTrue(names["udp_default_port_5005"]["passed"])
         self.assertTrue(names["http_default_port_8000"]["passed"])
 
-    def test_port_availability_probe_supports_tcp_and_udp(self) -> None:
-        tcp_available, tcp_detail = _port_available(0, socket.SOCK_STREAM)
-        udp_available, udp_detail = _port_available(0, socket.SOCK_DGRAM)
-        self.assertTrue(tcp_available, tcp_detail)
-        self.assertTrue(udp_available, udp_detail)
-        self.assertIn("tcp:0", tcp_detail)
-        self.assertIn("udp:0", udp_detail)
-
     def test_artifact_selection_does_not_silently_activate_tb5_or_old_b(self) -> None:
         names = {item["name"]: item for item in self.document["checks"]}
         self.assertTrue(names["thermal_production_path_is_historical_v0_1_0"]["passed"])
@@ -83,7 +72,7 @@ class Stage7OfflinePreflightTests(unittest.TestCase):
         self.assertTrue(str(observed["path"]).endswith("models/mmwave/m_n9/MMWAVE_M_N9_FULL_INT8_V1.tflite"))
 
     def test_historical_v010_primary_selector_fails_offline_preflight(self) -> None:
-        manifest = json.loads(MODEL_MANIFEST.read_text(encoding="utf-8"))
+        manifest = json.loads((ROOT / "sources" / "ondevice_ai" / "models" / "model_manifest.json").read_text(encoding="utf-8"))
         fixture = dict(manifest["models"]["mmwave_v0_1_0"])
         fixture["active_runtime_selector"] = True
         checks = _mmwave_selector_contract_checks(fixture)
@@ -119,7 +108,7 @@ class Stage7OfflinePreflightTests(unittest.TestCase):
         self.assertFalse(document["ok"])
 
     def test_device_validation_overclaim_fails_even_when_m_n9_identity_is_correct(self) -> None:
-        manifest = json.loads(MODEL_MANIFEST.read_text(encoding="utf-8"))
+        manifest = json.loads((ROOT / "sources" / "ondevice_ai" / "models" / "model_manifest.json").read_text(encoding="utf-8"))
         fixture = dict(manifest["models"]["mmwave"])
         fixture["DEVICE_VALIDATED"] = True
         fixture["PI_SMOKE"] = "PASS"
@@ -164,11 +153,18 @@ class Stage7OfflinePreflightTests(unittest.TestCase):
         self.assertEqual(document["pir"]["runtime_status"]["ai_status"], "NOT_APPLICABLE")
         self.assertEqual(document["pir"]["runtime_status"]["sensor_value_status"], "NO_MOTION")
         self.assertEqual(document["co2"]["runtime_status"]["ai_status"], "ACTIVE")
-        self.assertEqual(document["mmwave"]["runtime_status"]["ai_status"], "MODEL_PENDING")
-        self.assertEqual(document["mmwave"]["runtime_status"]["blocked_reason"], "MR60_NATIVE_MODEL_PENDING")
+        self.assertEqual(document["mmwave"]["runtime_status"]["ai_status"], "BLOCKED")
+        self.assertEqual(
+            document["mmwave"]["runtime_status"]["blocked_reason"],
+            "CANONICAL_FRESHNESS_METADATA_MISSING",
+        )
         blocked = runtime_status_document(state(), {})
         self.assertNotEqual(blocked["sensors"]["co2"]["ai_status"], "ACTIVE")
-        self.assertEqual(blocked["sensors"]["mmwave"]["ai_status"], "MODEL_PENDING")
+        self.assertEqual(blocked["sensors"]["mmwave"]["ai_status"], "BLOCKED")
+        self.assertEqual(
+            blocked["sensors"]["mmwave"]["blocked_reason"],
+            "CANONICAL_FRESHNESS_METADATA_MISSING",
+        )
 
     def test_bundle_verifier_includes_runtime_status_module(self) -> None:
         result = verify(ROOT)

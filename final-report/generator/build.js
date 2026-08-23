@@ -289,7 +289,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     {text:'라이브러리 : ',options:{bold:true,color:NAVY}},
     {text:'TensorFlow Lite, Sensirion SCD4x, Seeed mmWave, Express 5, gpiozero, NumPy.  위 자산은 학습·추론·통신에 활용하였으며, 센서 통합 펌웨어와 통신 프로토콜, 상태 관리, 위험도 엔진은 팀 자체 구현이다.',options:{color:INK}}
   ],{x:0.78,y:y+4.06,w:11.77,h:0.92,fontFace:F,fontSize:11,lineSpacing:16,valign:'top'});
-  note(s,'저장소는 파일 종류 대신 기기와 책임 영역을 기준으로 분할하였다. 각 디렉터리의 소유자는 .github/CODEOWNERS 에 정의되어 있다.');
+  note(s,'본 보고서의 저장소 경로는 패키징 시점 스냅샷(commit 3f22fb1) 기준이다. 이후 저장소를 기기 단위로 재편하여 현재 main 에서는 ESP32/ 와 RaspberryPi/ 아래에 있으며, 스냅샷 구조는 archive/legacy_main_repo/ 에 그대로 보존되어 있다.');
 }
 
 /* ============ P7 ============ */

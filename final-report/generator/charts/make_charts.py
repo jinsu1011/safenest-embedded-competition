@@ -9,7 +9,7 @@ from matplotlib import font_manager
 # 출력은 저장소 상대 경로. 입력(원본 증거 패키지)은 저장소에 포함되지 않으므로
 # SAFENEST_EVIDENCE 환경변수로 위치를 알려주어야 한다.
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT  = os.path.join(ROOT, "previews")
+OUT  = os.path.join(ROOT, "..", "previews")
 IN   = os.environ.get("SAFENEST_EVIDENCE")
 if not IN or not os.path.isdir(IN):
     raise SystemExit(
@@ -54,16 +54,17 @@ xmax, ymax = max(vals, key=lambda p: p[1])
 xend, yend = vals[-1]
 ax.annotate("최고 %d ppm" % ymax, xy=(xmax, ymax), xytext=(xmax + 45, ymax - 60),
             fontsize=11, color=NAVY, arrowprops=dict(arrowstyle="->", color=NAVY, lw=1.2))
-ax.annotate("종료 %d ppm" % yend, xy=(xend, yend), xytext=(xend - 115, yend + 150),
+ax.annotate("종료 %d ppm" % yend, xy=(xend, yend), xytext=(xend - 175, yend + 70),
             fontsize=11, color=NAVY, arrowprops=dict(arrowstyle="->", color=NAVY, lw=1.2))
 ax.axhline(1500, color=AMBER, ls="--", lw=1.4, zorder=2)
-ax.text(4, 1520, "1,500 ppm (실내공기질 관리법 시행규칙 별표2 기계환기 기준)",
-        fontsize=9.5, color=AMBER, va="bottom")
+ax.text(232, 1466, "1,500 ppm (실내공기질 관리법 기계환기 기준)",
+        fontsize=9.5, color=AMBER, va="top")
 ax.set_title("SCD40 실측: 호기 주입 상승·복귀 6분 세션 (2026-08-12, 표본 360개, 약 1초 주기)",
-             fontsize=12.5, color=NAVY, pad=11)
+             fontsize=12.5, color=NAVY, pad=30)
 ax.set_xlabel("세션 경과 시간 (초)", fontsize=11, color=NAVY)
 ax.set_ylabel("CO₂ 농도 (ppm)", fontsize=11, color=NAVY)
-ax.legend(fontsize=10, loc="upper left", frameon=False)
+ax.legend(fontsize=10, loc="upper center", bbox_to_anchor=(0.5, 1.13),
+          ncol=2, frameon=False, columnspacing=2.0)
 ax.grid(alpha=0.18, ls=":")
 for s in ("top", "right"): ax.spines[s].set_visible(False)
 ax.tick_params(labelsize=10, colors=GREY)
@@ -89,7 +90,8 @@ c1 = [BLUE, BLUE, RED, AMBER]
 b = a1.bar([d[0] for d in dist], dv, color=c1, width=0.6)
 for r, v in zip(b, dv):
     a1.text(r.get_x() + r.get_width()/2, v + 0.02, "%.3f" % v, ha="center", fontsize=11, color=NAVY)
-a1.text(3, 0.42, "lock loss\n유효 창 0", ha="center", fontsize=10, color=RED)
+a1.text(3, 0.34, "lock loss\n유효 창 0", ha="center", fontsize=10,
+        color="white", fontweight="bold")
 a1.set_ylim(0, 1.18); a1.set_ylabel("재실 검출률", fontsize=11, color=NAVY)
 a1.set_title("거리별 재실 검출률", fontsize=12, color=NAVY)
 
@@ -110,17 +112,4 @@ fig.savefig(OUT + "/chart_mmwave.png", bbox_inches="tight", facecolor="white")
 plt.close(fig)
 print("chart_mmwave.png", dv, pv)
 
-# ---------- 재해자 구성 도넛 ----------
-fig, ax = plt.subplots(figsize=(3.4, 3.0), dpi=230)
-w, d = 136, 202          # 사망 / 그 외 재해자 (고용노동부 보도자료 2024)
-wedges, _ = ax.pie([w, d], startangle=90, counterclock=False,
-                   colors=[RED, "#C9D2DC"], wedgeprops=dict(width=0.40, edgecolor="white", linewidth=2))
-ax.text(0, 0.16, "재해자 338명 중", ha="center", va="center", fontsize=10.5, color=GREY)
-ax.text(0, -0.16, "136명 사망", ha="center", va="center", fontsize=15.5, color=RED, fontweight="bold")
-ax.legend(wedges, ["사망 136명", "그 외 재해자 202명"], loc="lower center",
-          bbox_to_anchor=(0.5, -0.16), ncol=1, frameon=False, fontsize=10)
-ax.set_aspect("equal")
-fig.tight_layout()
-fig.savefig(OUT + "/chart_victims.png", bbox_inches="tight", facecolor="white")
-plt.close(fig)
-print("chart_victims.png")
+# 재해자 구성 도넛은 make_victims_chart.py 에서 생성한다 (슬라이드 배치 비율 유지).

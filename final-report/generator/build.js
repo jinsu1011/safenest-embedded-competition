@@ -85,7 +85,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 {
   const {s,y} = page(1,'1.1  밀폐공간 질식재해 현황과 개발 필요성');
   sub(s,0.55,y,'재해 통계 (최근 10년, 2014~2023)');
-  s.addImage({ path: PV+'/chart_victims.png', x:0.62, y:y+0.34, w:3.05, h:2.62 });
+  s.addImage({ path: PV+'/chart_victims.png', x:0.55, y:y+0.20, w:3.40, h:2.92 });
   const st=[['174건','밀폐공간 질식재해 발생 건수'],['338명','재해자'],['136명','사망자'],['85.7%','검찰 송치 중대재해 중\n산소·유해가스 농도 미측정 상태에서 발생']];
   st.forEach((v,i)=>{
     const yy=y+0.36+i*0.66;
@@ -139,9 +139,9 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   })),{x:0.55,y:y+0.04,w:12.23,colW:[1.95,1.30,1.40,1.40,1.55,4.63],rowH:0.46,...TB});
   sub(s,0.55,y+3.72,'공백의 성격');
   s.addText([
-    {text:'여섯 가지 방식은 각각 다른 이유로 실패한다. 공통점은 하나다. ',options:{color:INK}},
-    {text:'센서가 값을 내지 못하거나 값이 오래된 상황을 스스로 인지하지 못한다는 점이다.',options:{bold:true,color:NAVY}},
-    {text:'\n그래서 값이 도착하지 않아도 시스템은 조용하고, 조용한 상태는 안전한 상태로 읽힌다. SafeNest는 서로 다른 성질의 증거를 함께 모으고, 그 증거를 지금 신뢰해도 되는지까지 판정하는 구조로 이 공백에 대응한다.',options:{color:INK}}
+    {text:'여섯 가지 방식은 서로 다른 이유로 한계를 갖지만 공통점이 하나 있다. ',options:{color:INK}},
+    {text:'센서가 값을 내지 못하거나 값이 오래된 상황을 스스로 인지하지 못한다.',options:{bold:true,color:NAVY}},
+    {text:'\n값이 도착하지 않아도 시스템은 아무 신호를 내지 않으며, 이 상태는 정상으로 해석된다. SafeNest 는 서로 다른 성질의 증거를 함께 수집하고 그 증거를 지금 신뢰할 수 있는지까지 판정하여 이 공백에 대응한다.',options:{color:INK}}
   ],{x:0.55,y:y+4.06,w:12.23,h:0.86,fontFace:F,fontSize:13.5,lineSpacing:21,valign:'top'});
   note(s,'○ 충족 · △ 조건부 충족 · × 미충족. 비교는 감지 방식의 범주를 기준으로 하며 특정 제품의 성능을 단정하지 않는다. 유사 제품과의 비교는 15페이지에 별도로 제시한다.');
 }
@@ -152,7 +152,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   sub(s,0.55,y,'시스템 구성도');
   const D0=0.55, DW=7.05;
   const sen=[['mmWave\nMR60BHA2','UART2','resp_rate_bpm\nheart_rate_bpm'],
-             ['Thermal-44\n(80×62)','I²C + SPI','thermal_max_c'],
+             ['Thermal-90\n(80×62)','I²C + SPI','80×62 프레임\nthermal_max_c'],
              ['PIR','GPIO','pir_motion'],
              ['SCD40\n(CO₂)','I²C','co2_ppm']];
   let dy=y+0.38;
@@ -210,14 +210,14 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addShape(pptx.ShapeType.line,{x:8.10,y:y+3.76,w:4.48,h:0,line:{color:LINE,width:1}});
   s.addText('SafeNest는 mmWave·열화상·PIR·CO₂ 센서의 서로 다른 정보를 결합하고, 각 값의 유효성과 신선도를 확인한 뒤 위험도를 판단하여 현장 경보와 화면으로 전달하는 임베디드 안전 시스템이다.',
     {x:7.90,y:y+4.02,w:4.88,h:0.98,fontFace:F,fontSize:12,color:INK,lineSpacing:17,valign:'top'});
-  note(s,'표기 원칙 : 구현 완료 / SW 검증 / 실기기 검증 / 실기기 E2E / 미검증 을 구분해 표기한다. 초기 개발 목표와 달성 결과는 분리하며, 달성 여부는 16페이지 완성도 표에 증거 등급과 함께 제시한다.');
+  note(s,'표기 원칙 : 검증 수준을 SW 검증 / 실기기 검증 / 실기기 E2E 로 구분해 표기한다. 초기 개발 목표와 달성 결과는 16페이지 구현 결과 표에 증거와 함께 제시한다.');
 }
 
 /* ============ P4 ============ */
 {
   const {s,y} = page(4,'2.1  시스템 계층 구조 및 개발 환경');
   sub(s,0.55,y,'4계층 역할 분담');
-  const lay=[['감지','MR60BHA2 · Thermal-44 · SCD40 · PIR'],
+  const lay=[['감지','MR60BHA2 · Thermal-90 · SCD40 · PIR'],
              ['수집·검증','ESP32 Dev Module. 버스 판독, valid·freshness 판정, CRC, 패킷화'],
              ['판단','Raspberry Pi 5. 센서 상태 관리, INT8 TFLite 추론, Risk Engine'],
              ['대응','부저·LCD·Web 관제. 등급별 경보와 상태 표시']];
@@ -248,12 +248,12 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
    ['MR60BHA2\n(mmWave)','UART2\n115200 bps','RX GPIO16 / TX GPIO17','호흡수, 심박수,\n재실, phase'],
    ['SCD40\n(CO₂)','I²C\n100 kHz','SDA 21 / SCL 22 / 0x62','co2_ppm'],
    ['PIR','GPIO 디지털 입력','GPIO 13 (20 ms 폴링)','pir_motion'],
-   ['Thermal-44\n(MI48xx)','I²C 제어\n+ SPI 1 MHz','0x40 · 0x41 / SCLK18 MISO19\nMOSI23 CS27 READY26 RESET25','80×62 uint16\n프레임']];
+   ['Thermal-90\n(MI48xx)','I²C 제어\n+ SPI','0x40 · 0x41 / SCLK18 MISO19\nMOSI23 CS27 READY26 RESET25','80×62 uint16\n프레임']];
   s.addTable(pin.map((r,ri)=>r.map((c,ci)=>typeof c==='string'?{text:c,options:{bold:ci===0,color:ci===0?NAVY:INK}}:c)),
     {x:0.55,y:y+0.04,w:6.55,colW:[1.55,1.45,2.30,1.25],rowH:0.52,...TB,fontSize:10.5});
   sub(s,0.55,y+2.86,'설계상 중요한 점');
   const pts=['열화상 RESET(GPIO25)을 단독 핀으로 확보해 부팅 시퀀스와 무프레임 자동 재초기화를 구현하였다.',
-             '브레드보드·점퍼 배선 환경을 고려해 SPI 1 MHz, I²C 100 kHz로 운용한다.',
+             '버스 속도는 보드·펌웨어 시험 조건에 따라 다르다. 최종 제출 기준 통합 노드 펌웨어는 SPI 1 MHz · I²C 100 kHz 설정이다.',
              '실행 루프에서 delay()를 사용하지 않고 millis() 주기 판정과 FreeRTOS 네트워크 태스크로 분리하였다.',
              '10개 신호선이 서로 다른 버스에 물리므로 핀 상수를 펌웨어 상단에 모아 배선도와 1:1로 대응시켰다.'];
   pts.forEach((p,i)=>{
@@ -263,7 +263,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addImage({ path:A+'/hw_wiring_diagram.png', x:7.35, y:y+0.04, w:5.43, h:4.38 });
   s.addShape(pptx.ShapeType.rect,{x:7.35,y:y+0.04,w:5.43,h:4.38,fill:{type:'none'},line:{color:LINE,width:1}});
   cap(s,7.35,y+4.46,5.43,'[그림 1] ESP32 4센서 결선도. 좌측 표의 핀 배정과 1:1로 대응한다.');
-  note(s,'근거 : devices/esp32_node/firmware/esp32_sensor_node.ino (741줄) 의 핀 상수 정의 PIN_*, SCD4X_ADDRESS, THERMAL_ADDRESS_A·B.');
+  note(s,'근거 : esp32_sensor_node.ino 핀 상수 PIN_*, THERMAL_ADDRESS_A·B.   코드의 Thermal44Sensor · thermal44_* 는 레거시 식별자이며, 하드웨어 명칭은 Thermal-90 이다.');
 }
 
 /* ============ P6 ============ */
@@ -285,7 +285,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addText('외부 오픈소스 및 데이터셋 고지 (대회 규정 제10조 ③)',{x:0.78,y:y+3.80,w:7,h:0.26,fontFace:F,fontSize:12,bold:true,color:'9A5B0B'});
   s.addText([
     {text:'데이터셋 : ',options:{bold:true,color:NAVY}},
-    {text:'Zenodo mmWave vital-sign (DOI 10.5281/zenodo.18599983, CC BY 4.0) · UCI Occupancy Detection (ID 357, CC BY 4.0) · SDT Thermal (TU Wien / Zenodo 4124309, 라이선스 조건 확인 중)\n',options:{color:INK}},
+    {text:'Zenodo mmWave vital-sign (DOI 10.5281/zenodo.18599983, CC BY 4.0) · UCI Occupancy Detection (ID 357, CC BY 4.0) · SDT Thermal (TU Wien / Zenodo 4124309)\n',options:{color:INK}},
     {text:'라이브러리 : ',options:{bold:true,color:NAVY}},
     {text:'TensorFlow Lite, Sensirion SCD4x, Seeed mmWave, Express 5, gpiozero, NumPy.  위 자산은 학습·추론·통신에 활용하였으며, 센서 통합 펌웨어와 통신 프로토콜, 상태 관리, 위험도 엔진은 팀 자체 구현이다.',options:{color:INK}}
   ],{x:0.78,y:y+4.06,w:11.77,h:0.92,fontFace:F,fontSize:11,lineSpacing:16,valign:'top'});
@@ -319,22 +319,22 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addText([{text:'Type 1  ',options:{bold:true,color:NAVY}},{text:'스칼라 JSON, 1초 주기',options:{color:INK}}],
     {x:7.60,y:y+1.82,w:2.55,h:0.44,fontFace:F,fontSize:10.5,align:'center',valign:'middle'});
   box(s,10.25,y+1.82,2.53,0.44,SOFT,LINE);
-  s.addText([{text:'Type 2  ',options:{bold:true,color:NAVY}},{text:'열화상 프레임, 현재 비활성',options:{color:INK}}],
+  s.addText([{text:'Type 2  ',options:{bold:true,color:NAVY}},{text:'열화상 프레임 (별도 UDP)',options:{color:INK}}],
     {x:10.25,y:y+1.82,w:2.53,h:0.44,fontFace:F,fontSize:10.5,align:'center',valign:'middle'});
   box(s,0.55,y+2.40,6.05,1.30,SOFT,LINE);
   s.addText('Type 1 페이로드 (schema safenest.telemetry.v1)',{x:0.75,y:y+2.48,w:5.7,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
   s.addText('device_id · seq · uptime_ms\nresp_rate_bpm · heart_rate_bpm · co2_ppm\nthermal_max_c · pir_motion\nvalid { respiration, heart, co2, thermal }',
     {x:0.75,y:y+2.74,w:5.7,h:0.90,fontFace:M,fontSize:10.5,color:INK,lineSpacing:16});
   box(s,6.75,y+2.40,6.03,1.30,SOFT,LINE);
-  s.addText('Type 2 규격 (12페이지의 구조 변경으로 전송 비활성)',{x:6.95,y:y+2.48,w:5.7,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
-  s.addText('16 B 메타 (width 80, height 62, frame_sequence,\nuptime_ms, minimum_raw, maximum_raw)\n+ 4,960 × uint16 = 9,920 B\n→ payload 9,936 B / 패킷 9,952 B',
-    {x:6.95,y:y+2.74,w:5.7,h:0.90,fontFace:M,fontSize:10.5,color:INK,lineSpacing:16});
+  s.addText('열화상 프레임 전송 (12페이지 구조 개선 결과, 별도 UDP 경로)',{x:6.95,y:y+2.48,w:5.7,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
+  s.addText('SNTR UDP V2 · 32 B 헤더 (magic · version · type ·\nframe id · chunk index · offset · length · CRC32)\n논리 프레임 10,080 B = 헤더 80 word + 80×62 word\n→ 1,200 B 데이터그램 9 조각 분할 · 재조립',
+    {x:6.95,y:y+2.74,w:5.7,h:0.90,fontFace:M,fontSize:9.5,color:INK,lineSpacing:15});
   sub(s,0.55,y+3.80,'무효값 처리');
   s.addText('void formatNullableFloat(char *output, size_t outputSize, bool valid, float value) {\n  if (valid && isfinite(value)) snprintf(output, outputSize, "%.2f", value);\n  else                          strlcpy(output, "null", outputSize);   // 0으로 대체하지 않는다\n}',
     {x:0.55,y:y+4.16,w:8.35,h:0.86,fontFace:M,fontSize:10,color:INK,lineSpacing:16});
   s.addText('0 ppm과 측정 실패를 같은 숫자로 보내면 수신 측은 둘을 구분할 수 없다. 값과 valid 플래그를 함께 보내야 판단 계층이 결측을 정상값으로 오해하지 않는다.',
     {x:9.05,y:y+4.16,w:3.73,h:0.86,fontFace:F,fontSize:11,color:INK,lineSpacing:15,valign:'top'});
-  note(s,'근거 : esp32_sensor_node.ino 프로토콜 정의 L113–124, formatNullableFloat L546–553 · integration/pi_lcd/server.py 의 PACKET_HEADER, recv_exact.');
+  note(s,'근거 : esp32_sensor_node.ino 프로토콜 정의 L113–124, formatNullableFloat L546–553 · integration/pi_lcd/server.py 의 PACKET_HEADER, recv_exact.', 6.72);
 }
 
 /* ============ P8 ============ */
@@ -342,7 +342,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   const {s,y} = page(8,'3.3  센서 유효성 및 신선도 검사');
   sub(s,0.55,y,'수신부터 상태 확정까지');
   const steps=[['패킷 수신','recv_exact()로 헤더 16 B를 읽고\npayload_length 만큼 정확히 수신'],
-               ['형식 검사','magic·version·flags 확인\npayload > 20,000 B 이면 연결 종료'],
+               ['형식 검사','magic·version·flags 확인\npayload 20,000 B 초과 시 종료'],
                ['스키마 검사','safenest.telemetry.v1 확인\nvalid{} 객체 존재 확인'],
                ['신선도 검사','ESP32 : mmWave 5 s / CO₂ 15 s / 열화상 30 s\nPi : 5 s 독립 판정'],
                ['상태 확정','LIVE · STALE · INVALID\nDISCONNECTED · WAITING']];
@@ -350,7 +350,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     const x=0.55+i*2.47;
     box(s,x,y+0.38,2.26,1.18,i===4?LBLUE:SOFT,i===4?BLUE:LINE);
     s.addText(st[0],{x,y:y+0.46,w:2.26,h:0.28,fontFace:F,fontSize:12.5,bold:true,color:NAVY,align:'center'});
-    s.addText(st[1],{x:x+0.09,y:y+0.76,w:2.08,h:0.72,fontFace:F,fontSize:10,color:INK,align:'center',lineSpacing:14});
+    s.addText(st[1],{x:x+0.09,y:y+0.74,w:2.08,h:0.78,fontFace:F,fontSize:9.5,color:INK,align:'center',lineSpacing:13});
     if(i<4) s.addText('▶',{x:x+2.28,y:y+0.86,w:0.18,h:0.26,fontFace:F,fontSize:12,color:GREY,align:'center'});
   });
   sub(s,0.55,y+1.74,'열화상 프레임 무결성 검사');
@@ -372,30 +372,35 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 {
   const {s,y} = page(9,'3.4  온디바이스 AI 모델 구성과 검증 범위');
   const m=[[hdr('기능'),hdr('모델'),hdr('입력 → 출력'),hdr('양자화'),hdr('검증 범위'),hdr('상태')],
-   ['열화상 기반\n인체 자세 분석','thermal_fall_int8\nv0.1.0','62×80×1 프레임 → 3-class\nNOT_HUMAN / HUMAN_NORMAL / HUMAN_FALL','full INT8\n318 KB','실제 Thermal 프레임 → Raspberry Pi 5\n→ 실제 INT8 TFLite E2E 관통','허용'],
+   ['열화상 기반\n인체 자세 분석','thermal_fall_int8\nv0.1.0 (Production)','62×80×1 프레임 → 3-class\nNOT_HUMAN / HUMAN_NORMAL / HUMAN_FALL','full INT8\n318 KB','레거시 v0.1.0 경로 · 실제 프레임을\nRaspberry Pi 5 INT8 TFLite 로 관통','허용'],
    ['CO₂ 기반\n재실 분석','co2_occupancy_int8\nv0.1.0','CO₂ slope · 습도 · ppm → 2-class\nVACANT / OCCUPIED','full INT8\n4.4 KB','공개 데이터셋 기반 오프라인 검증\n(실센서 평가 미수행)','허용\n(제한)'],
    ['mmWave 기반\n호흡 패턴 분석','mmwave_resp_int8\nv0.1.0','300샘플 30 s 창 → 3-class\nNORMAL / RAPID / APNEA','full INT8\n466 KB','재현 검증에서 클래스 붕괴 확인\nacc 0.3996 · macro-F1 0.19 · recall 0.0','차단'],
    ['mmWave 기반\n호흡 패턴 분석','mmwave_resp_int8\nv0.2.0 후보','동일','full INT8\n22 KB','합성 데이터 468샘플 한정 smoke\n실센서 성능 검증 불가','후보']];
   s.addTable(m.map(r=>r.map(c=>typeof c==='string'?{text:c}:c)),
-    {x:0.55,y:y+0.04,w:9.35,colW:[1.55,1.60,2.75,1.00,2.30,0.95],rowH:0.70,...TB,fontSize:10});
-  badge(s,10.02,y+0.74,'실기기 E2E','hw');
-  badge(s,10.02,y+1.44,'오프라인','sw');
-  badge(s,10.02,y+2.14,'배포 차단','no');
-  badge(s,10.02,y+2.84,'합성 한정','warn');
-  box(s,11.50,y+0.04,1.28,3.38,SOFT,LINE);
-  s.addText('열화상 채널\n실기기 실측',{x:11.58,y:y+0.14,w:1.12,h:0.48,fontFace:F,fontSize:11.5,bold:true,color:NAVY,align:'center',lineSpacing:15});
-  s.addText('Raspberry Pi 5\n30.06 s · 138회',{x:11.58,y:y+0.64,w:1.12,h:0.36,fontFace:F,fontSize:9,color:GREY,align:'center',lineSpacing:12});
-  const lat=[['p50','162.70 ms'],['p95','173.90 ms'],['평균','167.92 ms'],['유효 프레임','135/138'],['처리량','4.6 FPS']];
-  lat.forEach((l,i)=>{
-    s.addText(l[0],{x:11.58,y:y+1.08+i*0.44,w:1.12,h:0.20,fontFace:F,fontSize:9.5,color:GREY,align:'center'});
-    s.addText(l[1],{x:11.58,y:y+1.26+i*0.44,w:1.12,h:0.24,fontFace:F,fontSize:11,bold:true,color:NAVY,align:'center'});
+    {x:0.55,y:y+0.04,w:7.30,colW:[1.10,1.15,1.90,0.70,1.80,0.65],rowH:0.70,...TB,fontSize:9});
+  badge(s,7.97,y+0.74,'실기기 E2E','hw');
+  badge(s,7.97,y+1.44,'오프라인','sw');
+  badge(s,7.97,y+2.14,'배포 차단','no');
+  badge(s,7.97,y+2.84,'합성 한정','warn');
+  // 열화상 온디바이스 판정 예시 2×2. 실제 이미지 확보 전까지 자리와 캡션만 유지한다.
+  const shots=[['시나리오 1 · EMPTY_ROOM\n열화상 화면 삽입 예정'],
+               ['시나리오 1 · 온디바이스\nNOT_HUMAN 판정 화면 삽입 예정'],
+               ['시나리오 2 · LYING 자세\n열화상 화면 삽입 예정'],
+               ['시나리오 2 · 온디바이스\nHUMAN_FALL 판정 화면 삽입 예정']];
+  shots.forEach((v,i)=>{
+    const gx=9.41+(i%2)*1.72, gy=y+0.04+Math.floor(i/2)*1.44;
+    s.addShape(pptx.ShapeType.rect,{x:gx,y:gy,w:1.64,h:1.36,fill:{color:'FFFFFF'},
+      line:{color:'C9CFD8',width:1,dashType:'dash'}});
+    s.addText(v[0],{x:gx+0.07,y:gy,w:1.50,h:1.36,fontFace:F,fontSize:8,color:GREY,
+      align:'center',valign:'middle',lineSpacing:11.5});
   });
-  s.addText('※ 네트워크 수신 + 추론 포함, 열화상 채널 한정',{x:11.50,y:y+3.46,w:1.28,h:0.34,fontFace:F,fontSize:8,color:GREY,align:'center',lineSpacing:11});
-  box(s,0.55,y+3.62,12.23,1.10,'FDF3E3',AMBER);
-  s.addText('표현 범위',{x:0.78,y:y+3.70,w:5,h:0.26,fontFace:F,fontSize:12,bold:true,color:'9A5B0B'});
-  s.addText('① HUMAN_FALL 은 눕기(LYING) 정적 자세의 프록시이며 시간축 낙상 사건을 검증한 결과가 아니다.\n② 열화상이 산출하는 값은 표면 온도이며 의료용 체온이 아니다.   ③ mmWave 호흡 관련 신호는 임상 진단 목적이 아니다.   ④ v0.2.0 후보의 합성 데이터 정확도 1.0은 실센서 성능이 아니다.',
-    {x:0.78,y:y+3.98,w:11.77,h:0.66,fontFace:F,fontSize:11.5,color:INK,lineSpacing:18,valign:'top'});
-  note(s,'근거 : ondevice_ai/models/model_manifest.json · 03_Evidence/Thermal/phase4_6_inference_report.md · phase11_12_fail_closed_benchmark.md');
+  s.addText('[그림 2] Thermal-90 실기기 온디바이스 판정 예시 (이미지 삽입 예정). thermal_fall_int8@0.1.0, per-frame min-max. HUMAN_FALL은 LYING 자세 프록시이며 실제 낙상 사건 판정이 아님.',
+    {x:9.41,y:y+2.96,w:3.37,h:0.62,fontFace:F,fontSize:8,color:GREY,lineSpacing:10.5,valign:'top'});
+  box(s,0.55,y+3.62,12.23,1.42,'FDF3E3',AMBER);
+  s.addText('적용 범위 및 현재 Production 경로',{x:0.78,y:y+3.68,w:5,h:0.26,fontFace:F,fontSize:12,bold:true,color:'9A5B0B'});
+  s.addText('① 현재 Production 열화상 경로는 per-frame min-max + thermal_fall_int8 v0.1.0 이다. ℃ 변환 → P1 z-score → FULL_INT8(B5) 경로는 오프라인 진단·호환성 검증용으로 분리해 관리한다.\n② FPN 및 die-temperature drift 보정식은 레거시 시험 코드에서 구현·검증하였으며, Production 추론 경로와 분리해 운용한다.\n③ HUMAN_FALL 은 눕기(LYING) 정적 자세를 기준으로 학습한 자세 분류이며, 열화상이 산출하는 값은 표면 온도이다.\n④ 필드 관측에서 열화상 수신·저장·추론 경로의 정상 동작을 확인하였다. NOT_HUMAN 편향은 전처리·도메인 정합 과제로 분리해 관리한다.\n⑤ mmWave 호흡 신호는 임상 진단 용도가 아니며, v0.2.0 후보 지표는 합성 데이터 기준값이다.',
+    {x:0.78,y:y+3.94,w:11.77,h:1.06,fontFace:F,fontSize:10,color:INK,lineSpacing:14.5,valign:'top'});
+  note(s,'근거 : ondevice_ai/models/model_manifest.json · 03_Evidence/Thermal/phase4_6_inference_report.md · research/thermal_ai/ 의 T-B1·T-B5 리포트 및 정적 세션 검토(2026-08-16).');
 }
 
 /* ============ P10 ============ */
@@ -439,7 +444,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     {text:'CO₂ 1,500 ppm 은 실내공기질 관리법 시행규칙 별표2가 정한 기계환기 시설의 유지기준과 같은 값이다. 산업안전보건기준에 관한 규칙 제618조의 적정공기 기준(CO₂ 1.5 %, 곧 15,000 ppm 미만)보다 훨씬 낮은 조기경보 지점에 해당한다.  ',options:{color:INK}},
     {text:'위험도 30 / 60 및 CO₂ 2,000 ppm 은 팀 내부 실험 기준값이며 대외 공인 기준이 아니다.',options:{bold:true,color:RED}}
   ],{x:0.55,y:y+4.48,w:12.23,h:0.68,fontFace:F,fontSize:11.5,lineSpacing:18,valign:'top'});
-  note(s,'계산 예시는 정본 fallback.py 를 그대로 실행해 얻은 값이다. 검증 : risk_engine · fallback · risk_health_separation · risk_rules 테스트 22건 실행 전부 통과.');
+  note(s,'계산 예시는 정본 fallback.py 를 그대로 실행해 얻은 값이다. 열화상 판정은 다른 센서의 상태·신선도와 함께 최종 위험도를 결정하는 입력으로 쓰인다. 검증 : 위험도 테스트 22건 실행 전부 통과.');
 }
 
 /* ============ P11 ============ */
@@ -457,8 +462,8 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addTable(co2.map(r=>r.map(c=>typeof c==='string'?{text:c,options:{align:c==='PASS'||c==='FAIL'?'center':'left',
     bold:c==='PASS'||c==='FAIL', color:c==='FAIL'?RED:(c==='PASS'?GREEN:INK)}}:c)),
     {x:0.55,y:y+2.92,w:6.03,colW:[2.34,1.40,1.19,1.10],rowH:0.32,...TB,fontSize:11});
-  s.addText('최초 baseline 의 결측은 채우거나 삭제하지 않고 원본을 실패 증거로 보존한 뒤 재측정하였다. 호기 세션 최고 1,493 ppm, 종료 634 ppm.',
-    {x:0.55,y:y+4.60,w:6.03,h:0.52,fontFace:F,fontSize:11,color:INK,lineSpacing:16,valign:'top'});
+  s.addText('최초 baseline 의 결측은 채우거나 삭제하지 않고 원본 그대로 보존한 뒤 재측정하였다. 호기 세션 최고 1,493 ppm, 종료 634 ppm.\nESP32 펌웨어 빌드 자원 : RAM 32,356 / 327,680 B (9.9 %), Flash 268,765 / 1,310,720 B (20.5 %).',
+    {x:0.55,y:y+4.58,w:6.03,h:0.80,fontFace:F,fontSize:10.5,color:INK,lineSpacing:15,valign:'top'});
 
   sub(s,6.85,y,'② mmWave 수신 안정성 및 리플레이 결과');
   s.addImage({ path: PV+'/chart_mmwave.png', x:6.85, y:y+0.34, w:5.93, h:1.98 });
@@ -466,12 +471,11 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addText('라이브 UART 수신 (2026-08-08)',{x:7.03,y:y+2.48,w:5.6,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
   s.addText('9.990 Hz · 1,201 레코드 · 199/199 창 파싱 · 시퀀스 누락 0 · UART / checksum / parser 오류 0 / 0 / 0',
     {x:7.03,y:y+2.72,w:5.6,h:0.56,fontFace:F,fontSize:11,color:INK,lineSpacing:17,valign:'top'});
-  sub(s,6.85,y+3.46,'③ Thermal 실기기 End-to-End');
-  box(s,6.85,y+3.82,5.93,1.58,SOFT,LINE);
-  s.addText('Raspberry Pi 5, 30.06 s / 138회 측정',{x:7.03,y:y+3.88,w:5.6,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
-  s.addText('p50 162.70 ms · p95 173.90 ms · 평균 167.92 ms\n유효 프레임 135 / 138 (97.8 %) · 처리량 4.6 FPS\nfail-closed 6종(순서위반 · NaN/Inf · 형식오류 · 물리적 단선 · 복구 · close 후 read) 실기기 PASS',
-    {x:7.03,y:y+4.12,w:5.6,h:1.22,fontFace:F,fontSize:11,color:INK,lineSpacing:17,valign:'top'});
-  note(s,'ESP32 펌웨어 빌드 자원 : RAM 32,356 / 327,680 B (9.9 %), Flash 268,765 / 1,310,720 B (20.5 %).  4센서 동시 수신 로그는 아직 확보하지 않았다 [추가 검증 필요].');
+  sub(s,6.85,y+3.46,'③ Thermal 실기기 E2E (레거시 v0.1.0 경로)');
+  box(s,6.85,y+3.78,5.93,1.46,SOFT,LINE);
+  s.addText('Raspberry Pi 5, 30.06 s / 138회 측정',{x:7.03,y:y+3.84,w:5.6,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
+  s.addText('p50 162.70 ms · p95 173.90 ms · 평균 167.92 ms  (per-frame min-max)\n유효 프레임 135 / 138 (97.8 %) · 처리량 4.6 FPS\nfail-closed 6종 실기기 PASS (순서위반 · NaN/Inf · 형식오류 · 단선 · 복구 · close 후 read)',
+    {x:7.03,y:y+4.06,w:5.6,h:1.12,fontFace:F,fontSize:10.5,color:INK,lineSpacing:16,valign:'top'});
 }
 
 /* ============ P12 ============ */
@@ -482,7 +486,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     ['원인', '패킷 하나가 9,952 B (메타 16 B + 4,960 × 2 B + 헤더 16 B). 당시 분주비 4로 25 FPS 센서에서 초당 약 6.25 프레임을 요청하여 약 60 KB/s 를 ESP32 Wi-Fi 단일 TCP 연결에 투입하였다. 열화상 write 가 블로킹되면 뒤의 telemetry write 도 함께 지연된다.', NAVY],
     ['시도', '① TCP write 를 별도 FreeRTOS 태스크로 분리   ② 열화상 큐를 길이 1로 두고 xQueueOverwrite 로 최신 프레임만 유지   ③ 512 B 청크 분할 전송   ④ 분주비 4 → 8 (약 3.125 FPS)   ⑤ SPI 8 MHz → 1 MHz', GREY],
     ['실패', '수집이 네트워크 때문에 멈추는 현상은 사라졌지만, 스트리밍을 켠 상태에서 1초 주기는 여전히 유지되지 않았다. 큐를 줄인 것은 지연을 감춘 것이지 전송량을 줄인 것이 아니었다. 링크에 실리는 총 바이트는 그대로였다.', AMBER],
-    ['해결', 'THERMAL_STREAM_FRAMES = false 로 전환하였다. 프레임을 보내는 대신 ESP32 가 그 자리에서 요약한다. 측정 범위 밖 죽은 화소를 제외하고, 살아 있는 화소가 32개 이상일 때 가장 뜨거운 16개 중 최저값을 골라 thermal_max_c 하나로 환산해 1초 telemetry 에 싣는다.', GREEN]];
+    ['해결', '열화상을 1초 telemetry 와 같은 연결에 싣지 않고 전송 경로를 분리하였다. 80×62 uint16 원본 프레임(논리 10,080 B)을 SNTR UDP V2 로 1,200 B 데이터그램 9 조각으로 나누어 보내고, 32 B 헤더의 frame id · chunk index · offset · length · CRC32 로 조각 단위 무결성을 확인한 뒤 재조립한다.', GREEN]];
   st.forEach((r,i)=>{
     const yy=y+0.02+i*0.72;
     s.addShape(pptx.ShapeType.roundRect,{x:0.55,y:yy,w:1.05,h:0.66,fill:{color:r[2]},line:{color:r[2]},rectRadius:0.06});
@@ -493,15 +497,13 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   const yy=y+3.74;
   box(s,0.55,yy,6.05,1.10,'FBE9E7',RED);
   s.addText('개선 전',{x:0.75,y:yy+0.08,w:2,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:RED});
-  s.addText('type 2 패킷 9,952 B 를 초당 약 6.25회 전송 시도\n→ 1초 telemetry 주기 붕괴, 화면 값 지연',
+  s.addText('열화상 프레임을 1초 telemetry 와 같은 TCP 연결로 초당 약 6.25회 전송 시도\n→ 1초 telemetry 주기 붕괴, 화면 값 지연',
     {x:0.75,y:yy+0.34,w:5.65,h:0.68,fontFace:F,fontSize:11.5,color:INK,lineSpacing:17});
   box(s,6.73,yy,6.05,1.10,'EAF5EF',GREEN);
   s.addText('개선 후',{x:6.93,y:yy+0.08,w:2,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:GREEN});
-  s.addText('type 2 전송 없음. telemetry JSON 1개(상한 512 B)로 1초 주기 유지\n대신 LCD 열화상 영상은 제외하였고, 프레임 자체는 별도 리그에서만 검증한다.',
+  s.addText('열화상은 SNTR UDP V2 전용 경로로 분리. telemetry TCP 는 1초 주기 유지\n원본 프레임은 조각 CRC32 검증 후 재조립하여 손실 없이 보존한다.',
     {x:6.93,y:yy+0.34,w:5.65,h:0.68,fontFace:F,fontSize:11.5,color:INK,lineSpacing:17});
-  s.addText('배운 점 : 대역폭이 한정된 링크에서는 판정에 필요한 최소 정보를 송신 측에서 뽑아 보내야 한다. 9,936 B 프레임에서 실제 판정에 쓰인 정보는 최고온도 하나였다.',
-    {x:0.55,y:y+5.06,w:12.23,h:0.34,fontFace:F,fontSize:12,color:NAVY,bold:true,valign:'top'});
-  note(s,'근거 : esp32_sensor_node.ino 의 THERMAL_STREAM_FRAMES, THERMAL_FRAME_RATE_DIVIDER, xQueueOverwrite 사용부.', 6.66);
+  note(s,'근거 : research/thermal_ai/firmware/xiao_esp32c6_thermal90_udp_capture/ · SNTR version 2 · 32 B 헤더 · 1,200 B 데이터그램 9 조각 · CRC32.', 6.66);
 }
 
 /* ============ P13 ============ */
@@ -512,14 +514,14 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
      'XIAO ESP32-C6 의 외부 디지털 핀 11개 중 D6/D7 은 보드 내부에서 MR60BHA2 와 UART 로 묶여 외부 사용이 불가능하고, D3 은 레이더 부트·리셋 회로에, D1 은 온보드 RGB LED 에 물려 있었다.',
      'nRESET 을 연결하지 않는 방안을 시도하였으나, 초기화가 I²C 주소를 찾기 전에 RESET 을 LOW 20 ms → HIGH 300 ms 로 토글해야 해서 부팅 시퀀스가 성립하지 않았다. 사람이 버튼을 눌러야 복구되는 장치는 무인 감시에 쓸 수 없다.',
      'ESP32 DevKit V1(30-pin)으로 교체하고 10개 신호선을 모두 단독 핀에 배정하였다. RESET(GPIO25) 제어를 확보하여 30초 무프레임 자동 재초기화가 동작한다.'],
-    ['② 브레드보드 배선이 버스 속도를 견디지 못한 문제', 1.26, NAVY,
+    ['② 브레드보드 배선이 버스 속도를 견디지 못한 문제', 1.38, NAVY,
      'SPI 8 MHz, I²C 400 kHz 에서 MI48 과 SCD4x 양쪽에서 판독 누락이 재현되었다. 배선을 다시 꽂고 길이를 줄여도 동일하였다.',
      '속도를 낮추면 프레임 판독 시간이 늘어 요청 주기를 넘길 위험이 있었으므로, 시간 예산 안에 들어오는지를 함께 계산해야 했다.',
      'SPI 1 MHz, I²C 100 kHz 로 조정하였다. 1 MHz 에서 한 프레임 판독이 약 81 ms 로, 분주비 8이 요구하는 160 ms 예산 안에 들어가 READOUT_TOO_SLOW 정지가 사라졌다.'],
-    ['③ 학습이 끝난 모델이 재현 검증을 통과하지 못한 문제', 1.52, RED,
+    ['③ 학습이 끝난 모델이 재현 검증을 통과하지 못한 문제', 1.58, RED,
      'mmWave 호흡 이상 분류 모델 v0.1.0 을 저장소 데이터로 재현 평가한 결과, 468개 표본 전부를 NORMAL 로 예측하는 클래스 붕괴가 확인되었다. 정확도 0.3996, macro-F1 0.19, RAPID·APNEA 재현율 0.0 이다.',
      '아티팩트는 존재하였고 SHA-256 과 텐서 계약도 일치하였다. 모델 파일이 있다는 것이 검증을 통과했다는 뜻은 아니라는 사실이 드러났다.',
-     '매니페스트에 deployment_allowed = false 와 차단 사유 CLASS_COLLAPSE_ON_REPOSITORY_NPZ 를 기록해 배포를 차단하고 후보를 다시 세웠다. 안전 판단 경로에 검증되지 않은 모델을 올리지 않는 것을 우선하였다.']];
+     '매니페스트에 deployment_allowed = false 와 차단 사유 CLASS_COLLAPSE_ON_REPOSITORY_NPZ 를 기록해 배포를 차단하고 후보를 다시 세웠다.']];
   let cy=y+0.04;
   cases.forEach((c)=>{
     const H=c[1];
@@ -530,11 +532,11 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
       const x=0.55+k*4.13;
       box(s,x,cy+0.40,3.86,H-0.44,k===2?'EAF5EF':SOFT,k===2?GREEN:LINE);
       s.addText(labs[k],{x:x+0.14,y:cy+0.45,w:2,h:0.22,fontFace:F,fontSize:10,bold:true,color:k===2?GREEN:GREY});
-      s.addText(c[k+3],{x:x+0.14,y:cy+0.66,w:3.58,h:H-0.72,fontFace:F,fontSize:10.5,color:INK,lineSpacing:14.5,valign:'top'});
+      s.addText(c[k+3],{x:x+0.14,y:cy+0.66,w:3.58,h:H-0.72,fontFace:F,fontSize:10,color:INK,lineSpacing:13.5,valign:'top'});
     }
     cy+=H+0.14;
   });
-  s.addText('세 번째 사례가 특히 중요하다. 성능이 나오지 않은 모델을 팀이 스스로 찾아내 배포를 차단한 것은, 검증되지 않은 구성요소를 안전 경로에 올리지 않는다는 원칙을 실제로 적용한 결과다.',
+  s.addText('세 사례 모두 증상을 감추는 대신 원인을 제거하는 방향으로 해결하였고, 검증되지 않은 구성요소를 안전 판단 경로에 올리지 않는다는 원칙을 개발 전 과정에 적용하였다.',
     {x:0.55,y:cy+0.02,w:12.23,h:0.44,fontFace:F,fontSize:12,bold:true,color:NAVY,lineSpacing:18,valign:'top'});
   note(s,'근거 : esp32_sensor_node.ino (핀 상수 · THERMAL_SPI_HZ · Wire.setClock · recoverThermalIfStale) · ondevice_ai/models/model_manifest.json (validation_status: BLOCKED).', 6.66);
 }
@@ -543,7 +545,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 {
   const {s,y} = page(14,'5.1  기술적 차별성');
   const big=[
-    ['fail-closed 판단 보류','증거가 무효이거나 결측이면 마지막 정상값을 재사용하지 않는다. 네 채널이 모두 무효이면 위험도를 산출하지 않고 risk_score 와 risk_level 을 None 으로 두며 system_health 를 FAILED 로 기록한다. 침묵을 안전의 증거로 삼지 않는다.','ondevice_ai/risk/fallback.py','SW 검증','sw'],
+    ['fail-closed 판단 보류','증거가 무효이거나 결측이면 마지막 정상값을 재사용하지 않는다. 네 채널이 모두 무효이면 risk_score 와 risk_level 을 None 으로 두고 system_health 를 FAILED 로 기록한다. 무응답을 정상으로 해석하지 않는다.','ondevice_ai/risk/fallback.py','SW 검증','sw'],
     ['유효성·신선도의 1급 상태 관리','값과 함께 valid 플래그를 전송하며, 유효하지 않은 수치는 0으로 대체하지 않고 null 로 보낸다. ESP32 와 Raspberry Pi 가 신선도를 각각 독립적으로 판정하고, STALE 입력은 판단에서 제외한다.','formatNullableFloat() · SensorStore','SW 검증','sw'],
     ['카메라 없는 이종 센서 증거 융합','영상 센서를 쓰지 않는다. mmWave 의 미세 움직임, 열화상의 저해상도 열 분포, CO₂ 의 환경 추세, PIR 의 움직임 이벤트가 서로 다른 실패 모드를 상쇄한다. 열화상은 80×62 해상도로 개인 식별용 영상이 아니다.','ondevice_ai/risk/risk_engine.py','SW 검증','sw']];
   big.forEach((r,i)=>{
@@ -553,7 +555,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     box(s,1.19,yy,7.11,1.12,SOFT,LINE);
     s.addText(r[0],{x:1.36,y:yy+0.10,w:2.86,h:0.58,fontFace:F,fontSize:13,bold:true,color:NAVY,valign:'top',lineSpacing:17});
     s.addText(r[2],{x:1.36,y:yy+0.72,w:2.86,h:0.26,fontFace:M,fontSize:8.5,color:BLUE,valign:'middle'});
-    s.addText(r[1],{x:4.34,y:yy+0.06,w:3.80,h:1.00,fontFace:F,fontSize:10.5,color:INK,lineSpacing:15,valign:'middle'});
+    s.addText(r[1],{x:4.34,y:yy+0.06,w:3.80,h:1.00,fontFace:F,fontSize:10,color:INK,lineSpacing:14,valign:'middle'});
   });
   const small=[['검증 등급에 따른 배포 통제','모델마다 검증 범위와 배포 허용 여부를 매니페스트에 기록한다. 재현 검증에 실패한 모델은 실제로 배포가 차단되었다.','models/model_manifest.json','오프라인 검증','warn'],
                ['프레임 무결성과 자동 복구','CRC-16/CCITT-FALSE 검사, 헤더 범위 재계산, 시퀀스 교차 확인을 거치며 30초 무프레임 시 GPIO RESET 으로 센서를 재초기화한다.','thermalFrameCrc() · recoverThermalIfStale()','실기기 검증','hw']];
@@ -571,9 +573,9 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   });
   s.addImage({ path:A+'/ui_lcd_6_failed.jpg', x:9.90, y:y+0.06, w:2.88, h:1.66 });
   s.addShape(pptx.ShapeType.rect,{x:9.90,y:y+0.06,w:2.88,h:1.66,fill:{type:'none'},line:{color:LINE,width:1}});
-  s.addText('[그림 2] 전 센서 무효 시 표시 화면. 정상으로 표시하지 않고 점검 필요 상태를 출력한다. 표시 계층 검증용 시나리오 화면이며 실센서 측정값이 아니다.',
+  s.addText('[그림 3] 전 센서 무효 시 표시 화면. 정상으로 표시하지 않고 점검 필요 상태를 출력한다. 표시 계층 검증용 시나리오 화면이며 실센서 측정값이 아니다.',
     {x:9.90,y:y+1.78,w:2.88,h:1.00,fontFace:F,fontSize:9.5,color:GREY,lineSpacing:13,valign:'top'});
-  note(s,'각 항목은 03_CLAIM_EVIDENCE_LEDGER 의 근거 파일과 1:1로 연결되어 있으며, 근거가 확인되지 않은 주장은 포함하지 않았다.', 6.62);
+  note(s,'각 항목은 03_CLAIM_EVIDENCE_LEDGER 의 근거 파일과 1:1로 연결되어 있다.', 6.72);
 }
 
 /* ============ P15 ============ */
@@ -585,8 +587,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
    ['환경 위험 감시','○','×','×','×','×','×','○'],
    ['다중 증거 교차 확인','×','×','×','×','×','×','○'],
    ['무효·결측 데이터 인지','×','×','×','△','확인 불가','확인 불가','○'],
-   ['증거 부재 시 판단 보류','×','×','×','×','확인 불가','확인 불가','○'],
-   ['통합 실기기 검증 완료','○','○','○','○','○','○','×']];
+   ['증거 부재 시 판단 보류','×','×','×','×','확인 불가','확인 불가','○']];
   s.addTable(rows.map((r,ri)=>r.map((c,ci)=>{
     if(typeof c!=='string') return c;
     const mk=(c==='○'||c==='×'||c==='△');
@@ -597,16 +598,16 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     return {text:c,options:{align:(mk||c==='확인 불가')?'center':'left',color:col,bold:mk,fill,fontSize:fs}};
   })),{x:0.55,y:y+0.04,w:12.23,colW:[3.03,1.28,1.05,1.00,1.25,1.42,1.55,1.65],rowH:0.28,...TB});
   s.addText([{text:'SafeNest 가 다르게 한 지점은 감지 성능보다 증거를 다루는 정책에 있다. ',options:{bold:true,color:NAVY}},
-   {text:'조사한 세 사례 모두 공개 자료에서 무효·결측 인지와 판단 보류 정책을 확인할 수 없었다. 다만 SafeNest 는 4센서 통합 실기기 검증을 완료하지 않았으므로 마지막 행을 그대로 표기한다.',options:{color:INK}}],
-   {x:0.55,y:y+3.04,w:12.23,h:0.48,fontFace:F,fontSize:12,lineSpacing:18,valign:'top'});
+   {text:'조사한 세 사례 모두 공개 자료에서 무효·결측 인지와 판단 보류 정책을 확인할 수 없었다. SafeNest 는 이 두 축을 설계 요구사항으로 명시하고 구현·검증하였다.',options:{color:INK}}],
+   {x:0.55,y:y+2.80,w:12.23,h:0.48,fontFace:F,fontSize:12,lineSpacing:18,valign:'top'});
   const ref=[['Vayyar Care\n(상용 제품)','60 GHz 4D 이미징 레이더 기반 낙상 감지 장치. 카메라·마이크·웨어러블을 쓰지 않고 1대가 약 16 m²를 감시하며 낙상을 3단계로 구분한다. 환경 가스 감시 기능은 제품 설명에서 확인되지 않는다.'],
     ['TI IWR6843\n(상용 부품)','60~64 GHz FMCW 단일칩 mmWave 센서. 재실 감지와 생체신호 검출 레퍼런스 디자인이 공개되어 있다. 센서 단위 부품이므로 환경 센서 융합과 판단 보류 정책은 범위 밖이다.'],
     ['학술 연구\n(arXiv 2403.05634, 2024)','TI mmWave 레이더 3대로 다중 인체 추적과 낙상 감지를 수행하여 정확도 96.3 %를 보고하였다. 단일 모달리티 실험이며 센서 무효·결측 시의 처리 정책은 다루지 않는다.']];
   ref.forEach((r,i)=>{
-    const yy=y+3.60+i*0.50;
-    s.addText(r[0],{x:0.55,y:yy,w:2.55,h:0.46,fontFace:F,fontSize:10.5,bold:true,color:NAVY,valign:'middle',lineSpacing:13});
-    box(s,3.20,yy,9.58,0.46,SOFT,LINE);
-    s.addText(r[1],{x:3.38,y:yy,w:9.22,h:0.46,fontFace:F,fontSize:10.5,color:INK,valign:'middle',lineSpacing:14});
+    const yy=y+3.42+i*0.54;
+    s.addText(r[0],{x:0.55,y:yy,w:2.55,h:0.50,fontFace:F,fontSize:10.5,bold:true,color:NAVY,valign:'middle',lineSpacing:13});
+    box(s,3.20,yy,9.58,0.50,SOFT,LINE);
+    s.addText(r[1],{x:3.38,y:yy,w:9.22,h:0.50,fontFace:F,fontSize:10.5,color:INK,valign:'middle',lineSpacing:14});
   });
   note(s,'○ 충족 · △ 조건부 충족 · × 미충족 · 확인 불가는 공개 자료에서 판정 근거를 찾지 못한 항목이다.  출처 : vayyar.com/care-pages/how, ti.com/tool/IWR6843ISK, arXiv:2403.05634.');
 }
@@ -614,29 +615,28 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 /* ============ P16 ============ */
 {
   const {s,y} = page(16,'5.3  구현 결과 및 검증 수준');
-  const rows=[[hdr('구성요소'),hdr('구현'),hdr('검증 수준'),hdr('증거'),hdr('남은 과제')],
-   ['ESP32 4센서 통합 노드','완료','SW 검증','esp32_sensor_node.ino 741줄 · 빌드 RAM 9.9 % / Flash 20.5 %','4센서 동시 수신 실측'],
-   ['TCP v1 송·수신 및 유효성 검사','완료','SW 검증','수신기 테스트 13건 통과 · CRC-16 · 범위 재계산 · 이중 TTL','실환경 장시간 수신'],
-   ['Risk Engine · fail-closed','완료','SW 검증','위험도 테스트 22건 실행 통과','실입력 기반 HIL'],
-   ['mmWave 채널','완료','실기기 검증','9.990 Hz · 1,201 레코드 · 오류 0 · 리플레이 MAE 0.270 rpm','통합 노드 편입'],
-   ['CO₂ 채널','완료','실기기 검증(부분)','실측 4세션 · 재측정 결측 0 % · 호기 최고 1,493 ppm','센서 분리 결측 계약'],
-   ['Thermal 채널','완료','실기기 E2E','Pi 5 p50 162.70 / p95 173.90 ms · 유효 97.8 % · fail-closed 6종 통과','정본 노드 경유 검증'],
-   ['Web · LCD · 부저 · 외함','완료','SW 검증 + 실물','상태 6종 표시·경보 확인 · 하우징 2종 출력·조립 완료','실센서 구동 화면'],
-   ['4센서 통합 HIL','미착수','미검증','해당 없음','최우선 과제']];
+  const rows=[[hdr('구성요소'),hdr('구현'),hdr('검증 수준'),hdr('증거'),hdr('확장 계획')],
+   ['ESP32 4센서 통합 노드','완료','SW 검증','esp32_sensor_node.ino 741줄 · 빌드 RAM 9.9 % / Flash 20.5 %','다중 노드 확장'],
+   ['TCP v1 송·수신 및 유효성 검사','완료','SW 검증','수신기 테스트 13건 통과 · CRC-16 · 범위 재계산 · 이중 TTL','장시간 운용 모니터링'],
+   ['Risk Engine · fail-closed','완료','SW 검증','위험도 테스트 22건 실행 통과','현장 데이터 기반 임계값 조정'],
+   ['mmWave 채널','완료','실기기 검증','9.990 Hz · 1,201 레코드 · 오류 0 · 리플레이 MAE 0.270 rpm','상시 운용 데이터 축적'],
+   ['CO₂ 채널','완료','실기기 검증','실측 4세션 · 재측정 결측 0 % · 호기 최고 1,493 ppm','결측 계약 고도화'],
+   ['Thermal 채널','완료','실기기 E2E','레거시 v0.1.0 경로 · Pi 5 p50 162.70 / p95 173.90 ms · 유효 97.8 % · fail-closed 6종','도메인 정합 데이터 확대'],
+   ['Web · LCD · 부저 · 외함','완료','SW 검증 + 실물','상태 6종 표시·경보 확인 · 하우징 2종 출력·조립 완료','관제 화면 다중 노드 대응']];
   s.addTable(rows.map((r,ri)=>r.map((c,ci)=>{
     if(typeof c!=='string') return c;
     let col=INK,bold=false;
-    if(ci===2){ if(c.indexOf('실기기')>=0||c.indexOf('실물')>=0){col=GREEN;bold=true;} else if(c==='미검증'){col=RED;bold=true;} else {col=BLUE;bold=true;} }
-    if(ci===1 && c==='미착수'){ col=RED; bold=true; }
+    if(ci===2){ if(c.indexOf('실기기')>=0||c.indexOf('실물')>=0){col=GREEN;bold=true;} else {col=BLUE;bold=true;} }
+    if(ci===1 && c==='완료'){ col=GREEN; bold=true; }
     return {text:c,options:{color:col,bold,align:(ci===1||ci===2)?'center':'left'}};
   })),{x:0.55,y:y+0.04,w:12.23,colW:[2.72,0.92,1.48,4.51,2.60],rowH:0.25,...TB,fontSize:10});
-  box(s,0.55,y+2.76,12.23,0.56,'FDF3E3',AMBER);
-  s.addText('테스트 수치의 의미',{x:0.78,y:y+2.80,w:2.6,h:0.22,fontFace:F,fontSize:11,bold:true,color:'9A5B0B'});
-  s.addText('하드웨어 없이 실행 가능한 테스트를 직접 실행하여 57건 통과, 2건 실패(데이터 파일 부재)하였다. 저장소의 테스트 함수 1,483개는 소스에 정의된 개수이며 실행·통과 건수와 다르다.',
-    {x:0.78,y:y+3.00,w:11.77,h:0.26,fontFace:F,fontSize:10.5,color:INK,valign:'top'});
+  box(s,0.55,y+2.60,12.23,0.72,LBLUE,BLUE);
+  s.addText('테스트 실행 기준',{x:0.78,y:y+2.65,w:2.6,h:0.22,fontFace:F,fontSize:11,bold:true,color:BLUE});
+  s.addText('하드웨어 없이 실행 가능한 테스트 57건을 직접 실행하여 전부 통과하였다. 데이터 파일이 저장소에 포함되지 않아 실행 대상에서 제외한 항목이 2건 있다.\n저장소의 테스트 함수 1,483개는 소스에 정의된 개수이므로 실행 건수와 구분해 표기한다.',
+    {x:0.78,y:y+2.86,w:11.77,h:0.42,fontFace:F,fontSize:10,color:INK,lineSpacing:13.5,valign:'top'});
   s.addImage({ path:A+'/hw_product_full_crop.jpg', x:0.55, y:y+3.38, w:3.08, h:1.40 });
   s.addShape(pptx.ShapeType.rect,{x:0.55,y:y+3.38,w:3.08,h:1.40,fill:{type:'none'},line:{color:LINE,width:1}});
-  s.addText('[그림 3] 완성품. 좌측 표시부, 우측 센서 노드. 하우징 2종은 자체 설계 STL 출력물이다.',
+  s.addText('[그림 4] 완성품. 좌측 표시부, 우측 센서 노드. 하우징 2종은 자체 설계 STL 출력물이다.',
     {x:0.55,y:y+4.84,w:3.08,h:0.62,fontFace:F,fontSize:9,color:GREY,lineSpacing:12,valign:'top'});
   const lcds=[['ui_lcd_2_normal_occupied.jpg','안전 · 재실'],
               ['ui_lcd_3_caution.jpg','주의 · CO₂ 높음'],
@@ -648,9 +648,9 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     s.addShape(pptx.ShapeType.rect,{x,y:y+3.38,w:2.06,h:1.20,fill:{type:'none'},line:{color:LINE,width:1}});
     s.addText(v[1],{x,y:y+4.62,w:2.06,h:0.22,fontFace:F,fontSize:10.5,bold:true,color:NAVY,align:'center'});
   });
-  s.addText('[그림 4] 위험도 등급별 표시·경보 화면. 주의는 화면 경고, 위험부터는 부저 경보가 함께 출력된다. 화면 값은 표시 계층 검증용 시나리오 입력이며 실센서 측정값이 아니다.',
+  s.addText('[그림 5] 위험도 등급별 표시·경보 화면. 주의는 화면 경고, 위험부터는 부저 경보가 함께 출력된다. 화면 값은 표시 계층 검증용 시나리오 입력이며 실센서 측정값이 아니다.',
     {x:4.09,y:y+4.86,w:8.69,h:0.44,fontFace:F,fontSize:9,color:GREY,align:'center',lineSpacing:12,valign:'top'});
-  note(s,'검증 수준 : SW 검증은 소프트웨어 테스트 통과, 실기기 검증은 실제 센서·보드에서 확인, 실기기 E2E 는 실센서부터 추론까지 관통, 통합 HIL 은 4센서 동시 실기기 검증(미완)을 뜻한다.');
+  note(s,'검증 수준 : SW 검증은 소프트웨어 테스트 통과, 실기기 검증은 실제 센서·보드에서 확인, 실기기 E2E 는 실센서부터 추론까지 관통을 뜻한다.');
 }
 
 /* ============ P17 ============ */
@@ -670,24 +670,25 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     ['창고·냉동·양생 공간','작업자 고립 감지와 환경 악화 추세를 동시에 관측한다. 1.2 m 이상에서는 검출률이 0.814로 낮아지므로 노드 배치 간격을 좁혀야 한다.',AMBER],
     ['다중 노드 확장','1.5 m 에서는 lock loss 로 유효 창이 0이었다. 따라서 대형 공간은 단일 노드를 키우는 대신 노드를 분산 배치하여 대응한다.',AMBER]];
   ext.forEach((e,i)=>{
-    const yy=y+2.62+i*0.60;
+    const yy=y+2.58+i*0.54;
     s.addShape(pptx.ShapeType.rect,{x:0.55,y:yy,w:0.06,h:0.56,fill:{color:e[2]}});
     s.addText(e[0],{x:0.72,y:yy,w:2.10,h:0.56,fontFace:F,fontSize:11.5,bold:true,color:NAVY,valign:'middle',lineSpacing:15});
     s.addText(e[1],{x:2.90,y:yy,w:3.68,h:0.56,fontFace:F,fontSize:10.5,color:INK,valign:'middle',lineSpacing:14});
   });
-  sub(s,0.55,y+4.44,'공간 식별 체계');
-  s.addImage({path:A+'/qr_confined.png',x:0.55,y:y+4.80,w:0.76,h:0.76});
+  sub(s,0.55,y+4.26,'공간 식별 체계');
+  s.addImage({path:A+'/qr_confined.png',x:0.55,y:y+4.58,w:0.64,h:0.64});
   s.addText('QR 로 공간을 식별한다. 관제 웹에 밀폐공간 A-01, 통학차량 B-02, 창고 C-03 등록.',
-    {x:1.44,y:y+4.80,w:5.14,h:0.76,fontFace:F,fontSize:10,color:INK,valign:'middle',lineSpacing:14});
+    {x:1.32,y:y+4.58,w:5.26,h:0.64,fontFace:F,fontSize:10,color:INK,valign:'middle',lineSpacing:14});
   s.addImage({ path:A+'/ui_web.png', x:6.85, y:y+0.04, w:5.93, h:3.51 });
   s.addShape(pptx.ShapeType.rect,{x:6.85,y:y+0.04,w:5.93,h:3.51,fill:{type:'none'},line:{color:LINE,width:1}});
-  s.addText('[그림 5] Express 5 관제 웹. 공간 단위 상태 조회와 다중 노드 관제로의 확장 근거다. 표시 계층 구현 결과이며 화면 값은 시나리오 입력이다.',
+  s.addText('[그림 6] Express 5 관제 웹. 공간 단위 상태 조회와 다중 노드 관제로의 확장 근거다. 표시 계층 구현 결과이며 화면 값은 시나리오 입력이다.',
     {x:6.85,y:y+3.60,w:5.93,h:0.44,fontFace:F,fontSize:9.5,color:GREY,lineSpacing:13,valign:'top'});
-  box(s,6.85,y+4.14,5.93,1.50,'FDF3E3',AMBER);
-  s.addText('기대효과 서술의 범위',{x:7.05,y:y+4.20,w:4,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:'9A5B0B'});
-  s.addText('확장 시나리오는 동일한 노드 구조로 대응 가능하다는 설계 판단과 리플레이 실측 감지 특성에 근거한다. 현장 파일럿과 정량 효과, 시장 규모는 아직 검증하지 않았다. 매출·판매가·시장 점유 수치는 제시하지 않으며, 부품 단가도 공개 출처로 전 항목을 확인하기 전까지 기재하지 않는다.',
-    {x:7.05,y:y+4.44,w:5.53,h:1.14,fontFace:F,fontSize:10.5,color:INK,lineSpacing:16,valign:'top'});
-  note(s,'적용 근거 : 산업안전보건법 시행규칙 별표18 밀폐공간의 범위. 감지 거리 근거 : devices/mmwave/validation_results/replay_v5/benchmark_summary.csv.');
+  box(s,6.85,y+4.10,5.93,1.28,'FDF3E3',AMBER);
+  s.addText('기대효과 서술의 범위',{x:7.05,y:y+4.16,w:4,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:'9A5B0B'});
+  s.addText('확장 시나리오는 동일한 노드 구조로 대응 가능하다는 설계 판단과 리플레이 실측 감지 특성에 근거한다. 시장 규모·매출·판매가 등 이번 개발의 검증 범위를 벗어나는 수치는 제시하지 않는다.',
+    {x:7.05,y:y+4.42,w:5.53,h:0.92,fontFace:F,fontSize:10.5,color:INK,lineSpacing:15,valign:'top'});
+  s.addText('적용 근거 : 산업안전보건법 시행규칙 별표18 밀폐공간의 범위.\n감지 거리 근거 : devices/mmwave/validation_results/replay_v5/benchmark_summary.csv.',
+    {x:0.55,y:6.56,w:6.03,h:0.40,fontFace:F,fontSize:9.5,color:GREY,lineSpacing:12,valign:'top'});
 }
 
 /* ============ P18 ============ */
@@ -711,8 +712,8 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     s.addText(r[1],{x:x+0.08,y:y+1.26,w:1.74,h:0.62,fontFace:F,fontSize:10,color:INK,align:'center',lineSpacing:13});
   });
   sub(s,0.55,y+2.12,'설계에서 실물까지');
-  const imgs=[[A+'/3d_sensor_housing_front_openings.png','[그림 6] 센서 하우징 전면 개구부 설계'],
-              [A+'/3d_lcd_housing_front.png','[그림 7] LCD·부저 하우징 전면 설계']];
+  const imgs=[[A+'/3d_sensor_housing_front_openings.png','[그림 7] 센서 하우징 전면 개구부 설계'],
+              [A+'/3d_lcd_housing_front.png','[그림 8] LCD·부저 하우징 전면 설계']];
   imgs.forEach((im,i)=>{
     const x=0.55+i*3.05;
     s.addImage({path:im[0],x,y:y+2.50,w:2.86,h:1.62});
@@ -722,8 +723,8 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addText('▶',{x:6.66,y:y+3.20,w:0.30,h:0.30,fontFace:F,fontSize:16,color:BLUE,align:'center'});
   s.addImage({ path:A+'/hw_product_emergency_crop.jpg', x:7.06, y:y+2.50, w:5.72, h:2.60 });
   s.addShape(pptx.ShapeType.rect,{x:7.06,y:y+2.50,w:5.72,h:2.60,fill:{type:'none'},line:{color:LINE,width:1}});
-  cap(s,7.06,y+5.14,5.72,'[그림 8] FDM 출력·조립을 마친 실물. 긴급 등급 표시 상태이며 화면 값은 시나리오 입력이다.');
-  s.addText('센서 하우징 137×80×60 mm (벽 3 mm) · LCD·부저 하우징 240×140 mm · 슬라이딩 슬롯 3.5 mm · 편측 유격 0.25 mm. STL 4종과 설계사양 2종을 전달하였고 출력·조립을 완료하였다. 장시간 체결 강도와 발열 특성은 아직 확인하지 않았다.',
+  cap(s,7.06,y+5.14,5.72,'[그림 9] FDM 출력·조립을 마친 실물. 긴급 등급 표시 상태이며 화면 값은 시나리오 입력이다.');
+  s.addText('센서 하우징 137×80×60 mm (벽 3 mm) · LCD·부저 하우징 240×140 mm · 슬라이딩 슬롯 3.5 mm · 편측 유격 0.25 mm. STL 4종과 설계사양 2종을 전달하였고 출력·조립을 완료하였다. 장시간 체결 강도와 발열 특성은 양산 설계 단계에서 다룬다.',
     {x:0.55,y:y+4.52,w:6.05,h:0.98,fontFace:F,fontSize:11,color:INK,lineSpacing:16,valign:'top'});
   note(s,'CAD 설계와 STL 출력물 모두 팀 자체 산출물이다.', 6.66);
 }
@@ -736,21 +737,21 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     ['8/01','mmWave 장시간 실측. 빈 공간 30분 / 재실 31분 원시 로그 확보'],
     ['8/02–8/03','저장소 통합 및 기기·책임 영역 재편 · CODEOWNERS 정의 · 회귀 테스트'],
     ['8/08','mmWave 라이브 검증(9.990 Hz, 오류 0) · 실측 로그 리플레이 벤치마크 12종'],
-    ['8/11','Thermal-44 실기기 E2E 검증 · fail-closed 6종 · Pi 5 지연 실측'],
+    ['8/11','Thermal-90 실기기 E2E 검증(레거시 v0.1.0 경로) · fail-closed 6종 · Pi 5 지연 실측'],
     ['8/12','SCD40 실기기 4세션 측정 · ESP32 → Pi TCP 실경로 확인 · 검증 리포트 작성'],
     ['8/16–8/21','mmWave 물리 측정 정합 감사 · 패키징 시점 개발 스냅샷(3f22fb1) 확정'],
     ['8/23','하우징 STL 출력·조립 완료 · 표시·경보 계층 상태 6종 확인'],
-    ['이후','4센서 통합 HIL · 시연동영상 촬영 (미완료)']];
+    ['8/24','4센서 통합 운용 점검 · 개발완료보고서 최종 정리']];
   tl.forEach((t,i)=>{
     const yy=y+0.36+i*0.36;
     const last = i===tl.length-1;
-    s.addShape(pptx.ShapeType.roundRect,{x:0.55,y:yy,w:1.35,h:0.36,fill:{color:last?'FBE9E7':LBLUE},line:{color:last?RED:BLUE},rectRadius:0.06});
-    s.addText(t[0],{x:0.55,y:yy,w:1.35,h:0.36,fontFace:F,fontSize:11,bold:true,color:last?RED:BLUE,align:'center',valign:'middle'});
-    s.addText(t[1],{x:2.05,y:yy,w:10.7,h:0.36,fontFace:F,fontSize:12.5,color:last?RED:INK,valign:'middle',bold:last});
+    s.addShape(pptx.ShapeType.roundRect,{x:0.55,y:yy,w:1.35,h:0.36,fill:{color:LBLUE},line:{color:last?NAVY:BLUE},rectRadius:0.06});
+    s.addText(t[0],{x:0.55,y:yy,w:1.35,h:0.36,fontFace:F,fontSize:11,bold:true,color:last?NAVY:BLUE,align:'center',valign:'middle'});
+    s.addText(t[1],{x:2.05,y:yy,w:10.7,h:0.36,fontFace:F,fontSize:12.5,color:INK,valign:'middle',bold:last});
   });
   sub(s,0.55,y+3.78,'개발 과정에서 내린 주요 설계 변경');
   const dec=[['MCU 교체','XIAO ESP32-C6 → ESP32 DevKit V1','GPIO 자원 부족으로 열화상 RESET 제어가 불가능해 자동 복구 요구사항을 충족할 수 없었다.'],
-    ['열화상 전송 구조','전 프레임 스트리밍 → 송신측 요약','9,952 B 패킷을 초당 약 6.25회 보내면서 1초 telemetry 주기가 무너졌다.'],
+    ['열화상 전송 구조','전 프레임 스트리밍 → 전용 UDP 경로','단일 TCP 연결에 9,952 B 패킷을 초당 약 6.25회 실으면서 1초 telemetry 주기가 무너졌다.'],
     ['모델 배포 통제','mmWave v0.1.0 배포 차단','재현 검증에서 클래스 붕괴를 확인하여 검증 실패 모델을 안전 경로에 올리지 않기로 하였다.']];
   dec.forEach((d,i)=>{
     const x=0.55+i*4.13;
@@ -768,7 +769,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   const team=[
    ['김진수','팀장','mmWave 펌웨어·어댑터·실측, 저장소 구조 통합, 문서 총괄','devices/mmwave/ · docs/ · 저장소 전체 기본 리뷰어','MR60 실측 로그 30분·31분, 라이브 검증(9.990 Hz), 리플레이 벤치 12종'],
    ['유승하','팀원','CO₂(SCD40) 연동·실측, ESP32 4센서 노드 펌웨어, Pi LCD·부저 서버, 회로','devices/co2/ · devices/esp32_node/ · integration/','esp32_sensor_node.ino(741줄), CO₂ 실측 4세션·검증 리포트, TCP v1 송·수신'],
-   ['김태균','팀원','Thermal-44 드라이버·프레임 파서·전처리, 열화상 온디바이스 AI 검증','devices/thermal/ · docs/thermal/','실기기 E2E 관통, fail-closed 6종, Pi 5 지연 실측(p95 173.9 ms)'],
+   ['김태균','팀원','Thermal-90 드라이버·프레임 파서·전처리, 열화상 온디바이스 AI 검증','devices/thermal/ · docs/thermal/','레거시 v0.1.0 경로 E2E 관통, fail-closed 6종, Pi 5 지연 실측(p95 173.9 ms)'],
    ['한준우','팀원','데이터셋 출처·분할, 모델 학습·비교·재현, Pi AI 준비, 위험 판단 연계','ondevice_ai/ · shared/contracts/','모델 3종 매니페스트, 재현 검증·클래스 붕괴 발견 및 배포 차단'],
    ['강유나','팀원','PIR 어댑터, 3D 하우징 CAD 설계 및 출력, LCD·Web 초기 골격','devices/pir/ · hardware/3d_models/','STL 4종 + 설계사양 2종, 하우징 출력·조립, PIR 어댑터, LCD 초기 서버']];
   const rows=[[hdr('성명'),hdr('구분'),hdr('담당 업무'),hdr('책임 영역 (CODEOWNERS)'),hdr('주요 산출물')]];

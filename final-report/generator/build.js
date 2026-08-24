@@ -29,14 +29,16 @@ function page(n, title, sub){
   const s = pptx.addSlide();
   s.background = { color: BG };
   s.addShape(pptx.ShapeType.rect, { x:0, y:0, w:13.333, h:0.09, fill:{color:NAVY} });
-  s.addText(SEC[n], { x:0.55, y:0.22, w:6.5, h:0.26, fontFace:F, fontSize:11.5, color:BLUE, bold:true, charSpacing:0.5 });
-  s.addText(title, { x:0.55, y:0.50, w:12.23, h:0.60, fontFace:F, fontSize:23, bold:true, color:NAVY, valign:'top' });
-  if (sub) s.addText(sub, { x:0.55, y:1.11, w:12.23, h:0.28, fontFace:F, fontSize:13.5, color:GREY, valign:'top' });
-  const ly = sub ? 1.46 : 1.26;
-  s.addShape(pptx.ShapeType.line, { x:0.55, y:ly, w:12.23, h:0, line:{color:LINE, width:1} });
+  s.addText(SEC[n], { x:0.55, y:0.26, w:6.5, h:0.28, fontFace:F, fontSize:11.5, color:BLUE, bold:true, charSpacing:0.5 });
+  s.addText(title, { x:0.55, y:0.58, w:12.23, h:0.52, fontFace:F, fontSize:23, bold:true, color:NAVY, valign:'top' });
+  if (sub) s.addText(sub, { x:0.55, y:1.02, w:12.23, h:0.32, fontFace:F, fontSize:13.5, color:GREY, valign:'top' });
+  // 구분선은 제목에 가깝게 붙이고, 좌측에 짧은 강조 세그먼트를 겹쳐 제목 블록에 묶는다.
+  const ly = sub ? 1.36 : 1.16;
+  s.addShape(pptx.ShapeType.line, { x:0.55, y:ly, w:12.23, h:0, line:{color:LINE, width:0.75} });
+  s.addShape(pptx.ShapeType.line, { x:0.55, y:ly, w:1.15, h:0, line:{color:BLUE, width:2.25} });
   s.addText(String(n), { x:12.4, y:6.98, w:0.42, h:0.28, fontFace:F, fontSize:11, color:GREY, align:'right' });
   s.addText('SafeNest · 가만있어도SANDI', { x:0.55, y:6.98, w:5, h:0.28, fontFace:F, fontSize:9.5, color:GREY });
-  return { s, y: ly + 0.12 };
+  return { s, y: ly + 0.22 };
 }
 function note(s, txt, y){
   s.addText(txt, { x:0.55, y:y||6.62, w:11.7, h:0.28, fontFace:F, fontSize:9.5, color:GREY });
@@ -51,13 +53,13 @@ function box(s, x,y,w,h, fill, line){
   s.addShape(pptx.ShapeType.roundRect, { x,y,w,h, fill:{color:fill||SOFT}, line:{color:line||LINE, width:1}, rectRadius:0.06 });
 }
 function sub(s, x, y, t){
-  s.addText(t, { x, y, w:7, h:0.28, fontFace:F, fontSize:14.5, bold:true, color:NAVY, valign:'middle' });
+  s.addText(t, { x, y, w:7, h:0.30, fontFace:F, fontSize:14.5, bold:true, color:NAVY, valign:'middle' });
 }
 function cap(s, x, y, w, t){
   s.addText(t, { x, y, w, h:0.26, fontFace:F, fontSize:9.5, color:GREY, align:'center' });
 }
 function down(s, x, y, w){
-  s.addText('▼', { x, y, w, h:0.22, fontFace:F, fontSize:11, color:BLUE, align:'center' });
+  s.addText('▼', { x, y, w, h:0.26, fontFace:F, fontSize:11, color:BLUE, align:'center' });
 }
 const TB = { fontFace:F, fontSize:12, color:INK, valign:'middle', border:{type:'solid',color:LINE,pt:0.5} };
 function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{color:NAVY}, fontSize:12, align:'center' } }; }
@@ -75,7 +77,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addText('엣지 AI 기반 밀폐공간·차량 생명감지 및 위험도 자동경보 시스템',
     {x:1.0,y:4.02,w:11.3,h:0.5,fontFace:F,fontSize:20,color:INK,align:'center'});
   s.addShape(pptx.ShapeType.line,{x:5.17,y:4.82,w:3.0,h:0,line:{color:LINE,width:1.5}});
-  s.addText('가만있어도SANDI',{x:1.0,y:5.12,w:11.3,h:0.44,fontFace:F,fontSize:24,bold:true,color:NAVY,align:'center'});
+  s.addText('가만있어도SANDI',{x:1.0,y:5.12,w:11.3,h:0.50,fontFace:F,fontSize:24,bold:true,color:NAVY,align:'center'});
   s.addText('경희대학교 전자공학과',{x:1.0,y:5.64,w:11.3,h:0.36,fontFace:F,fontSize:16,color:GREY,align:'center'});
   s.addText('김진수 · 유승하 · 김태균 · 한준우 · 강유나',
     {x:1.0,y:6.06,w:11.3,h:0.34,fontFace:F,fontSize:14,color:GREY,align:'center'});
@@ -85,7 +87,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 {
   const {s,y} = page(1,'1.1  밀폐공간 질식재해 현황과 개발 필요성');
   sub(s,0.55,y,'재해 통계 (최근 10년, 2014~2023)');
-  s.addImage({ path: PV+'/chart_victims.png', x:0.55, y:y+0.20, w:3.40, h:2.92 });
+  s.addImage({ path: PV+'/chart_victims.png', x:0.55, y:y+0.40, w:3.20, h:2.75 });
   const st=[['174건','밀폐공간 질식재해 발생 건수'],['338명','재해자'],['136명','사망자'],['85.7%','검찰 송치 중대재해 중\n산소·유해가스 농도 미측정 상태에서 발생']];
   st.forEach((v,i)=>{
     const yy=y+0.36+i*0.66;
@@ -93,17 +95,17 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     s.addText(v[0],{x:4.20,y:yy,w:1.15,h:0.58,fontFace:F,fontSize:20,bold:true,color:i===3?RED:NAVY,valign:'middle'});
     s.addText(v[1],{x:5.42,y:yy,w:2.05,h:0.58,fontFace:F,fontSize:i===3?9.5:11.5,color:INK,valign:'middle',lineSpacing:13});
   });
-  box(s,7.85,y+0.34,4.93,2.62,SOFT,LINE);
-  s.addText('제도와 현실의 간극',{x:8.05,y:y+0.44,w:4.5,h:0.28,fontFace:F,fontSize:13.5,bold:true,color:NAVY});
+  box(s,7.85,y+0.36,4.93,2.62,SOFT,LINE);
+  s.addText('제도와 현실의 간극',{x:8.05,y:y+0.46,w:4.5,h:0.34,fontFace:F,fontSize:13.5,bold:true,color:NAVY});
   const law=['산업안전보건법 제619조는 밀폐공간 작업 시 산소·유해가스 농도 측정과 감시인 배치를 사업주 의무로 규정한다.',
              '중대재해처벌법 확대 적용으로 소규모 사업장까지 예방 설비 수요가 늘었다.',
              '감시인 상시 배치가 어려운 소규모 사업장이 대다수여서, 사람의 상태까지 자동으로 확인하는 무인 감시 수단이 필요하다.'];
   law.forEach((t,i)=>{
     s.addText([{text:'· ',options:{bold:true,color:BLUE}},{text:t,options:{color:INK}}],
-      {x:8.05,y:y+0.78+i*0.70,w:4.55,h:0.66,fontFace:F,fontSize:12,lineSpacing:17,valign:'top'});
+      {x:8.05,y:y+0.82+i*0.70,w:4.55,h:0.66,fontFace:F,fontSize:12,lineSpacing:17,valign:'top'});
   });
-  sub(s,0.55,y+3.14,'사고 진행 단계와 현재 감시 수단의 공백');
-  const fy=y+3.56;
+  sub(s,0.55,y+3.22,'사고 진행 단계와 현재 감시 수단의 공백');
+  const fy=y+3.64;
   const flow=[['작업자 진입','밀폐공간 내부'],['이상 발생','산소결핍·유해가스'],['움직임 정지','스스로 신고 불가'],['발견 지연','감시인 부재'],['사고 확정','구조 골든타임 경과']];
   flow.forEach((f,i)=>{
     const x=0.55+i*2.47;
@@ -114,8 +116,8 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   });
   s.addShape(pptx.ShapeType.roundRect,{x:5.49,y:fy,w:4.7,h:0.40,fill:{color:'FDF3E3'},line:{color:AMBER,width:1.25},rectRadius:0.06});
   s.addText('가스 감지기·PIR·CCTV가 사람의 상태를 놓치는 구간',{x:5.49,y:fy,w:4.7,h:0.40,fontFace:F,fontSize:11.5,bold:true,color:'9A5B0B',align:'center',valign:'middle'});
-  s.addText('▼',{x:6.55,y:fy+0.36,w:0.3,h:0.16,fontFace:F,fontSize:9,color:AMBER,align:'center'});
-  s.addText('▼',{x:8.85,y:fy+0.36,w:0.3,h:0.16,fontFace:F,fontSize:9,color:AMBER,align:'center'});
+  s.addText('▼',{x:6.55,y:fy+0.34,w:0.3,h:0.20,fontFace:F,fontSize:9,color:AMBER,align:'center'});
+  s.addText('▼',{x:8.85,y:fy+0.34,w:0.3,h:0.20,fontFace:F,fontSize:9,color:AMBER,align:'center'});
   s.addText('SafeNest는 이 구간에서 사람의 존재와 상태를 자동으로 확인하고 현장에 경보를 낸다.',
     {x:0.55,y:fy+1.46,w:12.23,h:0.30,fontFace:F,fontSize:13.5,bold:true,color:NAVY});
   note(s,'※ 출처 : 고용노동부 밀폐공간 질식재해 예방 보도자료(2024), 경향신문 밀폐공간 중대재해 분석 보도(2025). 법령 : 산업안전보건법 제619조.');
@@ -268,27 +270,43 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 
 /* ============ P6 ============ */
 {
-  const {s,y} = page(6,'3.1  소프트웨어 모듈 구성');
-  const mod=[[hdr('경로'),hdr('역할'),hdr('입력 → 출력')],
-   ['devices/esp32_node/firmware/\nesp32_sensor_node.ino','4센서 수집, 유효성 판정, 패킷화 (741줄)','센서 버스 → SafeNest TCP v1 패킷'],
-   ['devices/{mmwave,co2,pir,thermal}/src/','센서별 어댑터, mock, 설정','원시 판독 → 공용 센서 계약'],
-   ['shared/contracts/base_sensor.py','모든 영역이 의존하는 센서 계약','인터페이스 정의'],
-   ['integration/pi_lcd/server.py','TCP 9000 수신, HTTP 8080 API, 상태 6종, 부저','패킷 → 상태·화면·경보'],
-   ['ondevice_ai/inference/','TFLite Interpreter, 모델 레지스트리, 검증기','프레임·윈도우 → InferenceResult'],
-   ['ondevice_ai/risk/{risk_engine,fallback}.py','가중 융합 위험도, fail-closed 판정','센서 결과 → risk_score / level / health'],
-   ['ondevice_ai/integrated_node/run_node.py','통합 실행 노드, 외부 provider 주입','센서 provider → 위험도 출력'],
-   ['integration/web/','Express 5 관제 웹, QR 생성, 시뮬레이터','상태 → 관리자·방문자 화면'],
-   ['hardware/3d_models/','외함 CAD STL 4종 + 설계사양 2종','설계 → FDM 출력']];
-  s.addTable(mod.map((r,ri)=>r.map((c,ci)=>typeof c==='string'?{text:c,options:{fontFace:ci===0?M:F,fontSize:ci===0?10:11.5}}:c)),
-    {x:0.55,y:y+0.04,w:12.23,colW:[4.25,4.30,3.68],rowH:0.355,...TB});
-  box(s,0.55,y+3.72,12.23,1.32,SOFT,AMBER);
-  s.addText('외부 오픈소스 및 데이터셋 고지 (대회 규정 제10조 ③)',{x:0.78,y:y+3.80,w:7,h:0.26,fontFace:F,fontSize:12,bold:true,color:'9A5B0B'});
+  const {s,y} = page(6,'3.1  파일 구성과 함수별 기능');
+  sub(s,0.55,y,'파일 구성');
+  const mod=[[hdr('경로'),hdr('역할')],
+   ['esp32_node/firmware/esp32_sensor_node.ino','4센서 수집, 유효성 판정, 패킷화 (741줄)'],
+   ['devices/{mmwave,co2,pir,thermal}/src/','센서별 어댑터, mock, 설정'],
+   ['shared/contracts/base_sensor.py','모든 영역이 의존하는 공용 센서 계약'],
+   ['integration/pi_lcd/server.py','TCP 9000 수신, HTTP 8080 API, 상태 6종, 부저'],
+   ['ondevice_ai/inference/','TFLite Interpreter, 모델 레지스트리, 검증기'],
+   ['ondevice_ai/risk/{risk_engine,fallback}.py','가중 융합 위험도, fail-closed 판정'],
+   ['ondevice_ai/integrated_node/run_node.py','통합 실행 노드, 외부 provider 주입'],
+   ['integration/web/','Express 5 관제 웹, QR 생성, 시뮬레이터'],
+   ['hardware/3d_models/','외함 CAD STL 4종 + 설계사양 2종']];
+  s.addTable(mod.map((r,ri)=>r.map((c,ci)=>typeof c==='string'?{text:c,options:{fontFace:ci===0?M:F,fontSize:ci===0?8.5:10}}:c)),
+    {x:0.55,y:y+0.36,w:6.03,colW:[2.95,3.08],rowH:0.30,...TB});
+
+  sub(s,6.85,y,'핵심 함수별 기능');
+  const fn=[[hdr('함수'),hdr('기능')],
+   ['formatNullableFloat()','유효하지 않은 수치를 0으로 대체하지 않고 null 로 직렬화'],
+   ['makePacketHeader()','SNST 16 B 헤더 생성 (magic·version·type·seq·length)'],
+   ['sendThermalUdp()','payload 9,936 B 를 1,200 B 데이터그램 9 조각으로 분할 송신'],
+   ['thermalFrameCrc32()','프레임 CRC32 계산, 모든 UDP 조각 헤더에 반복 기록'],
+   ['recoverThermalIfStale()','30 s 무프레임 시 GPIO RESET 토글로 센서 재초기화'],
+   ['telemetryTcpTask() /\nthermalUdpTask()','TCP·UDP 송신을 FreeRTOS 태스크로 분리해 상호 블로킹 차단'],
+   ['recv_exact()','TCP 경계 없음을 전제로 헤더·payload 길이만큼 정확 수신'],
+   ['SensorStore.\nrecord_telemetry()','채널별 valid·수신 시각 기록, 5 s 기준 신선도 판정'],
+   ['evaluate_sensor_health_\nand_risk()','유효 채널 가중치 재정규화 후 위험도 산출, 전부 무효면 None']];
+  s.addTable(fn.map((r,ri)=>r.map((c,ci)=>typeof c==='string'?{text:c,options:{fontFace:ci===0?M:F,fontSize:ci===0?8:10}}:c)),
+    {x:6.85,y:y+0.36,w:5.93,colW:[2.10,3.83],rowH:0.30,...TB});
+
+  box(s,0.55,y+3.76,12.23,1.26,SOFT,AMBER);
+  s.addText('외부 오픈소스 및 데이터셋 고지 (대회 규정 제10조 ③)',{x:0.78,y:y+3.82,w:7,h:0.28,fontFace:F,fontSize:12,bold:true,color:'9A5B0B'});
   s.addText([
     {text:'데이터셋 : ',options:{bold:true,color:NAVY}},
     {text:'Zenodo mmWave vital-sign (DOI 10.5281/zenodo.18599983, CC BY 4.0) · UCI Occupancy Detection (ID 357, CC BY 4.0) · SDT Thermal (TU Wien / Zenodo 4124309)\n',options:{color:INK}},
     {text:'라이브러리 : ',options:{bold:true,color:NAVY}},
     {text:'TensorFlow Lite, Sensirion SCD4x, Seeed mmWave, Express 5, gpiozero, NumPy.  위 자산은 학습·추론·통신에 활용하였으며, 센서 통합 펌웨어와 통신 프로토콜, 상태 관리, 위험도 엔진은 팀 자체 구현이다.',options:{color:INK}}
-  ],{x:0.78,y:y+4.06,w:11.77,h:0.92,fontFace:F,fontSize:11,lineSpacing:16,valign:'top'});
+  ],{x:0.78,y:y+4.10,w:11.77,h:0.86,fontFace:F,fontSize:10.5,lineSpacing:15,valign:'top'});
   note(s,'저장소는 파일 종류 대신 기기와 책임 영역을 기준으로 분할하였다. 각 디렉터리의 소유자는 .github/CODEOWNERS 에 정의되어 있다.');
 }
 
@@ -303,7 +321,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     const w=[1.55,1.25,1.85,1.25,1.55,2.35][i];
     box(s,px,y+0.38,w,0.86,f[3]?LBLUE:SOFT,f[3]?BLUE:LINE);
     s.addText(f[0],{x:px,y:y+0.44,w,h:0.26,fontFace:M,fontSize:11,bold:true,color:NAVY,align:'center'});
-    s.addText(f[1],{x:px,y:y+0.70,w,h:0.22,fontFace:F,fontSize:10.5,color:BLUE,align:'center'});
+    s.addText(f[1],{x:px,y:y+0.68,w,h:0.24,fontFace:F,fontSize:10.5,color:BLUE,align:'center'});
     s.addText(f[2],{x:px,y:y+0.94,w,h:0.24,fontFace:F,fontSize:10,color:GREY,align:'center'});
     px+=w+0.06;
   });
@@ -322,11 +340,11 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addText([{text:'Type 2  ',options:{bold:true,color:NAVY}},{text:'열화상 프레임 (별도 UDP)',options:{color:INK}}],
     {x:10.25,y:y+1.82,w:2.53,h:0.44,fontFace:F,fontSize:10.5,align:'center',valign:'middle'});
   box(s,0.55,y+2.40,6.05,1.30,SOFT,LINE);
-  s.addText('Type 1 페이로드 (schema safenest.telemetry.v1)',{x:0.75,y:y+2.48,w:5.7,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
+  s.addText('Type 1 페이로드 (schema safenest.telemetry.v1)',{x:0.75,y:y+2.46,w:5.7,h:0.28,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
   s.addText('device_id · seq · uptime_ms\nresp_rate_bpm · heart_rate_bpm · co2_ppm\nthermal_max_c · pir_motion\nvalid { respiration, heart, co2, thermal }',
     {x:0.75,y:y+2.74,w:5.7,h:0.90,fontFace:M,fontSize:10.5,color:INK,lineSpacing:16});
   box(s,6.75,y+2.40,6.03,1.30,SOFT,LINE);
-  s.addText('열화상 프레임 전송 (12페이지 구조 개선 결과, UDP 5005)',{x:6.95,y:y+2.48,w:5.7,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
+  s.addText('열화상 프레임 전송 (12페이지 구조 개선 결과, UDP 5005)',{x:6.95,y:y+2.46,w:5.7,h:0.28,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
   s.addText('SafeNest Thermal UDP v1 (magic "SNTU", version 1)\n32 B 헤더 : frame id · chunk index · offset ·\nlength · CRC32 (모든 조각이 프레임 CRC32 반복)\n논리 payload 9,936 B = 메타 16 B + 4,960 × uint16\n→ 1,200 B 데이터그램 9 조각 분할 · 재조립',
     {x:6.95,y:y+2.70,w:5.7,h:0.96,fontFace:M,fontSize:9,color:INK,lineSpacing:13.5});
   sub(s,0.55,y+3.80,'무효값 처리');
@@ -468,12 +486,12 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   sub(s,6.85,y,'② mmWave 수신 안정성 및 리플레이 결과');
   s.addImage({ path: PV+'/chart_mmwave.png', x:6.85, y:y+0.34, w:5.93, h:1.98 });
   box(s,6.85,y+2.42,5.93,0.92,SOFT,LINE);
-  s.addText('라이브 UART 수신 (2026-08-08)',{x:7.03,y:y+2.48,w:5.6,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
+  s.addText('라이브 UART 수신 (2026-08-08)',{x:7.03,y:y+2.46,w:5.6,h:0.28,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
   s.addText('9.990 Hz · 1,201 레코드 · 199/199 창 파싱 · 시퀀스 누락 0 · UART / checksum / parser 오류 0 / 0 / 0',
     {x:7.03,y:y+2.72,w:5.6,h:0.56,fontFace:F,fontSize:11,color:INK,lineSpacing:17,valign:'top'});
   sub(s,6.85,y+3.46,'③ Thermal 실기기 E2E (레거시 v0.1.0 경로)');
   box(s,6.85,y+3.78,5.93,1.46,SOFT,LINE);
-  s.addText('Raspberry Pi 5, 30.06 s / 138회 측정',{x:7.03,y:y+3.84,w:5.6,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
+  s.addText('Raspberry Pi 5, 30.06 s / 138회 측정',{x:7.03,y:y+3.82,w:5.6,h:0.28,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
   s.addText('p50 162.70 ms · p95 173.90 ms · 평균 167.92 ms  (per-frame min-max)\n유효 프레임 135 / 138 (97.8 %) · 처리량 4.6 FPS\nfail-closed 6종 실기기 PASS (순서위반 · NaN/Inf · 형식오류 · 단선 · 복구 · close 후 read)',
     {x:7.03,y:y+4.06,w:5.6,h:1.12,fontFace:F,fontSize:10.5,color:INK,lineSpacing:16,valign:'top'});
 }
@@ -496,11 +514,11 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   });
   const yy=y+3.74;
   box(s,0.55,yy,6.05,1.10,'FBE9E7',RED);
-  s.addText('개선 전',{x:0.75,y:yy+0.08,w:2,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:RED});
+  s.addText('개선 전',{x:0.75,y:yy+0.06,w:2,h:0.28,fontFace:F,fontSize:11.5,bold:true,color:RED});
   s.addText('열화상 프레임을 1초 telemetry 와 같은 TCP 연결로 초당 약 6.25회 전송 시도\n→ 1초 telemetry 주기 붕괴, 화면 값 지연',
     {x:0.75,y:yy+0.34,w:5.65,h:0.68,fontFace:F,fontSize:11.5,color:INK,lineSpacing:17});
   box(s,6.73,yy,6.05,1.10,'EAF5EF',GREEN);
-  s.addText('개선 후',{x:6.93,y:yy+0.08,w:2,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:GREEN});
+  s.addText('개선 후',{x:6.93,y:yy+0.06,w:2,h:0.28,fontFace:F,fontSize:11.5,bold:true,color:GREEN});
   s.addText('열화상은 UDP 5005 전용 경로로 분리. telemetry TCP 9000 은 1초 주기 유지\n프레임은 조각 CRC32 검증 후 재조립하며, 분주비 4로 대역폭을 통제한다.',
     {x:6.93,y:yy+0.34,w:5.65,h:0.68,fontFace:F,fontSize:11.5,color:INK,lineSpacing:17});
   note(s,'근거 : ESP32/Arduino/esp32_sensor_node/esp32_sensor_node.ino 의 THERMAL_UDP_MAGIC "SNTU" · THERMAL_UDP_VERSION 1 · 32 B 헤더 · 1,200 B 데이터그램 · CRC32 · ESP32/docs/COMMUNICATION_PROTOCOL.md.', 6.66);
@@ -631,7 +649,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     return {text:c,options:{color:col,bold,align:(ci===1||ci===2)?'center':'left'}};
   })),{x:0.55,y:y+0.04,w:12.23,colW:[2.72,0.92,1.48,4.51,2.60],rowH:0.25,...TB,fontSize:10});
   box(s,0.55,y+2.60,12.23,0.72,LBLUE,BLUE);
-  s.addText('테스트 실행 기준',{x:0.78,y:y+2.65,w:2.6,h:0.22,fontFace:F,fontSize:11,bold:true,color:BLUE});
+  s.addText('테스트 실행 기준',{x:0.78,y:y+2.63,w:2.6,h:0.26,fontFace:F,fontSize:11,bold:true,color:BLUE});
   s.addText('하드웨어 없이 실행 가능한 테스트 57건을 직접 실행하여 전부 통과하였다. 데이터 파일이 저장소에 포함되지 않아 실행 대상에서 제외한 항목이 2건 있다.\n저장소의 테스트 함수 1,483개는 소스에 정의된 개수이므로 실행 건수와 구분해 표기한다.',
     {x:0.78,y:y+2.86,w:11.77,h:0.42,fontFace:F,fontSize:10,color:INK,lineSpacing:13.5,valign:'top'});
   s.addImage({ path:A+'/hw_product_full_crop.jpg', x:0.55, y:y+3.38, w:3.08, h:1.40 });
@@ -646,7 +664,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     const x=4.09+i*2.19;
     s.addImage({ path:A+'/'+v[0], x, y:y+3.38, w:2.06, h:1.20 });
     s.addShape(pptx.ShapeType.rect,{x,y:y+3.38,w:2.06,h:1.20,fill:{type:'none'},line:{color:LINE,width:1}});
-    s.addText(v[1],{x,y:y+4.62,w:2.06,h:0.22,fontFace:F,fontSize:10.5,bold:true,color:NAVY,align:'center'});
+    s.addText(v[1],{x,y:y+4.60,w:2.06,h:0.26,fontFace:F,fontSize:10.5,bold:true,color:NAVY,align:'center'});
   });
   s.addText('[그림 5] 위험도 등급별 표시·경보 화면. 주의는 화면 경고, 위험부터는 부저 경보가 함께 출력된다. 화면 값은 표시 계층 검증용 시나리오 입력이며 실센서 측정값이 아니다.',
     {x:4.09,y:y+4.86,w:8.69,h:0.44,fontFace:F,fontSize:9,color:GREY,align:'center',lineSpacing:12,valign:'top'});
@@ -657,7 +675,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 {
   const {s,y} = page(17,'6.1  적용 분야 및 기대효과');
   box(s,0.55,y+0.02,12.23,0.94,LBLUE,BLUE);
-  s.addText('카메라를 쓰지 않기 때문에 열리는 적용 영역',{x:0.78,y:y+0.08,w:6,h:0.26,fontFace:F,fontSize:12.5,bold:true,color:BLUE});
+  s.addText('카메라를 쓰지 않기 때문에 열리는 적용 영역',{x:0.78,y:y+0.06,w:6,h:0.30,fontFace:F,fontSize:12.5,bold:true,color:BLUE});
   s.addText('SafeNest 는 영상 센서를 전혀 쓰지 않는다. 열화상은 80×62 해상도로 개인을 식별할 수 없고, mmWave·CO₂·PIR 은 형상을 남기지 않는다.\n그래서 촬영 장비 반입이나 영상 저장이 통제되는 공간, 사생활 침해가 문제가 되는 공간에서도 사람의 존재와 상태를 감시할 수 있다.',
     {x:0.78,y:y+0.36,w:11.77,h:0.54,fontFace:F,fontSize:11.5,color:INK,lineSpacing:16,valign:'top'});
 
@@ -673,11 +691,11 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
      '도로교통법 제53조가 하차 확인과 하차확인장치 작동을 의무화',
      '현행 장치는 운전자가 버튼을 눌러 확인하는 방식이라 사람의 행위에 의존한다. SafeNest 는 좌석 거리에 해당하는 0.6~0.9 m 구간에서 재실 검출률 1.000 을 보였으므로 잔류 여부를 센서가 직접 판정한다.']];
   uses.forEach((u,i)=>{
-    const yy=y+1.42+i*1.16;
-    s.addShape(pptx.ShapeType.rect,{x:0.55,y:yy,w:0.06,h:1.06,fill:{color:u[1]}});
-    s.addText(u[0],{x:0.74,y:yy,w:5.84,h:0.24,fontFace:F,fontSize:12.5,bold:true,color:u[1]});
-    s.addText(u[2],{x:0.74,y:yy+0.25,w:5.84,h:0.20,fontFace:F,fontSize:10,color:GREY,valign:'top'});
-    s.addText(u[3],{x:0.74,y:yy+0.48,w:5.84,h:0.58,fontFace:F,fontSize:10.5,color:INK,lineSpacing:14,valign:'top'});
+    const yy=y+1.42+i*1.20;
+    s.addShape(pptx.ShapeType.rect,{x:0.55,y:yy,w:0.06,h:1.10,fill:{color:u[1]}});
+    s.addText(u[0],{x:0.74,y:yy,w:5.84,h:0.28,fontFace:F,fontSize:12.5,bold:true,color:u[1]});
+    s.addText(u[2],{x:0.74,y:yy+0.28,w:5.84,h:0.22,fontFace:F,fontSize:10,color:GREY,valign:'top'});
+    s.addText(u[3],{x:0.74,y:yy+0.52,w:5.84,h:0.58,fontFace:F,fontSize:10.5,color:INK,lineSpacing:14,valign:'top'});
   });
 
   s.addImage({ path:A+'/ui_web.png', x:6.85, y:y+1.18, w:5.93, h:3.51 });
@@ -689,8 +707,8 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 
 /* ============ P18 ============ */
 {
-  const {s,y} = page(18,'6.2  도입 비용과 발전 가능성');
-  sub(s,0.55,y,'도입 비용 (실구매 결제액 기준)');
+  const {s,y} = page(18,'6.2  판매가치 · 시장성 및 발전 가능성');
+  sub(s,0.55,y,'판매가치 : 도입 비용 (실구매 결제액 기준)');
   const bom=[[hdr('구분'),hdr('구성품'),hdr('금액(원)')],
    ['감지 노드','Thermal-90 열화상 모듈 (Waveshare 80×62 · 90° FOV)','104,223'],
    ['','MR60BHA2 60 GHz mmWave 센서','56,013'],
@@ -710,14 +728,14 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   })),{x:0.55,y:y+0.36,w:6.03,colW:[1.02,3.61,1.40],rowH:0.24,...TB,fontSize:9});
 
   box(s,0.55,y+4.14,6.03,1.12,'EAF5EF',GREEN);
-  s.addText('공간을 늘릴 때 추가되는 비용',{x:0.75,y:y+4.20,w:4,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:GREEN});
+  s.addText('공간을 늘릴 때 추가되는 비용',{x:0.75,y:y+4.18,w:4,h:0.28,fontFace:F,fontSize:11.5,bold:true,color:GREEN});
   s.addText([
     {text:'관제 노드 1대가 다수의 감지 노드를 수용하므로, 감시 공간을 늘릴 때 드는 추가 비용은 감지 노드 213,708원뿐이다.\n',options:{color:INK}},
     {text:'1개 공간 447,578원 · 3개 874,994원(공간당 291,665원) · 5개 1,302,410원(공간당 260,482원)\n',options:{color:INK}},
     {text:'5개 공간 기준 공간당 260,482원으로, 감시인 1명 월 인건비 2,156,880원의 약 12 % 수준이다.',options:{bold:true,color:GREEN}}
   ],{x:0.75,y:y+4.44,w:5.63,h:0.74,fontFace:F,fontSize:10,lineSpacing:14,valign:'top'});
 
-  sub(s,6.85,y,'센서 등급 상향에 따른 적용 범위 확장');
+  sub(s,6.85,y,'발전 가능성 : 센서 등급 상향에 따른 적용 범위 확장');
   const up=[[hdr('구성'),hdr('현재 구성의 실측 한계'),hdr('상위 센서 채택 시')],
    ['mmWave','MR60BHA2 60 GHz 단일 안테나.\n0.6~0.9 m 검출률 1.000, 1.2 m 0.814,\n1.5 m 에서 lock loss 로 유효 창 0','다중 송수신 FMCW(예: TI IWR6843) 채택 시\n검출 거리와 다중 인원 동시 추적 범위 확대'],
    ['열화상','Waveshare 80×62 · 90° FOV.\n저해상도라 원거리 인체 형상 분리가 어렵다','160×120 이상 LWIR 채택 시\n원거리 자세 분류와 다인 분리 가능'],
@@ -727,13 +745,18 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addText('판단 계층이 센서에 독립적인 계약(base_sensor · InferenceResult)으로 분리되어 있어, 센서를 상위 등급으로 교체해도 위험도 산출과 fail-closed 정책은 그대로 재사용한다.',
     {x:6.85,y:y+2.52,w:5.93,h:0.50,fontFace:F,fontSize:10,color:INK,lineSpacing:14,valign:'top'});
 
-  sub(s,6.85,y+3.06,'외함 설계와 실물');
-  s.addImage({path:A+'/3d_sensor_housing_front_openings.png',x:6.85,y:y+3.42,w:2.86,h:1.35});
-  s.addShape(pptx.ShapeType.rect,{x:6.85,y:y+3.42,w:2.86,h:1.35,fill:{type:'none'},line:{color:LINE,width:1}});
-  s.addImage({path:A+'/hw_product_emergency_crop.jpg',x:9.92,y:y+3.42,w:2.86,h:1.35});
-  s.addShape(pptx.ShapeType.rect,{x:9.92,y:y+3.42,w:2.86,h:1.35,fill:{type:'none'},line:{color:LINE,width:1}});
-  s.addText('[그림 7] 센서 하우징 전면 개구부 설계 (137×80×60 mm, 벽 3 mm).   [그림 8] FDM 출력·조립을 마친 실물 (표시부 240×140 mm). STL 4종과 설계사양 2종을 자체 설계·출력하였다.',
-    {x:6.85,y:y+4.84,w:5.93,h:0.42,fontFace:F,fontSize:9,color:GREY,lineSpacing:11.5,valign:'top'});
+  sub(s,6.85,y+3.06,'시장성 : 수요가 법령으로 발생하는 시장');
+  const mk=[['밀폐공간', BLUE,'산업안전보건법 제619조가 산소·유해가스 농도 측정과 감시인 배치를 사업주 의무로 규정한다. 최근 10년 질식재해 174건 · 재해자 338명 · 사망 136명.'],
+    ['어린이 통학차량', GREEN,'도로교통법 제53조가 하차 확인과 어린이 하차확인장치 작동을 의무화하고 있어 장착 수요가 이미 제도화되어 있다.'],
+    ['보안 통제구역', NAVY,'촬영 장비 반입이 통제되어 CCTV 로 대체할 수 없는 구간이다. 영상을 만들지 않는 감시 수단에 대한 대체재가 없다.']];
+  mk.forEach((m,i)=>{
+    const yy=y+3.42+i*0.48;
+    s.addShape(pptx.ShapeType.rect,{x:6.85,y:yy,w:0.05,h:0.42,fill:{color:m[1]}});
+    s.addText(m[0],{x:7.00,y:yy,w:1.32,h:0.42,fontFace:F,fontSize:10,bold:true,color:m[1],valign:'middle'});
+    s.addText(m[2],{x:8.36,y:yy,w:4.42,h:0.42,fontFace:F,fontSize:9,color:INK,valign:'middle',lineSpacing:12});
+  });
+  s.addText('세 시장 모두 임의 도입이 아니라 법령과 보안 규정이 수요를 만든다. 따라서 도입 판단은 성능보다 대체 비용에서 갈리며, 감시인 인건비의 12~21 % 수준인 도입비가 근거가 된다.',
+    {x:6.85,y:y+4.92,w:5.93,h:0.42,fontFace:F,fontSize:10,color:NAVY,bold:true,lineSpacing:14,valign:'top'});
   note(s,'단가 : 2026-07-02 실구매 결제액(열화상·mmWave·CO₂·LCD·배선) · 국내 유통가(Pi 5·ESP32) · 통상가 추정(PIR·부저·3D 출력). 인건비 : 2026년 최저임금 월 환산액 2,156,880원(고용노동부 고시).', 6.70);
 }
 
@@ -764,7 +787,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   dec.forEach((d,i)=>{
     const x=0.55+i*4.13;
     box(s,x,y+4.14,3.86,0.98,SOFT,AMBER);
-    s.addText(d[0],{x:x+0.14,y:y+4.19,w:3.58,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:'9A5B0B'});
+    s.addText(d[0],{x:x+0.14,y:y+4.17,w:3.58,h:0.28,fontFace:F,fontSize:11.5,bold:true,color:'9A5B0B'});
     s.addText(d[1],{x:x+0.14,y:y+4.44,w:3.58,h:0.24,fontFace:F,fontSize:11,bold:true,color:NAVY});
     s.addText(d[2],{x:x+0.14,y:y+4.69,w:3.58,h:0.40,fontFace:F,fontSize:10,color:INK,lineSpacing:14,valign:'top'});
   });

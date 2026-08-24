@@ -154,7 +154,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   sub(s,0.55,y,'시스템 구성도');
   const D0=0.55, DW=7.05;
   const sen=[['mmWave\nMR60BHA2','UART2','resp_rate_bpm\nheart_rate_bpm'],
-             ['Thermal-90\n(80×62)','I²C + SPI','80×62 프레임\nthermal_max_c'],
+             ['Thermal-90\n(80×62)','I²C + SPI','80×62 uint16\n프레임 (UDP)'],
              ['PIR','GPIO','pir_motion'],
              ['SCD40\n(CO₂)','I²C','co2_ppm']];
   let dy=y+0.38;
@@ -249,7 +249,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   const pin=[[hdr('센서'),hdr('인터페이스'),hdr('ESP32 핀 / 주소'),hdr('수집 값')],
    ['MR60BHA2\n(mmWave)','UART2\n115200 bps','RX GPIO16 / TX GPIO17','호흡수, 심박수,\n재실, phase'],
    ['SCD40\n(CO₂)','I²C\n100 kHz','SDA 21 / SCL 22 / 0x62','co2_ppm'],
-   ['PIR','GPIO 디지털 입력','GPIO 13 (20 ms 폴링)','pir_motion'],
+   ['PIR','GPIO 디지털 입력','GPIO 13 (20 ms 폴링)','pir_motion\n+ 전이 event_id'],
    ['Thermal-90\n(MI48xx)','I²C 제어\n+ SPI','0x40 · 0x41 / SCLK18 MISO19\nMOSI23 CS27 READY26 RESET25','80×62 uint16\n프레임']];
   s.addTable(pin.map((r,ri)=>r.map((c,ci)=>typeof c==='string'?{text:c,options:{bold:ci===0,color:ci===0?NAVY:INK}}:c)),
     {x:0.55,y:y+0.04,w:6.55,colW:[1.55,1.45,2.30,1.25],rowH:0.52,...TB,fontSize:10.5});
@@ -341,8 +341,8 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     {x:10.25,y:y+1.82,w:2.53,h:0.44,fontFace:F,fontSize:10.5,align:'center',valign:'middle'});
   box(s,0.55,y+2.40,6.05,1.30,SOFT,LINE);
   s.addText('Type 1 페이로드 (schema safenest.telemetry.v1)',{x:0.75,y:y+2.46,w:5.7,h:0.28,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
-  s.addText('device_id · seq · uptime_ms\nresp_rate_bpm · heart_rate_bpm · co2_ppm\nthermal_max_c · pir_motion\nvalid { respiration, heart, co2, thermal }',
-    {x:0.75,y:y+2.74,w:5.7,h:0.90,fontFace:M,fontSize:10.5,color:INK,lineSpacing:16});
+  s.addText('device_id · boot_id · seq · uptime_ms\nresp_rate_bpm · heart_rate_bpm · co2_ppm\npir_motion · pir_event_id\npir_last_transition_monotonic_ms\nvalid { respiration, heart, co2 } · mmwave{} · health{}',
+    {x:0.75,y:y+2.70,w:5.7,h:0.96,fontFace:M,fontSize:9,color:INK,lineSpacing:13.5});
   box(s,6.75,y+2.40,6.03,1.30,SOFT,LINE);
   s.addText('열화상 프레임 전송 (12페이지 구조 개선 결과, UDP 5005)',{x:6.95,y:y+2.46,w:5.7,h:0.28,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
   s.addText('SafeNest Thermal UDP v1 (magic "SNTU", version 1)\n32 B 헤더 : frame id · chunk index · offset ·\nlength · CRC32 (모든 조각이 프레임 CRC32 반복)\n논리 payload 9,936 B = 메타 16 B + 4,960 × uint16\n→ 1,200 B 데이터그램 9 조각 분할 · 재조립',
@@ -381,8 +381,8 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addTable(ig.map(r=>r.map(c=>typeof c==='string'?{text:c}:c)),
     {x:0.55,y:y+2.14,w:12.23,colW:[2.35,5.25,2.55,2.08],rowH:0.375,...TB,fontSize:11});
   s.addText([{text:'설계 원칙 : ',options:{bold:true,color:NAVY}},
-    {text:'센서가 정해진 시간 안에 갱신되지 않으면 해당 입력을 STALE로 분리하고, 마지막 정상값을 현재 증거로 다시 쓰지 않는다. 유효하지 않은 증거는 판단에서 제외하며 0으로 대체하지 않는다.',options:{color:INK}}],
-    {x:0.55,y:y+4.62,w:12.23,h:0.50,fontFace:F,fontSize:13,lineSpacing:19,valign:'top'});
+    {text:'센서가 정해진 시간 안에 갱신되지 않으면 해당 입력을 STALE로 분리하고, 마지막 정상값을 현재 증거로 다시 쓰지 않는다. 유효하지 않은 증거는 0으로 대체하지 않고 판단에서 제외한다.  PIR 은 레벨 판독 입력이라 TTL 을 두지 않고, 상태가 바뀔 때마다 pir_event_id 를 증가시켜 이벤트 누락을 확인한다.',options:{color:INK}}],
+    {x:0.55,y:y+4.58,w:12.23,h:0.58,fontFace:F,fontSize:12,lineSpacing:17,valign:'top'});
   note(s,'검증 : 본 문서 작성 시점에 integration/pi_lcd 테스트 13건을 실행해 전부 통과하였다. 부분 수신, 잘못된 헤더, 시퀀스 불일치, 신선도 판정이 포함된다.');
 }
 

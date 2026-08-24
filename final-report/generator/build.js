@@ -139,12 +139,14 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     return {text:c,options:{align:mk?'center':'left', bold:(mk||ci===0),
       fontSize:mk?15:12, color: mk?(c==='×'?RED:(c==='△'?AMBER:GREEN)):INK}};
   })),{x:0.55,y:y+0.04,w:12.23,colW:[1.95,1.30,1.40,1.40,1.55,4.63],rowH:0.46,...TB});
-  sub(s,0.55,y+3.72,'공백의 성격');
+  sub(s,0.55,y+3.58,'공백의 성격');
   s.addText([
     {text:'여섯 가지 방식은 서로 다른 이유로 한계를 갖지만 공통점이 하나 있다. ',options:{color:INK}},
     {text:'센서가 값을 내지 못하거나 값이 오래된 상황을 스스로 인지하지 못한다.',options:{bold:true,color:NAVY}},
-    {text:'\n값이 도착하지 않아도 시스템은 아무 신호를 내지 않으며, 이 상태는 정상으로 해석된다. SafeNest 는 서로 다른 성질의 증거를 함께 수집하고 그 증거를 지금 신뢰할 수 있는지까지 판정하여 이 공백에 대응한다.',options:{color:INK}}
-  ],{x:0.55,y:y+4.06,w:12.23,h:0.86,fontFace:F,fontSize:13.5,lineSpacing:21,valign:'top'});
+    {text:'\n값이 도착하지 않아도 시스템은 아무 신호를 내지 않으며, 이 상태는 정상으로 해석된다. SafeNest 는 서로 다른 성질의 증거를 함께 수집하고 그 증거를 지금 신뢰할 수 있는지까지 판정하여 이 공백에 대응한다.\n',options:{color:INK}},
+    {text:'센서 선정도 이 표에서 도출하였다. ',options:{bold:true,color:NAVY}},
+    {text:'정지 인체는 mmWave 의 미세 움직임과 열화상의 열 분포로, 환경 위험은 CO₂ 의 농도 추세로, 움직임 이벤트는 PIR 로 덮는다. 한 센서가 놓치는 것을 다른 센서가 보도록 조합하였다.',options:{color:INK}}
+  ],{x:0.55,y:y+3.90,w:12.23,h:1.22,fontFace:F,fontSize:11.5,lineSpacing:17,valign:'top'});
   note(s,'○ 충족 · △ 조건부 충족 · × 미충족. 비교는 감지 방식의 범주를 기준으로 하며 특정 제품의 성능을 단정하지 않는다. 유사 제품과의 비교는 15페이지에 별도로 제시한다.');
 }
 
@@ -294,19 +296,20 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
    ['recoverThermalIfStale()','30 s 무프레임 시 GPIO RESET 토글로 센서 재초기화'],
    ['telemetryTcpTask() /\nthermalUdpTask()','TCP·UDP 송신을 FreeRTOS 태스크로 분리해 상호 블로킹 차단'],
    ['recv_exact()','TCP 경계 없음을 전제로 헤더·payload 길이만큼 정확 수신'],
-   ['SensorStore.\nrecord_telemetry()','채널별 valid·수신 시각 기록, 5 s 기준 신선도 판정'],
-   ['evaluate_sensor_health_\nand_risk()','유효 채널 가중치 재정규화 후 위험도 산출, 전부 무효면 None']];
-  s.addTable(fn.map((r,ri)=>r.map((c,ci)=>typeof c==='string'?{text:c,options:{fontFace:ci===0?M:F,fontSize:ci===0?8:10}}:c)),
-    {x:6.85,y:y+0.36,w:5.93,colW:[2.10,3.83],rowH:0.30,...TB});
+   ['record_telemetry()','채널별 valid·수신 시각 기록, 5 s 기준 신선도 판정'],
+   ['evaluate_sensor_health_\nand_risk()','유효 채널 가중치 재정규화 후 위험도 산출, 전부 무효면 None'],
+   ['logHealth()','Wi-Fi·채널값·프레임수·CRC 오류·UDP 실패·free heap 주기 출력']];
+  s.addTable(fn.map((r,ri)=>r.map((c,ci)=>typeof c==='string'?{text:c,options:{fontFace:ci===0?M:F,fontSize:ci===0?7.5:9.5}}:c)),
+    {x:6.85,y:y+0.36,w:5.93,colW:[2.10,3.83],rowH:0.27,...TB});
 
-  box(s,0.55,y+3.76,12.23,1.26,SOFT,AMBER);
-  s.addText('외부 오픈소스 및 데이터셋 고지 (대회 규정 제10조 ③)',{x:0.78,y:y+3.82,w:7,h:0.28,fontFace:F,fontSize:12,bold:true,color:'9A5B0B'});
+  box(s,0.55,y+4.00,12.23,1.12,SOFT,AMBER);
+  s.addText('외부 오픈소스 및 데이터셋 고지 (대회 규정 제10조 ③)',{x:0.78,y:y+4.06,w:7,h:0.28,fontFace:F,fontSize:12,bold:true,color:'9A5B0B'});
   s.addText([
     {text:'데이터셋 : ',options:{bold:true,color:NAVY}},
     {text:'Zenodo mmWave vital-sign (DOI 10.5281/zenodo.18599983, CC BY 4.0) · UCI Occupancy Detection (ID 357, CC BY 4.0) · SDT Thermal (TU Wien / Zenodo 4124309)\n',options:{color:INK}},
     {text:'라이브러리 : ',options:{bold:true,color:NAVY}},
     {text:'TensorFlow Lite, Sensirion SCD4x, Seeed mmWave, Express 5, gpiozero, NumPy.  위 자산은 학습·추론·통신에 활용하였으며, 센서 통합 펌웨어와 통신 프로토콜, 상태 관리, 위험도 엔진은 팀 자체 구현이다.',options:{color:INK}}
-  ],{x:0.78,y:y+4.10,w:11.77,h:0.86,fontFace:F,fontSize:10.5,lineSpacing:15,valign:'top'});
+  ],{x:0.78,y:y+4.32,w:11.77,h:0.74,fontFace:F,fontSize:10,lineSpacing:14,valign:'top'});
   note(s,'저장소는 파일 종류 대신 기기와 책임 영역을 기준으로 분할하였다. 각 디렉터리의 소유자는 .github/CODEOWNERS 에 정의되어 있다.');
 }
 
@@ -371,7 +374,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     s.addText(st[1],{x:x+0.09,y:y+0.74,w:2.08,h:0.78,fontFace:F,fontSize:9.5,color:INK,align:'center',lineSpacing:13});
     if(i<4) s.addText('▶',{x:x+2.28,y:y+0.86,w:0.18,h:0.26,fontFace:F,fontSize:12,color:GREY,align:'center'});
   });
-  sub(s,0.55,y+1.74,'열화상 프레임 무결성 검사');
+  sub(s,0.55,y+1.62,'열화상 프레임 무결성 검사');
   const ig=[[hdr('검사'),hdr('방법'),hdr('불합격 시 처리'),hdr('구현 위치')],
    ['CRC-16/CCITT-FALSE','poly 0x1021, init 0xFFFF 로 계산해 헤더 기록값과 대조','프레임 폐기','thermalFrameCrc()'],
    ['헤더 범위 재계산','min/max 를 픽셀에서 다시 계산해 헤더 값과 대조','프레임 폐기','server.py'],
@@ -379,10 +382,12 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
    ['죽은 화소 배제','raw 2332–4231 (약 −40~150 ℃) 범위 밖 화소 제외','사용 가능 화소 32개 미만이면 폐기','.ino / server.py'],
    ['무프레임 자동 복구','30 s 무프레임 시 GPIO RESET LOW 20 ms → HIGH 300 ms','센서 재초기화','recoverThermalIfStale()']];
   s.addTable(ig.map(r=>r.map(c=>typeof c==='string'?{text:c}:c)),
-    {x:0.55,y:y+2.14,w:12.23,colW:[2.35,5.25,2.55,2.08],rowH:0.375,...TB,fontSize:11});
+    {x:0.55,y:y+1.98,w:12.23,colW:[2.35,5.25,2.55,2.08],rowH:0.36,...TB,fontSize:11});
   s.addText([{text:'설계 원칙 : ',options:{bold:true,color:NAVY}},
-    {text:'센서가 정해진 시간 안에 갱신되지 않으면 해당 입력을 STALE로 분리하고, 마지막 정상값을 현재 증거로 다시 쓰지 않는다. 유효하지 않은 증거는 0으로 대체하지 않고 판단에서 제외한다.  PIR 은 레벨 판독 입력이라 TTL 을 두지 않고, 상태가 바뀔 때마다 pir_event_id 를 증가시켜 이벤트 누락을 확인한다.',options:{color:INK}}],
-    {x:0.55,y:y+4.58,w:12.23,h:0.58,fontFace:F,fontSize:12,lineSpacing:17,valign:'top'});
+    {text:'센서가 정해진 시간 안에 갱신되지 않으면 해당 입력을 STALE로 분리하고, 마지막 정상값을 현재 증거로 다시 쓰지 않는다. 유효하지 않은 증거는 0으로 대체하지 않고 판단에서 제외한다.  PIR 은 레벨 판독 입력이라 TTL 을 두지 않고, 상태가 바뀔 때마다 pir_event_id 를 증가시켜 이벤트 누락을 확인한다.\n',options:{color:INK}},
+    {text:'자기진단 : ',options:{bold:true,color:NAVY}},
+    {text:'ESP32 는 큐 덮어쓰기·TCP·UDP 송신·CO₂ 판독·열화상 조회 실패 카운터 9종을 telemetry health 블록에 함께 실어 보내고, boot_id 로 재부팅과 재접속을 구분한다.',options:{color:INK}}],
+    {x:0.55,y:y+4.24,w:12.23,h:0.92,fontFace:F,fontSize:11,lineSpacing:15,valign:'top'});
   note(s,'검증 : 본 문서 작성 시점에 integration/pi_lcd 테스트 13건을 실행해 전부 통과하였다. 부분 수신, 잘못된 헤더, 시퀀스 불일치, 신선도 판정이 포함된다.');
 }
 
@@ -634,7 +639,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 {
   const {s,y} = page(16,'5.3  구현 결과 및 검증 수준');
   const rows=[[hdr('구성요소'),hdr('구현'),hdr('검증 수준'),hdr('증거'),hdr('확장 계획')],
-   ['ESP32 4센서 통합 노드','완료','SW 검증','esp32_sensor_node.ino 741줄 · 빌드 RAM 9.9 % / Flash 20.5 %','다중 노드 확장'],
+   ['ESP32 4센서 통합 노드','완료','SW 검증','esp32_sensor_node.ino 741줄 · RAM 9.9 % / Flash 20.5 % · 자기진단 9종','다중 노드 확장'],
    ['TCP v1 송·수신 및 유효성 검사','완료','SW 검증','수신기 테스트 13건 통과 · CRC-16 · 범위 재계산 · 이중 TTL','장시간 운용 모니터링'],
    ['Risk Engine · fail-closed','완료','SW 검증','위험도 테스트 22건 실행 통과','현장 데이터 기반 임계값 조정'],
    ['mmWave 채널','완료','실기기 검증','9.990 Hz · 1,201 레코드 · 오류 0 · 리플레이 MAE 0.270 rpm','상시 운용 데이터 축적'],

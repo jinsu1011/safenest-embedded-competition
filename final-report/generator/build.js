@@ -118,8 +118,8 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addText('가스 감지기·PIR·CCTV가 사람의 상태를 놓치는 구간',{x:5.49,y:fy,w:4.7,h:0.40,fontFace:F,fontSize:11.5,bold:true,color:'9A5B0B',align:'center',valign:'middle'});
   s.addText('▼',{x:6.55,y:fy+0.34,w:0.3,h:0.20,fontFace:F,fontSize:9,color:AMBER,align:'center'});
   s.addText('▼',{x:8.85,y:fy+0.34,w:0.3,h:0.20,fontFace:F,fontSize:9,color:AMBER,align:'center'});
-  s.addText('SafeNest는 이 구간에서 사람의 존재와 상태를 자동으로 확인하고 현장에 경보를 낸다.',
-    {x:0.55,y:fy+1.46,w:12.23,h:0.30,fontFace:F,fontSize:13.5,bold:true,color:NAVY});
+  s.addText('SafeNest 는 법정 산소·유해가스 측정 설비와 감시인을 대체하지 않는다. 이 구간에서 사람의 존재와 상태를 보조적으로 확인해 경보를 낸다.',
+    {x:0.55,y:fy+1.38,w:12.23,h:0.30,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
   note(s,'※ 출처 : 고용노동부 밀폐공간 질식재해 예방 보도자료(2024), 경향신문 밀폐공간 중대재해 분석 보도(2025). 법령 : 산업안전보건법 제619조.');
 }
 
@@ -259,10 +259,11 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   const pts=['열화상 RESET(GPIO25)을 단독 핀으로 확보해 부팅 시퀀스와 무프레임 자동 재초기화를 구현하였다.',
              '버스 속도는 보드·펌웨어 시험 조건에 따라 다르다. 최종 제출 기준 통합 노드 펌웨어는 SPI 1 MHz · I²C 100 kHz 설정이다.',
              '실행 루프에서 delay()를 사용하지 않고 millis() 주기 판정과 FreeRTOS 네트워크 태스크로 분리하였다.',
-             '10개 신호선이 서로 다른 버스에 물리므로 핀 상수를 펌웨어 상단에 모아 배선도와 1:1로 대응시켰다.'];
+             '10개 신호선이 서로 다른 버스에 물리므로 핀 상수를 펌웨어 상단에 모아 배선도와 1:1로 대응시켰다.',
+             'CO₂ 는 환기 상태와 재실 추세를 보는 지표이며, 산소·유해가스 법정 측정을 대신하지 않는다.'];
   pts.forEach((p,i)=>{
     s.addText([{text:'· ',options:{bold:true,color:BLUE}},{text:p,options:{color:INK}}],
-      {x:0.58,y:y+3.22+i*0.48,w:6.52,h:0.44,fontFace:F,fontSize:12,lineSpacing:16,valign:'top'});
+      {x:0.58,y:y+3.18+i*0.40,w:6.52,h:0.38,fontFace:F,fontSize:11,lineSpacing:14.5,valign:'top'});
   });
   s.addImage({ path:A+'/hw_wiring_diagram.png', x:7.35, y:y+0.04, w:5.43, h:4.38 });
   s.addShape(pptx.ShapeType.rect,{x:7.35,y:y+0.04,w:5.43,h:4.38,fill:{type:'none'},line:{color:LINE,width:1}});
@@ -374,9 +375,9 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     s.addText(st[1],{x:x+0.09,y:y+0.74,w:2.08,h:0.78,fontFace:F,fontSize:9.5,color:INK,align:'center',lineSpacing:13});
     if(i<4) s.addText('▶',{x:x+2.28,y:y+0.86,w:0.18,h:0.26,fontFace:F,fontSize:12,color:GREY,align:'center'});
   });
-  sub(s,0.55,y+1.62,'열화상 프레임 무결성 검사');
+  sub(s,0.55,y+1.62,'열화상 프레임 무결성 검사 (센서 → MCU 계층)');
   const ig=[[hdr('검사'),hdr('방법'),hdr('불합격 시 처리'),hdr('구현 위치')],
-   ['CRC-16/CCITT-FALSE','poly 0x1021, init 0xFFFF 로 계산해 헤더 기록값과 대조','프레임 폐기','thermalFrameCrc()'],
+   ['CRC-16/CCITT-FALSE','poly 0x1021, init 0xFFFF 로 계산해 헤더 기록값과 대조.\nMCU → Pi 의 UDP 조각 재조립은 별도 계층인 프레임 CRC32 로 확인한다','프레임 폐기','thermalFrameCrc()'],
    ['헤더 범위 재계산','min/max 를 픽셀에서 다시 계산해 헤더 값과 대조','프레임 폐기','server.py'],
    ['시퀀스 교차 확인','외부 헤더 sequence 와 내부 frame_sequence 일치 확인','프레임 폐기','server.py'],
    ['죽은 화소 배제','raw 2332–4231 (약 −40~150 ℃) 범위 밖 화소 제외','사용 가능 화소 32개 미만이면 폐기','.ino / server.py'],
@@ -405,20 +406,18 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   badge(s,7.97,y+1.44,'오프라인','sw');
   badge(s,7.97,y+2.14,'배포 차단','no');
   badge(s,7.97,y+2.84,'합성 한정','warn');
-  // 열화상 온디바이스 판정 예시 2×2. 실제 이미지 확보 전까지 자리와 캡션만 유지한다.
-  const shots=[['시나리오 1 · EMPTY_ROOM\n열화상 화면 삽입 예정'],
-               ['시나리오 1 · 온디바이스\nNOT_HUMAN 판정 화면 삽입 예정'],
-               ['시나리오 2 · LYING 자세\n열화상 화면 삽입 예정'],
-               ['시나리오 2 · 온디바이스\nHUMAN_FALL 판정 화면 삽입 예정']];
-  shots.forEach((v,i)=>{
-    const gx=9.41+(i%2)*1.72, gy=y+0.04+Math.floor(i/2)*1.44;
-    s.addShape(pptx.ShapeType.rect,{x:gx,y:gy,w:1.64,h:1.36,fill:{color:'FFFFFF'},
-      line:{color:'C9CFD8',width:1,dashType:'dash'}});
-    s.addText(v[0],{x:gx+0.07,y:gy,w:1.50,h:1.36,fontFace:F,fontSize:8,color:GREY,
-      align:'center',valign:'middle',lineSpacing:11.5});
-  });
-  s.addText('[그림 2] Thermal-90 실기기 온디바이스 판정 예시 (이미지 삽입 예정). thermal_fall_int8@0.1.0, per-frame min-max. HUMAN_FALL은 LYING 자세 프록시이며 실제 낙상 사건 판정이 아님.',
-    {x:9.41,y:y+2.96,w:3.37,h:0.62,fontFace:F,fontSize:8,color:GREY,lineSpacing:10.5,valign:'top'});
+  // 우측 : AI 와 안전 판단 계층의 역할 분리. AI 출력을 최종 판단이 아니라 증거로 다룬다는 점을 명시한다.
+  box(s,9.41,y+0.04,3.37,3.34,SOFT,LINE);
+  s.addText('AI 와 안전 판단의 역할 분리',{x:9.58,y:y+0.12,w:3.03,h:0.26,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
+  s.addText('Edge AI 가 하는 일',{x:9.58,y:y+0.44,w:3.03,h:0.22,fontFace:F,fontSize:10,bold:true,color:BLUE});
+  s.addText('· 열화상 인체·자세 특징 판단\n· CO₂ 재실 보조 분석\n· 검증을 통과한 모델에 한해 증거 생성',
+    {x:9.58,y:y+0.68,w:3.03,h:0.52,fontFace:F,fontSize:8.5,color:INK,lineSpacing:11.5,valign:'top'});
+  s.addText('안전 판단 계층이 하는 일',{x:9.58,y:y+1.26,w:3.03,h:0.22,fontFace:F,fontSize:10,bold:true,color:NAVY});
+  s.addText('· 유효성·신선도 검사\n· Sensor Health 판정\n· 유효 증거만 가중치 재정규화\n· 전부 무효면 판단 보류 (fail-closed)\n· 최종 위험도와 경보 등급 결정',
+    {x:9.58,y:y+1.50,w:3.03,h:1.00,fontFace:F,fontSize:8.5,color:INK,lineSpacing:11.5,valign:'top'});
+  box(s,9.55,y+2.56,3.09,0.74,'FFFFFF',BLUE);
+  s.addText('AI 출력도 최종 판단이 아니라 하나의 증거로 취급한다. AI 또는 센서가 신뢰할 수 없는 상태이면 그 입력을 최종 위험 판단에서 제외한다.',
+    {x:9.68,y:y+2.62,w:2.83,h:0.62,fontFace:F,fontSize:8.5,color:NAVY,lineSpacing:11.5,valign:'top'});
   box(s,0.55,y+3.62,12.23,1.42,'FDF3E3',AMBER);
   s.addText('적용 범위 및 현재 Production 경로',{x:0.78,y:y+3.68,w:5,h:0.26,fontFace:F,fontSize:12,bold:true,color:'9A5B0B'});
   s.addText('① 현재 Production 열화상 경로는 per-frame min-max + thermal_fall_int8 v0.1.0 이다. ℃ 변환 → P1 z-score → FULL_INT8(B5) 경로는 오프라인 진단·호환성 검증용으로 분리해 관리한다.\n② FPN 및 die-temperature drift 보정식은 레거시 시험 코드에서 구현·검증하였으며, Production 추론 경로와 분리해 운용한다.\n③ HUMAN_FALL 은 눕기(LYING) 정적 자세를 기준으로 학습한 자세 분류이며, 열화상이 산출하는 값은 표면 온도이다.\n④ 필드 관측에서 열화상 수신·저장·추론 경로의 정상 동작을 확인하였다. NOT_HUMAN 편향은 전처리·도메인 정합 과제로 분리해 관리한다.\n⑤ mmWave 호흡 신호는 임상 진단 용도가 아니며, v0.2.0 후보 지표는 합성 데이터 기준값이다.',
@@ -570,7 +569,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   const big=[
     ['fail-closed 판단 보류','증거가 무효이거나 결측이면 마지막 정상값을 재사용하지 않는다. 네 채널이 모두 무효이면 risk_score 와 risk_level 을 None 으로 두고 system_health 를 FAILED 로 기록한다. 무응답을 정상으로 해석하지 않는다.','RaspberryPi/Ondevice_AI/risk/fallback.py','SW 검증','sw'],
     ['유효성·신선도의 1급 상태 관리','값과 함께 valid 플래그를 전송하며, 유효하지 않은 수치는 0으로 대체하지 않고 null 로 보낸다. ESP32 와 Raspberry Pi 가 신선도를 각각 독립적으로 판정하고, STALE 입력은 판단에서 제외한다.','formatNullableFloat() · SensorStore','SW 검증','sw'],
-    ['카메라 없는 이종 센서 증거 융합','영상 센서를 쓰지 않는다. mmWave 의 미세 움직임, 열화상의 저해상도 열 분포, CO₂ 의 환경 추세, PIR 의 움직임 이벤트가 서로 다른 실패 모드를 상쇄한다. 열화상 80×62 는 개인 식별이 불가능한 해상도이므로, 촬영 장비 반입이 통제되는 보안 구역에도 적용할 수 있다.','RaspberryPi/Ondevice_AI/risk/risk_engine.py','SW 검증','sw']];
+    ['RGB 카메라 없는 이종 센서 증거 융합','개인 식별이 가능한 RGB 카메라를 쓰지 않는다. mmWave 의 미세 움직임, 열화상의 열 분포, CO₂ 의 환경 추세, PIR 의 움직임 이벤트가 서로 다른 실패 모드를 상쇄한다. 80×62 열화상은 개인 식별에 쓰기 어려운 해상도라 촬영이 통제되는 구역에도 적용할 수 있다.','RaspberryPi/Ondevice_AI/risk/risk_engine.py','SW 검증','sw']];
   big.forEach((r,i)=>{
     const yy=y+0.06+i*1.22;
     s.addShape(pptx.ShapeType.roundRect,{x:0.55,y:yy,w:0.56,h:1.12,fill:{color:BLUE},line:{color:BLUE},rectRadius:0.06});
@@ -610,24 +609,25 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
    ['환경 위험 감시','○','×','×','×','×','×','○'],
    ['다중 증거 교차 확인','×','×','×','×','×','×','○'],
    ['무효·결측 데이터 인지','×','×','×','△','확인 불가','확인 불가','○'],
-   ['증거 부재 시 판단 보류','×','×','×','×','확인 불가','확인 불가','○']];
+   ['증거 부재 시 판단 보류','×','×','×','×','확인 불가','확인 불가','○'],
+   ['통합 실기기 검증 완료','○','○','○','○','○','○','×']];
   s.addTable(rows.map((r,ri)=>r.map((c,ci)=>{
     if(typeof c!=='string') return c;
     const mk=(c==='○'||c==='×'||c==='△');
     let col=INK, fill=undefined, fs=12;
-    if(mk){ col = c==='×'?RED:(c==='△'?AMBER:GREEN); fs=15; }
+    if(mk){ col = c==='×'?RED:(c==='△'?AMBER:GREEN); fs=13; }
     if(c==='확인 불가'){ col=GREY; fs=9.5; }
     if(ci===7 && ri>0) fill={color: c==='×' ? 'FBE9E7' : LBLUE};
     return {text:c,options:{align:(mk||c==='확인 불가')?'center':'left',color:col,bold:mk,fill,fontSize:fs}};
-  })),{x:0.55,y:y+0.04,w:12.23,colW:[3.03,1.28,1.05,1.00,1.25,1.42,1.55,1.65],rowH:0.28,...TB});
+  })),{x:0.55,y:y+0.04,w:12.23,colW:[3.03,1.28,1.05,1.00,1.25,1.42,1.55,1.65],rowH:0.25,...TB});
   s.addText([{text:'SafeNest 가 다르게 한 지점은 감지 성능보다 증거를 다루는 정책에 있다. ',options:{bold:true,color:NAVY}},
-   {text:'조사한 세 사례 모두 공개 자료에서 무효·결측 인지와 판단 보류 정책을 확인할 수 없었다. SafeNest 는 이 두 축을 설계 요구사항으로 명시하고 구현·검증하였다.',options:{color:INK}}],
-   {x:0.55,y:y+2.80,w:12.23,h:0.48,fontFace:F,fontSize:12,lineSpacing:18,valign:'top'});
+   {text:'조사한 세 사례 모두 공개 자료에서 무효·결측 인지와 판단 보류 정책을 확인할 수 없었다. SafeNest 는 이 두 축을 설계 요구사항으로 명시하고 구현·검증하였다. 다만 마지막 축은 SafeNest 가 유일하게 미충족이다. 상용 제품과 달리 4채널 동시 통합 실기기 검증까지는 이르지 못했고, 이를 확장 계획으로 분리해 표기한다.',options:{color:INK}}],
+   {x:0.55,y:y+2.78,w:12.23,h:0.70,fontFace:F,fontSize:11.5,lineSpacing:17,valign:'top'});
   const ref=[['Vayyar Care\n(상용 제품)','60 GHz 4D 이미징 레이더 기반 낙상 감지 장치. 카메라·마이크·웨어러블을 쓰지 않고 1대가 약 16 m²를 감시하며 낙상을 3단계로 구분한다. 환경 가스 감시 기능은 제품 설명에서 확인되지 않는다.'],
     ['TI IWR6843\n(상용 부품)','60~64 GHz FMCW 단일칩 mmWave 센서. 재실 감지와 생체신호 검출 레퍼런스 디자인이 공개되어 있다. 센서 단위 부품이므로 환경 센서 융합과 판단 보류 정책은 범위 밖이다.'],
     ['학술 연구\n(arXiv 2403.05634, 2024)','TI mmWave 레이더 3대로 다중 인체 추적과 낙상 감지를 수행하여 정확도 96.3 %를 보고하였다. 단일 모달리티 실험이며 센서 무효·결측 시의 처리 정책은 다루지 않는다.']];
   ref.forEach((r,i)=>{
-    const yy=y+3.42+i*0.54;
+    const yy=y+3.56+i*0.50;
     s.addText(r[0],{x:0.55,y:yy,w:2.55,h:0.50,fontFace:F,fontSize:10.5,bold:true,color:NAVY,valign:'middle',lineSpacing:13});
     box(s,3.20,yy,9.58,0.50,SOFT,LINE);
     s.addText(r[1],{x:3.38,y:yy,w:9.22,h:0.50,fontFace:F,fontSize:10.5,color:INK,valign:'middle',lineSpacing:14});
@@ -639,8 +639,8 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 {
   const {s,y} = page(16,'5.3  구현 결과 및 검증 수준');
   const rows=[[hdr('구성요소'),hdr('구현'),hdr('검증 수준'),hdr('증거'),hdr('확장 계획')],
-   ['ESP32 4센서 통합 노드','완료','SW 검증','esp32_sensor_node.ino 741줄 · RAM 9.9 % / Flash 20.5 % · 자기진단 9종','다중 노드 확장'],
-   ['TCP v1 송·수신 및 유효성 검사','완료','SW 검증','수신기 테스트 13건 통과 · CRC-16 · 범위 재계산 · 이중 TTL','장시간 운용 모니터링'],
+   ['ESP32 4센서 통합 노드','완료','SW 검증','esp32_sensor_node.ino 1,042줄 · RAM 9.9 % / Flash 20.5 % · 자기진단 9종','다중 노드 확장'],
+   ['TCP v1 송·수신 및 유효성 검사','완료','SW 검증','수신기 테스트 4건 통과 · CRC-16 · 범위 재계산 · 이중 TTL','장시간 운용 모니터링'],
    ['Risk Engine · fail-closed','완료','SW 검증','위험도 테스트 22건 실행 통과','현장 데이터 기반 임계값 조정'],
    ['mmWave 채널','완료','실기기 검증','9.990 Hz · 1,201 레코드 · 오류 0 · 리플레이 MAE 0.270 rpm','상시 운용 데이터 축적'],
    ['CO₂ 채널','완료','실기기 검증','실측 4세션 · 재측정 결측 0 % · 호기 최고 1,493 ppm','결측 계약 고도화'],
@@ -653,10 +653,10 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     if(ci===1 && c==='완료'){ col=GREEN; bold=true; }
     return {text:c,options:{color:col,bold,align:(ci===1||ci===2)?'center':'left'}};
   })),{x:0.55,y:y+0.04,w:12.23,colW:[2.72,0.92,1.48,4.51,2.60],rowH:0.25,...TB,fontSize:10});
-  box(s,0.55,y+2.60,12.23,0.72,LBLUE,BLUE);
-  s.addText('테스트 실행 기준',{x:0.78,y:y+2.63,w:2.6,h:0.26,fontFace:F,fontSize:11,bold:true,color:BLUE});
-  s.addText('하드웨어 없이 실행 가능한 테스트 57건을 직접 실행하여 전부 통과하였다. 데이터 파일이 저장소에 포함되지 않아 실행 대상에서 제외한 항목이 2건 있다.\n저장소의 테스트 함수 1,483개는 소스에 정의된 개수이므로 실행 건수와 구분해 표기한다.',
-    {x:0.78,y:y+2.86,w:11.77,h:0.42,fontFace:F,fontSize:10,color:INK,lineSpacing:13.5,valign:'top'});
+  box(s,0.55,y+2.44,12.23,0.88,LBLUE,BLUE);
+  s.addText('테스트 실행 기준과 검증 경계',{x:0.78,y:y+2.47,w:4.2,h:0.26,fontFace:F,fontSize:11,bold:true,color:BLUE});
+  s.addText('정본 트리에서 하드웨어 없이 실행 가능한 테스트 40건을 직접 실행하여 전부 통과하였다 (LCD 수신 4 · 위험도 fail-closed 22 · CO₂ 10 · mmWave 4). 저장소 재편 이전 트리에서는 데이터 파일 미포함으로 2건이 실패하였고, 결과를 보정하지 않고 실패로 기록하였다.\n저장소의 테스트 함수 1,483개는 소스에 정의된 개수이므로 실행 건수와 구분해 표기한다. 위 표의 검증 수준은 채널 단위 기준이며, 4채널 동시 입력을 전제로 한 통합 실기기 검증은 확장 계획으로 분리해 관리한다.',
+    {x:0.78,y:y+2.70,w:11.77,h:0.58,fontFace:F,fontSize:9.5,color:INK,lineSpacing:13,valign:'top'});
   s.addImage({ path:A+'/hw_product_full_crop.jpg', x:0.55, y:y+3.38, w:3.08, h:1.40 });
   s.addShape(pptx.ShapeType.rect,{x:0.55,y:y+3.38,w:3.08,h:1.40,fill:{type:'none'},line:{color:LINE,width:1}});
   s.addText('[그림 4] 완성품. 좌측 표시부, 우측 센서 노드. 하우징 2종은 자체 설계 STL 출력물이다.',
@@ -680,8 +680,8 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 {
   const {s,y} = page(17,'6.1  적용 분야 및 기대효과');
   box(s,0.55,y+0.02,12.23,0.94,LBLUE,BLUE);
-  s.addText('카메라를 쓰지 않기 때문에 열리는 적용 영역',{x:0.78,y:y+0.06,w:6,h:0.30,fontFace:F,fontSize:12.5,bold:true,color:BLUE});
-  s.addText('SafeNest 는 영상 센서를 전혀 쓰지 않는다. 열화상은 80×62 해상도로 개인을 식별할 수 없고, mmWave·CO₂·PIR 은 형상을 남기지 않는다.\n그래서 촬영 장비 반입이나 영상 저장이 통제되는 공간, 사생활 침해가 문제가 되는 공간에서도 사람의 존재와 상태를 감시할 수 있다.',
+  s.addText('RGB 카메라를 쓰지 않기 때문에 열리는 적용 영역',{x:0.78,y:y+0.06,w:6,h:0.30,fontFace:F,fontSize:12.5,bold:true,color:BLUE});
+  s.addText('SafeNest 는 개인을 식별할 수 있는 RGB 카메라를 쓰지 않는다. 열화상은 80×62 저해상도 표면 온도 분포이고, mmWave·CO₂·PIR 은 형상을 남기지 않는다.\n그래서 RGB 영상 기반 감시에 비해 개인정보 노출 가능성이 낮고, 촬영 장비 반입이 통제되는 공간에서도 사람의 존재와 상태를 감시할 수 있다.',
     {x:0.78,y:y+0.36,w:11.77,h:0.54,fontFace:F,fontSize:11.5,color:INK,lineSpacing:16,valign:'top'});
 
   sub(s,0.55,y+1.08,'적용 분야');
@@ -689,9 +689,9 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     ['① 밀폐공간 무인 감시', BLUE,
      '산업안전보건법 시행규칙 별표18이 정한 맨홀·정화조·집수정 등',
      '제619조가 산소·유해가스 농도 측정과 감시인 배치를 사업주 의무로 정하지만 감시인 상시 배치가 어려운 소규모 사업장이 대다수다. 공기질과 사람의 상태를 함께 확인해 가스 감지기 단독 운용의 공백을 메운다.'],
-    ['② 보안 통제구역 · 반도체 팹 · 군사 · 연구시설', NAVY,
+    ['② 보안 통제구역 · 연구시설 (확장 적용 분야)', NAVY,
      '촬영 장비 반입이 통제되어 CCTV 로 인원 상태를 볼 수 없는 구역',
-     '보안 규정을 건드리지 않고 재실·이상 상태만 감시한다. 남는 것이 영상이 아니라 상태값이므로 반출 심사 대상이 되는 화상 데이터를 만들지 않는다. 1인 작업이 잦은 클린룸·시험동에 적용할 수 있다.'],
+     '보안 규정을 건드리지 않고 재실·이상 상태만 감시한다. RGB 영상을 남기지 않아 반출 심사 부담이 작다. 1인 작업이 잦은 클린룸·시험동이 우선 적용 대상이며, 반도체 팹·군사시설은 현장 검증 전 단계의 적용 후보다.'],
     ['③ 어린이 통학차량 잔류 감지', GREEN,
      '도로교통법 제53조가 하차 확인과 하차확인장치 작동을 의무화',
      '현행 장치는 운전자가 버튼을 눌러 확인하는 방식이라 사람의 행위에 의존한다. SafeNest 는 좌석 거리에 해당하는 0.6~0.9 m 구간에서 재실 검출률 1.000 을 보였으므로 잔류 여부를 센서가 직접 판정한다.']];
@@ -705,7 +705,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 
   s.addImage({ path:A+'/ui_web.png', x:6.85, y:y+1.18, w:5.93, h:3.51 });
   s.addShape(pptx.ShapeType.rect,{x:6.85,y:y+1.18,w:5.93,h:3.51,fill:{type:'none'},line:{color:LINE,width:1}});
-  s.addText('[그림 6] 관제 웹 화면. QR 로 공간을 식별해 밀폐공간 A-01, 통학차량 B-02, 창고 C-03 을 등록·조회한다. 화면에 남는 것은 영상이 아니라 상태값이다.',
+  s.addText('[그림 6] 관제 웹 화면. QR 로 공간을 식별해 밀폐공간 A-01, 통학차량 B-02, 창고 C-03 을 등록·조회한다. 화면에 남는 것은 RGB 영상이 아니라 상태값이다.',
     {x:6.85,y:y+4.76,w:5.93,h:0.40,fontFace:F,fontSize:9.5,color:GREY,lineSpacing:13,valign:'top'});
   note(s,'근거 : 산업안전보건법 제619조 · 시행규칙 별표18 · 도로교통법 제53조 제4항·제5항. 감지 거리 : archive/legacy_main_repo/devices/mmwave/validation_results/replay_v5/benchmark_summary.csv.');
 }
@@ -737,7 +737,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addText([
     {text:'관제 노드 1대가 다수의 감지 노드를 수용하므로, 감시 공간을 늘릴 때 드는 추가 비용은 감지 노드 213,708원뿐이다.\n',options:{color:INK}},
     {text:'1개 공간 447,578원 · 3개 874,994원(공간당 291,665원) · 5개 1,302,410원(공간당 260,482원)\n',options:{color:INK}},
-    {text:'5개 공간 기준 공간당 260,482원으로, 감시인 1명 월 인건비 2,156,880원의 약 12 % 수준이다.',options:{bold:true,color:GREEN}}
+    {text:'5개 공간 기준 공간당 260,482원으로, 감시인 1명 월 인건비의 약 12 % 수준인 추가 도입비다.',options:{bold:true,color:GREEN}}
   ],{x:0.75,y:y+4.44,w:5.63,h:0.74,fontFace:F,fontSize:10,lineSpacing:14,valign:'top'});
 
   sub(s,6.85,y,'발전 가능성 : 센서 등급 상향에 따른 적용 범위 확장');
@@ -753,15 +753,15 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   sub(s,6.85,y+3.06,'시장성 : 수요가 법령으로 발생하는 시장');
   const mk=[['밀폐공간', BLUE,'산업안전보건법 제619조가 산소·유해가스 농도 측정과 감시인 배치를 사업주 의무로 규정한다. 최근 10년 질식재해 174건 · 재해자 338명 · 사망 136명.'],
     ['어린이 통학차량', GREEN,'도로교통법 제53조가 하차 확인과 어린이 하차확인장치 작동을 의무화하고 있어 장착 수요가 이미 제도화되어 있다.'],
-    ['보안 통제구역', NAVY,'촬영 장비 반입이 통제되어 CCTV 로 대체할 수 없는 구간이다. 영상을 만들지 않는 감시 수단에 대한 대체재가 없다.']];
+    ['보안 통제구역', NAVY,'촬영 장비 반입이 통제되어 CCTV 로 대체할 수 없는 구간이다. RGB 영상을 남기지 않는 감시 수단에 대한 대체재가 없다.']];
   mk.forEach((m,i)=>{
-    const yy=y+3.42+i*0.48;
+    const yy=y+3.36+i*0.46;
     s.addShape(pptx.ShapeType.rect,{x:6.85,y:yy,w:0.05,h:0.42,fill:{color:m[1]}});
     s.addText(m[0],{x:7.00,y:yy,w:1.32,h:0.42,fontFace:F,fontSize:10,bold:true,color:m[1],valign:'middle'});
     s.addText(m[2],{x:8.36,y:yy,w:4.42,h:0.42,fontFace:F,fontSize:9,color:INK,valign:'middle',lineSpacing:12});
   });
-  s.addText('세 시장 모두 임의 도입이 아니라 법령과 보안 규정이 수요를 만든다. 따라서 도입 판단은 성능보다 대체 비용에서 갈리며, 감시인 인건비의 12~21 % 수준인 도입비가 근거가 된다.',
-    {x:6.85,y:y+4.92,w:5.93,h:0.42,fontFace:F,fontSize:10,color:NAVY,bold:true,lineSpacing:14,valign:'top'});
+  s.addText('세 시장 모두 법령과 보안 규정이 수요를 만든다. SafeNest 는 안전 인력과 측정 설비를 대체하지 않고 보조하는 장비이며, 추가 도입비는 인건비의 12~21 % 수준이다.',
+    {x:6.85,y:y+4.78,w:5.93,h:0.42,fontFace:F,fontSize:9.5,color:NAVY,bold:true,lineSpacing:13,valign:'top'});
   note(s,'단가 : 2026-07-02 실구매 결제액(열화상·mmWave·CO₂·LCD·배선) · 국내 유통가(Pi 5·ESP32) · 통상가 추정(PIR·부저·3D 출력). 인건비 : 2026년 최저임금 월 환산액 2,156,880원(고용노동부 고시).', 6.70);
 }
 

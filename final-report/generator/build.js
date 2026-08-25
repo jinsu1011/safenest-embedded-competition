@@ -101,15 +101,18 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     s.addText(v[0],{x:4.20,y:yy,w:1.15,h:0.58,fontFace:F,fontSize:20,bold:true,color:i===3?RED:NAVY,valign:'middle'});
     s.addText(v[1],{x:5.42,y:yy,w:2.05,h:0.58,fontFace:F,fontSize:i===3?9.5:11.5,color:INK,valign:'middle',lineSpacing:13});
   });
-  box(s,7.85,y+0.36,4.93,2.62,SOFT,LINE);
+  box(s,7.85,y+0.36,4.93,2.82,SOFT,LINE);
   s.addText('제도와 현실의 간극',{x:8.05,y:y+0.46,w:4.5,h:0.34,fontFace:F,fontSize:13.5,bold:true,color:NAVY});
-  const law=['산업안전보건법 제619조는 밀폐공간 작업 시 산소·유해가스 농도 측정과 감시인 배치를 사업주 의무로 규정한다.',
-             '중대재해처벌법 확대 적용으로 소규모 사업장까지 예방 설비 수요가 늘었다.',
-             '감시인 상시 배치가 어려운 소규모 사업장이 대다수여서, 사람의 상태까지 자동으로 확인하는 무인 감시 수단이 필요하다.'];
-  law.forEach((t,i)=>{
-    s.addText([{text:'· ',options:{bold:true,color:BLUE}},{text:t,options:{color:INK}}],
-      {x:8.05,y:y+0.82+i*0.70,w:4.55,h:0.66,fontFace:F,fontSize:12,lineSpacing:17,valign:'top'});
-  });
+  s.addText([
+    {text:'· ',options:{bold:true,color:BLUE}},
+    {text:'산업안전보건법 제619조는 밀폐공간 작업 시 산소·유해가스 농도 측정과 감시인 배치를 사업주 의무로 규정한다.\n',options:{color:INK}},
+    {text:'· ',options:{bold:true,color:BLUE}},
+    {text:'그러나 2026년 6월 진안 맨홀 사고에서는 작업지침이 있는데도 현장 보고가 누락되었고, 8월에는 유제품 공장 저장탱크 청소 중 2명이 쓰러져 1명이 사망하였다.\n',options:{color:RED}},
+    {text:'· ',options:{bold:true,color:BLUE}},
+    {text:'같은 달 인천시와 고용노동부는 맨홀 질식사고 추방을 공동선언하고 사전 안전확인 시스템 구축에 합의하였다.\n',options:{color:INK}},
+    {text:'· ',options:{bold:true,color:BLUE}},
+    {text:'감시인 상시 배치가 어려운 소규모 사업장이 대다수여서, 사람의 상태까지 자동으로 확인하는 무인 감시 수단이 필요하다.',options:{color:INK}}
+  ],{x:8.05,y:y+0.80,w:4.55,h:2.30,fontFace:F,fontSize:10,lineSpacing:15,valign:'top'});
   sub(s,0.55,y+3.22,'사고 진행 단계와 현재 감시 수단의 공백');
   const fy=y+3.64;
   const flow=[['작업자 진입','밀폐공간 내부'],['이상 발생','산소결핍·유해가스'],['움직임 정지','스스로 신고 불가'],['발견 지연','감시인 부재'],['사고 확정','구조 골든타임 경과']];
@@ -126,7 +129,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addText('▼',{x:8.85,y:fy+0.34,w:0.3,h:0.20,fontFace:F,fontSize:9,color:AMBER,align:'center'});
   s.addText('SafeNest 는 법정 산소·유해가스 측정 설비와 감시인을 대체하지 않는다. 이 구간에서 사람의 존재와 상태를 보조적으로 확인해 경보를 낸다.',
     {x:0.55,y:fy+1.38,w:12.23,h:0.30,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
-  note(s,'※ 출처 : 고용노동부 밀폐공간 질식재해 예방 보도자료(2024), 경향신문 밀폐공간 중대재해 분석 보도(2025). 법령 : 산업안전보건법 제619조.');
+  note(s,'※ 출처 : 고용노동부 질식재해 예방 보도자료(2024) · 경향신문 중대재해 분석(2025) · 뉴시스(2026-06-22 · 2026-08-06) · 매일경제(2026-08-09) · 산업안전보건법 제619조.', 6.64);
 }
 
 /* ============ P2 ============ */
@@ -441,22 +444,25 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   sub(s,0.55,y+0.66,'가중치를 이렇게 나눈 이유');
   badge(s,11.46,y+0.66,'SW 검증','sw');
   const wc=[
-    ['mmWave   0.35','호흡 정지 · 직접 징후',BLUE,'질식은 호흡이 멎으면서 진행된다. 성인 정상 호흡수 12~20회/분을 벗어난 상태가 2초 이상 이어지면 무호흡으로 확정한다. 사람의 상태를 직접 재는 유일한 생체 채널이다.'],
-    ['CO₂   0.35','결핍 환경 · 원인 지표',BLUE,'밀폐공간 질식은 공기 조성 변화가 먼저 나타난다. 검찰 송치 중대재해의 85.7 %가 농도 미측정 상태에서 발생하였다. 원인 단계에서 경보를 낼 수 있는 채널이다.'],
-    ['PIR   0.15','움직임 · 정황 증거',GREY,'움직임이 없다는 사실만으로 위험을 단정할 수 없다. 정밀 작업이나 대기 중에도 15초 이상 정지가 흔하다. 위양성이 커 보조 가중치로 제한하였다.'],
-    ['Thermal   0.15','자세 · 정황 증거',GREY,'쓰러진 자세는 강한 신호이나 80×62 해상도에서 자세 판별은 각도와 거리에 좌우된다. 열화상이 내는 값은 표면 온도이므로 보조 가중치로 제한하였다.']];
+    ['mmWave',0.35,'호흡 정지 · 직접 징후',BLUE,'질식은 호흡이 멎으면서 진행된다. 성인 정상 12~20회/분을 벗어난 상태가 2초 이상 이어지면 무호흡으로 확정한다.'],
+    ['CO₂',0.35,'결핍 환경 · 원인 지표',BLUE,'밀폐공간 질식은 공기 조성 변화가 먼저 나타난다. 검찰 송치 중대재해의 85.7 %가 농도 미측정 상태에서 발생하였다.'],
+    ['PIR',0.15,'움직임 · 정황 증거',GREY,'움직임이 없다는 사실만으로 위험을 단정할 수 없다. 정밀 작업 중에도 15초 이상 정지가 흔하다.'],
+    ['Thermal',0.15,'자세 · 정황 증거',GREY,'80×62 해상도에서 자세 판별은 각도와 거리에 좌우된다. 열화상이 내는 값은 표면 온도이다.']];
   wc.forEach((c,i)=>{
-    const x=0.55+i*3.07, on=(c[2]===BLUE);
-    box(s,x,y+1.00,3.00,1.24,'FFFFFF',on?BLUE:LINE);
-    s.addShape(pptx.ShapeType.rect,{x,y:y+1.00,w:3.00,h:0.06,fill:{color:c[2]}});
-    s.addText(c[0],{x:x+0.14,y:y+1.09,w:2.72,h:0.24,fontFace:F,fontSize:11.5,bold:true,color:on?NAVY:GREY});
-    s.addText(c[1],{x:x+0.14,y:y+1.31,w:2.72,h:0.20,fontFace:F,fontSize:9.5,bold:true,color:c[2]});
-    s.addText(c[3],{x:x+0.14,y:y+1.52,w:2.72,h:0.70,fontFace:F,fontSize:9,color:INK,lineSpacing:12,valign:'top'});
+    const x=0.55+i*3.07, on=(c[3]===BLUE), yy=y+1.00;
+    box(s,x,yy,3.00,1.30,'FFFFFF',on?BLUE:LINE);
+    s.addShape(pptx.ShapeType.rect,{x,y:yy,w:3.00,h:0.06,fill:{color:c[3]}});
+    s.addText(c[0],{x:x+0.16,y:yy+0.11,w:1.60,h:0.28,fontFace:F,fontSize:12.5,bold:true,color:on?NAVY:GREY,valign:'middle'});
+    s.addText(c[1].toFixed(2),{x:x+1.60,y:yy+0.09,w:1.26,h:0.30,fontFace:F,fontSize:18,bold:true,color:c[3],align:'right',valign:'middle'});
+    s.addShape(pptx.ShapeType.rect,{x:x+0.16,y:yy+0.44,w:2.68,h:0.08,fill:{color:'EDF1F6'}});
+    s.addShape(pptx.ShapeType.rect,{x:x+0.16,y:yy+0.44,w:2.68*(c[1]/0.35),h:0.08,fill:{color:c[3]}});
+    s.addText(c[2],{x:x+0.16,y:yy+0.57,w:2.68,h:0.20,fontFace:F,fontSize:9.5,bold:true,color:c[3]});
+    s.addText(c[4],{x:x+0.16,y:yy+0.78,w:2.68,h:0.48,fontFace:F,fontSize:8.5,color:INK,lineSpacing:11.5,valign:'top'});
   });
 
-  box(s,0.55,y+2.30,12.23,0.46,'FDF3E3',AMBER);
+  box(s,0.55,y+2.36,12.23,0.46,'FDF3E3',AMBER);
   s.addText('한 채널이 최대치를 내도 R 은 35 에 그쳐 DANGER 60 에 닿지 못한다. 두 채널 이상이 동시에 이상을 가리켜야 위험 등급이 성립하며, 무호흡과 낙상(신뢰도 0.8 이상)이 함께 확인되면 즉시 100 으로 승격한다.',
-    {x:0.75,y:y+2.30,w:11.83,h:0.46,fontFace:F,fontSize:10.5,bold:true,color:'9A5B0B',valign:'middle'});
+    {x:0.75,y:y+2.36,w:11.83,h:0.46,fontFace:F,fontSize:10.5,bold:true,color:'9A5B0B',valign:'middle'});
 
   const cs=[
     ['HEALTHY','모든 센서 유효','4채널 가중 융합으로 위험도를 산출한다.',GREEN],
@@ -464,14 +470,14 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     ['FAILED','전부 무효 또는 결측','risk_score 와 risk_level 을 None 으로 두고 점검 필요 상태로 표시한다.',RED]];
   cs.forEach((c,i)=>{
     const x=0.55+i*4.13;
-    box(s,x,y+2.84,3.86,0.64,'FFFFFF',c[3]);
-    s.addShape(pptx.ShapeType.rect,{x,y:y+2.84,w:0.07,h:0.64,fill:{color:c[3]}});
-    s.addText(c[0]+'   ·   '+c[1],{x:x+0.18,y:y+2.87,w:3.58,h:0.24,fontFace:F,fontSize:11,bold:true,color:c[3],valign:'middle'});
-    s.addText(c[2],{x:x+0.18,y:y+3.10,w:3.58,h:0.34,fontFace:F,fontSize:9,color:INK,lineSpacing:12,valign:'top'});
+    box(s,x,y+2.92,3.86,0.66,'FFFFFF',c[3]);
+    s.addShape(pptx.ShapeType.rect,{x,y:y+2.92,w:0.07,h:0.66,fill:{color:c[3]}});
+    s.addText(c[0]+'   ·   '+c[1],{x:x+0.20,y:y+2.95,w:3.56,h:0.24,fontFace:F,fontSize:11,bold:true,color:c[3],valign:'middle'});
+    s.addText(c[2],{x:x+0.20,y:y+3.18,w:3.56,h:0.36,fontFace:F,fontSize:9,color:INK,lineSpacing:12.5,valign:'top'});
   });
 
-  sub(s,0.55,y+3.58,'계산 예시 : 열화상이 STALE 로 떨어진 경우');
-  box(s,0.55,y+3.90,7.35,1.14,SOFT,LINE);
+  sub(s,0.55,y+3.70,'계산 예시 : 열화상이 STALE 로 떨어진 경우');
+  box(s,0.55,y+4.04,7.35,1.06,SOFT,LINE);
   s.addText([
     {text:'입력   ',options:{bold:true,color:NAVY}},
     {text:'mmWave 0.00 (valid) · CO₂ 1.00 (valid, 1,500 ppm 초과) · PIR 1.00 (valid, 무움직임) · Thermal STALE\n',options:{color:INK}},
@@ -481,11 +487,11 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     {text:'R = 100 × (0.00×0.412 + 1.00×0.412 + 1.00×0.176) = ',options:{color:INK}},
     {text:'58.82  →  CAUTION',options:{bold:true,color:AMBER}},
     {text:'\nsystem_health = DEGRADED, stale_sensors = [thermal]',options:{fontFace:M,fontSize:9.5,color:GREY}}
-  ],{x:0.75,y:y+3.97,w:6.95,h:1.00,fontFace:F,fontSize:10.5,lineSpacing:16,valign:'top'});
-  box(s,8.10,y+3.90,4.68,1.14,'FFFFFF',RED);
-  s.addText('fail-closed 구현 (RaspberryPi/Ondevice_AI/risk/fallback.py)',{x:8.30,y:y+3.95,w:4.38,h:0.22,fontFace:F,fontSize:9.5,bold:true,color:RED});
+  ],{x:0.77,y:y+4.10,w:6.93,h:0.96,fontFace:F,fontSize:10.5,lineSpacing:15.5,valign:'top'});
+  box(s,8.10,y+4.04,4.68,1.06,'FFFFFF',RED);
+  s.addText('fail-closed 구현 (RaspberryPi/Ondevice_AI/risk/fallback.py)',{x:8.32,y:y+4.09,w:4.36,h:0.22,fontFace:F,fontSize:9.5,bold:true,color:RED});
   s.addText('if system_health == "FAILED":\n    risk_score = None   # 0점 대체 금지\n    risk_level = None   # 등급 산출 금지\n    reasons.insert(0,\n        "ALL_SENSORS_FAULT_OR_MISSING")',
-    {x:8.30,y:y+4.17,w:4.3,h:0.84,fontFace:M,fontSize:9,color:INK,lineSpacing:13});
+    {x:8.32,y:y+4.31,w:4.3,h:0.76,fontFace:M,fontSize:9,color:INK,lineSpacing:12.5});
   note(s,'임계값 : CO₂ 1,500 ppm 은 실내공기질 관리법 시행규칙 별표2 의 기계환기 유지기준과 같은 값으로, 산업안전보건기준에 관한 규칙 제618조 적정공기 기준(CO₂ 1.5 %)보다 낮은 조기경보 지점이다. 위험도 30 / 60 은 팀 내부 실험 기준값이며 대외 공인 기준은 아니다.  계산 예시는 정본 fallback.py 를 그대로 실행해 얻은 값이고, 위험도 테스트 22건은 실행 전부 통과하였다.', 6.58);
 }
 
@@ -777,25 +783,25 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addTable(up.map(r=>r.map(c=>typeof c==='string'?{text:c}:c)),
     {x:6.85,y:y+0.36,w:5.93,colW:[0.92,2.55,2.46],rowH:0.44,...TB,fontSize:9});
 
-  box(s,6.85,y+2.18,5.93,1.52,LBLUE,BLUE);
+  box(s,6.85,y+2.18,5.93,1.46,LBLUE,BLUE);
   s.addText('제품화 지향 상위 구성 시 도입 비용 (감지 노드 1식)',{x:7.03,y:y+2.22,w:5.6,h:0.24,fontFace:F,fontSize:11,bold:true,color:BLUE});
   s.addText([
     {text:'mmWave TI IWR6843AOPEVM 280,417원 · 열화상 FLIR Lepton 3.5(160×120) 237,876원 · CO₂ SCD41 27,314원 · MCU 현행 유지 33,578원\n',options:{color:INK}},
     {text:'감지 노드 소계 579,185원. 관제 노드를 그대로 두면 1개 공간 1식 813,055원으로 현재 447,578원의 1.82배다.\n',options:{bold:true,color:NAVY}},
     {text:'판단 계층이 센서에 독립적인 계약(base_sensor · InferenceResult)으로 분리되어 있어, 센서를 교체해도 위험도 산출과 fail-closed 정책은 그대로 재사용한다.\n',options:{color:INK}},
     {text:'상위 구성 단가는 DigiKey 1개 유통가를 1 USD = 1,383원(2026-08-24)으로 환산한 추정치이며 함체·인증·양산 할인은 반영 전 금액이다.',options:{color:GREY}}
-  ],{x:7.03,y:y+2.46,w:5.6,h:1.18,fontFace:F,fontSize:8.5,lineSpacing:11.5,valign:'top'});
+  ],{x:7.03,y:y+2.46,w:5.6,h:1.12,fontFace:F,fontSize:8.5,lineSpacing:11.5,valign:'top'});
 
-  sub(s,6.85,y+3.80,'시장성 : 법령·보안 규정이 수요를 만드는 시장');
-  const mk=[['밀폐공간', BLUE,'산업안전보건법 제619조가 농도 측정과 감시인 배치를 사업주 의무로 규정한다. 최근 10년 질식재해 174건 · 사망 136명.'],
+  sub(s,6.85,y+3.74,'시장성 : 법령·보안 규정이 수요를 만드는 시장');
+  const mk=[['밀폐공간', BLUE,'산업안전보건법 제619조가 측정·감시인 배치를 의무로 규정한다. 2026년 8월 인천시와 고용노동부가 사전 안전확인 시스템 구축을 공동선언하였다.'],
     ['어린이 통학차량', GREEN,'도로교통법 제53조가 하차 확인과 하차확인장치 작동을 의무화해 장착 수요가 이미 제도화되어 있다.'],
     ['보안 통제구역', NAVY,'촬영 장비 반입이 통제되어 CCTV 로 대체할 수 없다. RGB 영상을 남기지 않는 감시 수단의 대체재가 없다.']];
   mk.forEach((m,i)=>{
     const x=6.85+i*2.04;
-    box(s,x,y+4.14,1.85,0.98,'FFFFFF',LINE);
-    s.addShape(pptx.ShapeType.rect,{x,y:y+4.14,w:1.85,h:0.05,fill:{color:m[1]}});
-    s.addText(m[0],{x:x+0.14,y:y+4.23,w:1.60,h:0.22,fontFace:F,fontSize:10,bold:true,color:m[1]});
-    s.addText(m[2],{x:x+0.14,y:y+4.45,w:1.60,h:0.60,fontFace:F,fontSize:8,color:INK,lineSpacing:11,valign:'top'});
+    box(s,x,y+4.08,1.85,1.10,'FFFFFF',LINE);
+    s.addShape(pptx.ShapeType.rect,{x,y:y+4.08,w:1.85,h:0.05,fill:{color:m[1]}});
+    s.addText(m[0],{x:x+0.14,y:y+4.17,w:1.60,h:0.22,fontFace:F,fontSize:10,bold:true,color:m[1]});
+    s.addText(m[2],{x:x+0.14,y:y+4.39,w:1.60,h:0.74,fontFace:F,fontSize:8,color:INK,lineSpacing:11,valign:'top'});
   });
   note(s,'단가 : 2026-07-02 실구매 결제액(열화상·mmWave·CO₂·LCD·배선) · 국내 유통가(Pi 5·ESP32) · 통상가 추정(PIR·부저·3D 출력). 상위 구성 단가 출처 : digikey.com, mouser.com. 인건비 : 2026년 최저임금 월 환산액 2,156,880원.', 6.68);
 }

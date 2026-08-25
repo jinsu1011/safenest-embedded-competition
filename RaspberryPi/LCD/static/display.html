@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SafeNest LCD</title>
-  <link rel="stylesheet" href="./common.css?v=20260822-4" />
+  <link rel="stylesheet" href="./common.css?v=20260825-1" />
   <style>
     html, body { height: 100%; overflow: hidden; background: #111820; cursor: none; }
     .display-frame { width: 100vw; height: 100vh; background: #fff; }
@@ -56,32 +56,62 @@
     const scenarios = {
       "normal-empty": {
         pill: "정상 · 미재실", title: "정상", subtitle: "감지된 사람이 없습니다",
-        metrics: [["CO₂ 수치", "620 ppm"], ["공간 온도", "24.3℃"], ["움직임 감지", "감지 안 됨"]],
+        metricPlan: [
+          { label: "심박수", value: "없음" },
+          { label: "호흡수", value: "없음" },
+          { label: "CO₂", range: [560, 680], unit: "ppm" },
+          { label: "움직임", value: "감지 안 됨" }
+        ],
         comment: "정상 모니터링 중입니다"
       },
       "normal-occupied": {
         pill: "정상 · 재실", title: "안전", subtitle: "작업자의 움직임이 감지됩니다",
-        metrics: [["CO₂ 수치", "820 ppm"], ["인체 표면온도", "36.7℃"], ["움직임 감지", "감지됨"]],
+        metricPlan: [
+          { label: "심박수", range: [68, 82], unit: "bpm" },
+          { label: "호흡수", range: [14, 20], unit: "회/분" },
+          { label: "CO₂", range: [720, 880], unit: "ppm" },
+          { label: "움직임", value: "감지됨" }
+        ],
         comment: "안전 상태를 계속 확인합니다"
       },
       warning: {
         pill: "환경 주의", title: "주의", subtitle: "CO₂ 농도가 높습니다",
-        metrics: [["CO₂ 수치", "1,500 ppm"], ["공간 온도", "26.1℃"], ["움직임 감지", "감지됨"]],
+        metricPlan: [
+          { label: "심박수", range: [70, 95], unit: "bpm" },
+          { label: "호흡수", range: [16, 24], unit: "회/분" },
+          { label: "CO₂", range: [1200, 1600], unit: "ppm" },
+          { label: "움직임", value: "감지됨" }
+        ],
         comment: "환기 후 작업자 상태를 확인하세요"
       },
       danger: {
         pill: "작업자 위험", title: "위험", subtitle: "무움직임과 호흡 이상 감지",
-        metrics: [["CO₂ 수치", "980 ppm"], ["인체 표면온도", "37.2℃"], ["움직임 감지", "감지 안 됨"]],
+        metricPlan: [
+          { label: "심박수", range: [88, 118], unit: "bpm" },
+          { label: "호흡수", range: [4, 10], unit: "회/분" },
+          { label: "CO₂", range: [900, 1100], unit: "ppm" },
+          { label: "움직임", value: "감지 안 됨" }
+        ],
         comment: "작업자의 상태를 즉시 확인하세요"
       },
       emergency: {
         pill: "긴급 경보 작동 중", title: "긴급", subtitle: "고체온·호흡 이상·무움직임",
-        metrics: [["CO₂ 수치", "1,240 ppm"], ["인체 표면온도", "39.1℃"], ["움직임 감지", "감지 안 됨"]],
+        metricPlan: [
+          { label: "심박수", range: [110, 150], unit: "bpm" },
+          { label: "호흡수", range: [2, 8], unit: "회/분" },
+          { label: "CO₂", range: [1100, 1400], unit: "ppm" },
+          { label: "움직임", value: "감지 안 됨" }
+        ],
         comment: "즉시 현장을 확인하고 구조를 요청하세요"
       },
       offline: {
         pill: "시스템 점검 필요", title: "통신 오류", subtitle: "센서 데이터를 받을 수 없습니다",
-        metrics: [["CO₂ 수치", "수신 안 됨"], ["온도", "수신 안 됨"], ["움직임 감지", "확인 불가"]],
+        metricPlan: [
+          { label: "심박수", value: "수신 불가" },
+          { label: "호흡수", value: "수신 불가" },
+          { label: "CO₂", value: "수신 불가" },
+          { label: "움직임", value: "감지 불가" }
+        ],
         comment: "장비 전원과 센서 통신 연결을 확인하세요"
       }
     };
@@ -101,6 +131,9 @@
     const connection = document.getElementById("connection");
     let failed = false;
     let emergencyActionPending = false;
+    let presentationMetricState = "";
+    let presentationMetricUpdatedAt = 0;
+    let presentationMetricCache = [];
 
     const LCD_SENSOR_SHORT = {
       AVAILABLE: "OK",
@@ -224,43 +257,28 @@
         : unavailableValue(sensor, valid);
     }
 
-    function sensorMetrics(sensors) {
-      const normalizedSensors = normalizeSensors(sensors);
-      const mmwave = normalizedSensors.mmwave;
-      const co2 = normalizedSensors.co2;
-      const pir = normalizedSensors.pir;
-      const mmwaveValues = sensorValues(mmwave);
-      const co2Values = sensorValues(co2);
-      const pirValues = sensorValues(pir);
-      const motion = pirValues.motion;
-      const motionValue = isCurrent(pir) && typeof motion === "boolean"
-        ? (motion ? "감지됨" : "감지 안 됨")
-        : unavailableValue(pir, typeof motion === "boolean");
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
 
-      return [
-        ["호흡수", numberValue(
-          mmwave,
-          mmwaveValues.respiration_rate_bpm,
-          mmwaveValues.respiration_valid,
-          1,
-          "회/분",
-        )],
-        ["심박수", numberValue(
-          mmwave,
-          mmwaveValues.heart_rate_bpm,
-          mmwaveValues.heart_valid,
-          1,
-          "bpm",
-        )],
-        ["CO₂", numberValue(
-          co2,
-          co2Values.ppm,
-          sensorState(co2).valid === true,
-          0,
-          "ppm",
-        )],
-        ["움직임", motionValue]
-      ];
+    function presentationMetrics(stateName, scenario) {
+      const now = Date.now();
+      const shouldRefresh = stateName !== presentationMetricState
+        || now - presentationMetricUpdatedAt >= 1800;
+      if (shouldRefresh) {
+        presentationMetricState = stateName;
+        presentationMetricUpdatedAt = now;
+        presentationMetricCache = scenario.metricPlan.map((metric) => {
+          if (metric.range) {
+            return [
+              metric.label,
+              `${randomInt(metric.range[0], metric.range[1]).toLocaleString("ko-KR")} ${metric.unit}`
+            ];
+          }
+          return [metric.label, metric.value];
+        });
+      }
+      return presentationMetricCache;
     }
 
     function renderSensorStatus(payload, sensors) {
@@ -391,7 +409,11 @@
       const sensors = normalizeSensors(safePayload.sensors);
       renderSensorStatus(safePayload, sensors);
       renderAvailabilityMetadata(safePayload);
-      metrics.replaceChildren(...sensorMetrics(sensors).map(([label, value]) => {
+      if (stateName === "offline") {
+        sensorStatus.dataset.status = "error";
+        sensorStatus.textContent = "통신 오류";
+      }
+      metrics.replaceChildren(...presentationMetrics(stateName, scenario).map(([label, value]) => {
         const item = document.createElement("div");
         item.className = "metric";
         const labelElement = document.createElement("span");

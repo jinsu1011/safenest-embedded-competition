@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SafeNest Raspberry Pi LCD 실행 가이드</title>
+  <style>
+    :root { color-scheme: light; --bg:#eef3f6; --card:#fff; --ink:#14212b; --muted:#596b78; --line:#d8e1e7; --brand:#1769aa; --brand-soft:#e8f2fa; --ok:#167547; --warn:#a45a08; --code:#17212b; }
+    * { box-sizing:border-box; } html { scroll-behavior:smooth; }
+    body { margin:0; color:var(--ink); background:var(--bg); font-family:Pretendard,"Noto Sans KR",system-ui,-apple-system,sans-serif; line-height:1.68; }
+    a { color:var(--brand); } .layout { display:grid; grid-template-columns:250px minmax(0,820px); gap:28px; width:min(1120px,calc(100% - 32px)); margin:28px auto 64px; }
+    nav { position:sticky; top:20px; align-self:start; padding:20px; background:var(--card); border:1px solid var(--line); border-radius:18px; }
+    nav strong { display:block; margin-bottom:12px; font-size:18px; } nav a { display:block; padding:7px 9px; color:var(--muted); border-radius:8px; text-decoration:none; } nav a:hover { color:var(--brand); background:var(--brand-soft); }
+    main { min-width:0; } .hero,section { padding:28px; background:var(--card); border:1px solid var(--line); border-radius:20px; box-shadow:0 12px 28px rgba(24,49,67,.06); } section { margin-top:20px; }
+    .eyebrow { margin:0 0 6px; color:var(--brand); font-size:13px; font-weight:850; letter-spacing:.06em; } h1 { margin:0; font-size:clamp(30px,5vw,48px); letter-spacing:-.045em; line-height:1.16; } h2 { margin:0 0 14px; font-size:25px; letter-spacing:-.025em; } p { margin:8px 0; }
+    .lead { margin-top:14px; color:var(--muted); font-size:17px; } .links { display:flex; flex-wrap:wrap; gap:9px; margin-top:20px; } .links a { padding:10px 14px; color:#fff; background:var(--brand); border-radius:10px; font-weight:800; text-decoration:none; } .links a.secondary { color:var(--brand); background:var(--brand-soft); }
+    .note { margin:14px 0; padding:13px 15px; color:#274253; background:#f3f8fb; border-left:4px solid var(--brand); border-radius:8px; } .warning { border-left-color:var(--warn); background:#fff8ec; } .success { border-left-color:var(--ok); background:#eef9f3; }
+    ol,ul { padding-left:22px; } li+li { margin-top:7px; } code { padding:2px 5px; background:#edf1f4; border-radius:5px; font-family:"SFMono-Regular",Consolas,monospace; font-size:.92em; }
+    .command { position:relative; margin:10px 0 16px; } pre { margin:0; padding:17px 52px 17px 18px; overflow-x:auto; color:#edf5fa; background:var(--code); border-radius:12px; line-height:1.55; } pre code { padding:0; color:inherit; background:transparent; }
+    .copy { position:absolute; top:9px; right:9px; padding:6px 9px; color:#dce8ef; background:#2c3b48; border:1px solid #465866; border-radius:7px; cursor:pointer; }
+    table { width:100%; border-collapse:collapse; margin:12px 0; } th,td { padding:11px 12px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; } th { color:var(--muted); background:#f7f9fa; }
+    .checklist { list-style:none; padding:0; } .checklist li { padding:10px 12px; background:#f7f9fa; border:1px solid var(--line); border-radius:9px; } .checklist li::before { content:"□"; margin-right:9px; color:var(--brand); font-weight:900; }
+    footer { padding:24px 4px; color:var(--muted); font-size:13px; text-align:center; }
+    @media(max-width:850px){.layout{grid-template-columns:1fr}nav{position:static}nav a{display:inline-block}} @media(max-width:560px){.layout{width:min(100% - 18px,820px);margin-top:9px}.hero,section{padding:20px;border-radius:15px}th,td{padding:9px 8px;font-size:14px}}
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav aria-label="문서 목차"><strong>실행 가이드</strong><a href="#quick">1. 빠른 실행</a><a href="#screen">2. LCD 화면 표시</a><a href="#control">3. 노트북 제어</a><a href="#verify">4. 정상 동작 확인</a><a href="#stop">5. 중지·재시작</a><a href="#trouble">6. 문제 해결</a><a href="#files">7. 파일 구성</a></nav>
+    <main>
+      <header class="hero"><p class="eyebrow">SAFENEST · RASPBERRY PI</p><h1>LCD 실행 가이드</h1><p class="lead">SafeNest LCD 서버를 실행하고, Raspberry Pi 화면에는 <code>display</code>를 띄우며, 노트북에서는 <code>control</code>로 상태를 전환하는 절차입니다.</p><div class="links"><a href="/display">LCD 화면 열기</a><a class="secondary" href="/control">제어 화면 열기</a></div></header>
+      <section id="quick"><h2>1. 빠른 실행</h2><p>Raspberry Pi 터미널에서 아래 명령을 실행합니다. 서버가 실행되는 동안 이 터미널을 닫지 마세요.</p><div class="command"><pre><code>cd /home/sandi/safenest-team-main/RaspberryPi/LCD
+python3 server.py</code></pre><button class="copy" type="button">복사</button></div><div class="success note">성공하면 <strong>SafeNest LCD 서버가 시작되었습니다</strong>, <strong>GPIO18 부저 준비 완료</strong>, <strong>TCP 9000 센서 수신 대기</strong> 메시지가 표시됩니다.</div><p>화면만 확인할 때는 <code>python3 server.py --disable-buzzer --disable-sensors</code>를 사용해도 됩니다.</p></section>
+      <section id="screen"><h2>2. Raspberry Pi LCD에 화면 표시</h2><p>서버 실행 후 별도 터미널에서 Chromium을 키오스크 모드로 실행합니다.</p><div class="command"><pre><code>DISPLAY=:0 XDG_RUNTIME_DIR=/run/user/1000 chromium \
+  --kiosk --noerrdialogs --disable-infobars \
+  http://127.0.0.1:8080/display</code></pre><button class="copy" type="button">복사</button></div><div class="note"><code>Missing X server or $DISPLAY</code>가 나오면 <code>DISPLAY=:0</code>과 <code>XDG_RUNTIME_DIR=/run/user/1000</code>을 확인하세요.</div><p>키오스크 종료: <kbd>Alt</kbd>+<kbd>F4</kbd></p></section>
+      <section id="control"><h2>3. 노트북에서 LCD 제어</h2><ol><li>Pi와 노트북을 같은 네트워크에 연결합니다.</li><li>Pi에서 <code>hostname -I</code>로 IP를 확인합니다.</li><li>노트북에서 <code>http://라즈베리파이-IP:8080/control</code>을 엽니다.</li><li>버튼 1~6 또는 숫자키로 상태를 전환하고 공간 이름을 적용합니다.</li></ol><table><thead><tr><th>주소</th><th>용도</th></tr></thead><tbody><tr><td><code>/display</code></td><td>물리 LCD 표시 화면</td></tr><tr><td><code>/control</code></td><td>상태 제어·미리보기</td></tr><tr><td><code>/guide.html</code></td><td>이 실행 가이드</td></tr><tr><td><code>/health</code></td><td>서버·부저·센서 상태</td></tr></tbody></table></section>
+      <section id="verify"><h2>4. 정상 동작 확인</h2><div class="command"><pre><code>curl -fsS http://127.0.0.1:8080/health
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8080/display
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8080/control</code></pre><button class="copy" type="button">복사</button></div><ul class="checklist"><li>두 화면의 HTTP 결과가 각각 <code>200</code>이다.</li><li>LCD에 SafeNest 화면이 전체화면으로 보인다.</li><li>제어 화면에 “LCD 서버 연결됨”이 보인다.</li><li>상태를 바꾸면 LCD가 약 1초 안에 바뀐다.</li><li>ESP32 연결 시 센서 수신 상태가 갱신된다.</li></ul></section>
+      <section id="stop"><h2>5. 중지와 재시작</h2><p>서버 터미널에서 <kbd>Ctrl</kbd>+<kbd>C</kbd>, Chromium에서 <kbd>Alt</kbd>+<kbd>F4</kbd>로 종료합니다.</p><div class="command"><pre><code>pgrep -af "python3 server.py|chromium.*8080/display"
+ss -ltnp | grep -E ':8080|:9000'</code></pre><button class="copy" type="button">복사</button></div><p>재시작 순서는 <strong>서버 종료 → 서버 실행 → Chromium 새로 실행</strong>입니다.</p></section>
+      <section id="trouble"><h2>6. 문제 해결</h2><table><thead><tr><th>증상</th><th>조치</th></tr></thead><tbody><tr><td><code>Address already in use</code></td><td><code>ss -ltnp | grep -E ':8080|:9000'</code>으로 중복 서버를 확인합니다.</td></tr><tr><td>LCD가 흰 화면</td><td><code>/health</code> 응답과 서버 오류를 확인하고 Chromium을 새로고침합니다.</td></tr><tr><td>노트북 접속 불가</td><td>같은 네트워크와 실제 Pi IP 사용 여부를 확인합니다.</td></tr><tr><td>GPIO 권한 오류</td><td>화면만 필요하면 <code>--disable-buzzer</code>를 사용합니다.</td></tr><tr><td>센서 연결 대기</td><td>ESP32의 TCP <code>9000</code> 전송을 확인합니다.</td></tr><tr><td>Chromium 그래픽 오류</td><td>Pi 데스크톱 로그인 후 <code>DISPLAY=:0</code>으로 실행합니다.</td></tr></tbody></table><div class="warning note"><strong>포트 구분:</strong> 이 문서는 LCD 단독 서버의 <code>8080</code> 기준입니다. 전체 런타임의 <code>8000</code> 절차와 혼용하지 마세요.</div></section>
+      <section id="files"><h2>7. 관련 파일</h2><table><thead><tr><th>파일</th><th>역할</th></tr></thead><tbody><tr><td><code>server.py</code></td><td>HTTP API, GPIO18 부저, ESP32 TCP 수신</td></tr><tr><td><code>static/display.html</code></td><td>LCD 표시 화면</td></tr><tr><td><code>static/control.html</code></td><td>상태 제어·미리보기</td></tr><tr><td><code>static/common.css</code></td><td>공통 디자인</td></tr><tr><td><code>state.json</code></td><td>마지막 상태 저장</td></tr></tbody></table></section>
+      <footer>SafeNest Raspberry Pi LCD · 업데이트 2026-08-25</footer>
+    </main>
+  </div>
+  <script>document.querySelectorAll(".copy").forEach((button)=>{button.addEventListener("click",async()=>{const text=button.parentElement.querySelector("code").innerText;try{await navigator.clipboard.writeText(text);button.textContent="완료";setTimeout(()=>{button.textContent="복사"},1200)}catch{button.textContent="선택 후 복사"}})});</script>
+</body>
+</html>

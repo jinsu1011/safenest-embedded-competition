@@ -6,6 +6,7 @@ import threading
 import time
 import unittest
 from unittest import mock
+import wave
 
 from backend.runtime import SafeNestRuntime
 from backend.store import RuntimeStore
@@ -13,6 +14,8 @@ from services.tts import (
     AsyncRiskTTS,
     SpeechInterrupted,
     SubprocessSpeechBackend,
+    _ALERT_SOUND_PATHS,
+    _RECORDED_MESSAGE_PATHS,
     _select_engine,
     effective_risk_level,
     message_for_publication,
@@ -181,7 +184,99 @@ class KoreanPiperBackendTests(unittest.TestCase):
 
         self.assertEqual(commands[0][0][1:3], ["-m", "piper"])
         self.assertEqual(commands[0][1], "주의가 필요합니다.")
+        self.assertEqual(len(commands), 3)
         self.assertEqual(commands[1][0][:2], ["aplay", "-q"])
+        self.assertEqual(Path(commands[1][0][-1]).name, "warning_chime.wav")
+        self.assertEqual(Path(commands[2][0][-1]).name, "speech.wav")
+
+    def test_danger_siren_plays_before_the_danger_message(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            model = Path(temporary) / "ko_KR-kss-medium.onnx"
+            model.write_bytes(b"model")
+            backend = SubprocessSpeechBackend(engine="piper", piper_model=model)
+            commands: list[list[str]] = []
+
+            def fake_run(command, _cancel_event, *, input_text=None) -> None:
+                commands.append(command)
+                if "--output_file" in command:
+                    output = Path(command[command.index("--output_file") + 1])
+                    output.write_bytes(b"0" * 45)
+
+            with mock.patch.object(backend, "_run", side_effect=fake_run):
+                backend.speak("위험 상황입니다.", "DANGER", threading.Event())
+
+        self.assertEqual(len(commands), 3)
+        self.assertEqual(Path(commands[1][-1]).name, "danger_siren.wav")
+        self.assertEqual(Path(commands[2][-1]).name, "speech.wav")
+
+    def test_recorded_message_plays_after_alert_without_synthesis(self) -> None:
+        backend = SubprocessSpeechBackend(engine="piper")
+        commands: list[list[str]] = []
+        text = message_for_publication(
+            publication("WARNING", reasons=("ABNORMAL_RESPIRATION",)),
+            "WARNING",
+        )
+
+        with mock.patch.object(
+            backend,
+            "_run",
+            side_effect=lambda command, _cancel_event: commands.append(command),
+        ):
+            backend.speak(text, "WARNING", threading.Event())
+
+        self.assertEqual(len(commands), 2)
+        self.assertEqual(Path(commands[0][-1]).name, "warning_chime.wav")
+        self.assertEqual(Path(commands[1][-1]).name, "warning_respiration.wav")
+
+    def test_every_risk_message_maps_to_the_matching_recorded_wav(self) -> None:
+        cases = (
+            (publication("WARNING", reasons=("ABNORMAL_RESPIRATION",)), "WARNING", "warning_respiration.wav"),
+            (publication("WARNING", reasons=("CO2_HIGH",)), "WARNING", "warning_co2.wav"),
+            (publication("WARNING", reasons=("LONG_NO_MOTION",)), "WARNING", "warning_no_motion.wav"),
+            (publication("WARNING", reasons=("THERMAL_FALL",)), "WARNING", "warning_thermal.wav"),
+            (publication("WARNING"), "WARNING", "warning_generic.wav"),
+            (publication("DANGER", floors=("thermal_fall_confident",)), "DANGER", "danger_fall.wav"),
+            (publication("DANGER", floors=("mmwave_apnea_hardware_verified",)), "DANGER", "danger_apnea.wav"),
+            (publication("DANGER", reasons=("CO2_IMMEDIATE_DANGER",)), "DANGER", "danger_co2.wav"),
+            (publication("DANGER"), "DANGER", "danger_generic.wav"),
+        )
+        for event, level, expected_name in cases:
+            with self.subTest(level=level, expected_name=expected_name):
+                text = message_for_publication(event, level)
+                self.assertEqual(_RECORDED_MESSAGE_PATHS[text].name, expected_name)
+
+    def test_recorded_message_wavs_are_aplay_compatible(self) -> None:
+        self.assertEqual(len(_RECORDED_MESSAGE_PATHS), 9)
+        for path in _RECORDED_MESSAGE_PATHS.values():
+            with self.subTest(path=path), wave.open(str(path), "rb") as audio:
+                self.assertEqual(audio.getnchannels(), 1)
+                self.assertEqual(audio.getsampwidth(), 2)
+                self.assertEqual(audio.getframerate(), 22_050)
+                self.assertGreater(audio.getnframes(), 0)
+
+    def test_alert_wav_durations_match_the_warning_and_danger_contract(self) -> None:
+        expected_ranges = {
+            "WARNING": (0.5, 1.0),
+            "DANGER": (1.0, 2.0),
+        }
+        for level, (minimum, maximum) in expected_ranges.items():
+            path = _ALERT_SOUND_PATHS[level]
+            with self.subTest(level=level), wave.open(str(path), "rb") as audio:
+                self.assertEqual(audio.getnchannels(), 1)
+                self.assertEqual(audio.getsampwidth(), 2)
+                duration = audio.getnframes() / audio.getframerate()
+                self.assertGreaterEqual(duration, minimum)
+                self.assertLessEqual(duration, maximum)
+
+    def test_interrupt_terminates_an_active_alert_playback_process(self) -> None:
+        backend = SubprocessSpeechBackend(engine="piper")
+        process = mock.Mock()
+        process.poll.return_value = None
+        backend._active_process = process
+
+        backend.interrupt()
+
+        process.terminate.assert_called_once_with()
 
 
 class ExplodingTTS:

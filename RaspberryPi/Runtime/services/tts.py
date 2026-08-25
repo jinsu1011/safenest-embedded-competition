@@ -28,6 +28,32 @@ _DEFAULT_PIPER_MODEL = (
     / "tts"
     / "ko_KR-kss-medium.onnx"
 )
+_ALERT_SOUND_ROOT = Path(__file__).resolve().parents[1] / "assets" / "audio"
+_ALERT_SOUND_PATHS = {
+    "WARNING": _ALERT_SOUND_ROOT / "warning_chime.wav",
+    "DANGER": _ALERT_SOUND_ROOT / "danger_siren.wav",
+}
+_RECORDED_MESSAGE_ROOT = _ALERT_SOUND_ROOT / "messages"
+_RECORDED_MESSAGE_PATHS = {
+    "주의가 필요합니다. 호흡 이상 징후가 감지되었습니다. 주변 상태를 확인해 주세요.":
+        _RECORDED_MESSAGE_ROOT / "warning_respiration.wav",
+    "주의가 필요합니다. 이산화탄소 농도 이상이 감지되었습니다. 환기 상태를 확인해 주세요.":
+        _RECORDED_MESSAGE_ROOT / "warning_co2.wav",
+    "주의가 필요합니다. 장시간 움직임이 감지되지 않았습니다. 주변 상태를 확인해 주세요.":
+        _RECORDED_MESSAGE_ROOT / "warning_no_motion.wav",
+    "주의가 필요합니다. 열화상 이상 징후가 감지되었습니다. 주변 상태를 확인해 주세요.":
+        _RECORDED_MESSAGE_ROOT / "warning_thermal.wav",
+    "주의가 필요합니다. 위험 징후가 감지되었습니다. 주변 상태를 확인해 주세요.":
+        _RECORDED_MESSAGE_ROOT / "warning_generic.wav",
+    "낙상 위험이 감지되었습니다. 즉시 상태를 확인해 주세요.":
+        _RECORDED_MESSAGE_ROOT / "danger_fall.wav",
+    "심각한 호흡 이상이 감지되었습니다. 즉시 상태를 확인해 주세요.":
+        _RECORDED_MESSAGE_ROOT / "danger_apnea.wav",
+    "이산화탄소 농도가 위험 수준입니다. 즉시 환기하고 현장을 확인해 주세요.":
+        _RECORDED_MESSAGE_ROOT / "danger_co2.wav",
+    "위험 상황이 감지되었습니다. 즉시 현장 상태를 확인해 주세요.":
+        _RECORDED_MESSAGE_ROOT / "danger_generic.wav",
+}
 
 
 class TTSProtocol(Protocol):
@@ -121,48 +147,53 @@ class SubprocessSpeechBackend:
         if cancel_event.is_set():
             raise SpeechInterrupted()
         with tempfile.TemporaryDirectory(prefix="safenest-tts-") as temporary:
-            output = Path(temporary) / "speech.wav"
-            if self.engine == "piper":
-                if self.piper_model is None or not self.piper_model.is_file():
-                    raise RuntimeError("Piper Korean model file is unavailable")
-                command = [
-                    sys.executable,
-                    "-m",
-                    "piper",
-                    "--model",
-                    str(self.piper_model),
-                    "--output_file",
-                    str(output),
-                ]
-                self._run(command, cancel_event, input_text=text)
+            recorded_message = _RECORDED_MESSAGE_PATHS.get(text)
+            if recorded_message is not None and recorded_message.is_file():
+                output = recorded_message
             else:
-                speed, pitch, volume = (
-                    (155, 55, 55) if level == "DANGER" else (140, 45, 45)
-                )
-                command = [
-                    self.engine,
-                    "-v",
-                    "ko",
-                    "-s",
-                    str(speed),
-                    "-p",
-                    str(pitch),
-                    "-a",
-                    str(volume),
-                    "-w",
-                    str(output),
-                    text,
-                ]
-                self._run(command, cancel_event)
+                output = Path(temporary) / "speech.wav"
+                if self.engine == "piper":
+                    if self.piper_model is None or not self.piper_model.is_file():
+                        raise RuntimeError("Piper Korean model file is unavailable")
+                    command = [
+                        sys.executable,
+                        "-m",
+                        "piper",
+                        "--model",
+                        str(self.piper_model),
+                        "--output_file",
+                        str(output),
+                    ]
+                    self._run(command, cancel_event, input_text=text)
+                else:
+                    speed, pitch, volume = (
+                        (155, 55, 55) if level == "DANGER" else (140, 45, 45)
+                    )
+                    command = [
+                        self.engine,
+                        "-v",
+                        "ko",
+                        "-s",
+                        str(speed),
+                        "-p",
+                        str(pitch),
+                        "-a",
+                        str(volume),
+                        "-w",
+                        str(output),
+                        text,
+                    ]
+                    self._run(command, cancel_event)
             if not output.is_file() or output.stat().st_size <= 44:
                 raise RuntimeError(f"TTS synthesis produced no usable WAV ({self.engine})")
             if cancel_event.is_set():
                 raise SpeechInterrupted()
-            play_command = ["aplay", "-q"]
-            if self.audio_device:
-                play_command.extend(("-D", self.audio_device))
-            play_command.append(str(output))
-            self._run(play_command, cancel_event)
+            alert_sound = _ALERT_SOUND_PATHS.get(level)
+            if alert_sound is not None and alert_sound.is_file():
+                self._play_wav(alert_sound, cancel_event)
+            elif alert_sound is not None:
+                LOGGER.warning("TTS alert sound is unavailable: %s", alert_sound)
+            self._play_wav(output, cancel_event)
 
     def interrupt(self) -> None:
         with self._process_lock:
@@ -183,6 +214,13 @@ class SubprocessSpeechBackend:
             "active_process": active,
             "piper_model": str(self.piper_model) if self.piper_model else None,
         }
+
+    def _play_wav(self, wav_path: Path, cancel_event: threading.Event) -> None:
+        play_command = ["aplay", "-q"]
+        if self.audio_device:
+            play_command.extend(("-D", self.audio_device))
+        play_command.append(str(wav_path))
+        self._run(play_command, cancel_event)
 
     def _run(
         self,

@@ -28,6 +28,38 @@ class BackendDependencyError(RuntimeError):
     pass
 
 
+_DEMO_TTS_LEVELS = {
+    "normal-empty": "NORMAL",
+    "normal-occupied": "NORMAL",
+    "warning": "WARNING",
+    "danger": "DANGER",
+    "emergency": "DANGER",
+    "offline": "INDETERMINATE",
+}
+
+
+def _notify_demo_tts(
+    runtime: SafeNestRuntime,
+    store: RuntimeStore,
+    state: str,
+) -> bool:
+    """Feed only the manual LCD demo state into the existing TTS controller."""
+
+    publication = {
+        "risk": {
+            "risk_level": _DEMO_TTS_LEVELS[state],
+            "reasons": [f"LCD_DEMO_{state.upper().replace('-', '_')}"],
+            "escalation_floors": [],
+        },
+        "emergency": {"active": state == "emergency"},
+    }
+    try:
+        return bool(runtime.tts.handle_publication(publication))
+    except Exception as error:
+        store.record_runtime_error("demo_tts", error)
+        return False
+
+
 def create_app(
     runtime: SafeNestRuntime | None = None,
     *,
@@ -374,7 +406,9 @@ def create_app(
         if state is None and requested_room is None:
             raise HTTPException(status_code=422, detail="변경할 항목이 없습니다.")
         if state is not None:
-            lcd_override["state"] = str(state)
+            demo_state = str(state)
+            lcd_override["state"] = demo_state
+            _notify_demo_tts(selected_runtime, selected_store, demo_state)
         if requested_room is not None:
             lcd_override["room"] = str(requested_room).strip()[:24]
         selected_store.record_event(

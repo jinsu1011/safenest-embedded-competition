@@ -3,9 +3,10 @@ from __future__ import annotations
 import importlib.util
 import json
 import threading
+from types import SimpleNamespace
 import unittest
 
-from backend.app import BackendDependencyError, create_app
+from backend.app import BackendDependencyError, _notify_demo_tts, create_app
 from backend.runtime import SafeNestRuntime
 from backend.store import RuntimeStore
 from backend.views import (
@@ -206,6 +207,31 @@ class RuntimeStoreTests(unittest.TestCase):
 
 
 class FastAPIContractTests(unittest.TestCase):
+    def test_manual_lcd_demo_states_only_notify_tts(self):
+        class RecordingTTS:
+            def __init__(self):
+                self.publications = []
+
+            def handle_publication(self, publication):
+                self.publications.append(publication)
+                return publication["risk"]["risk_level"] in {"WARNING", "DANGER"}
+
+        tts = RecordingTTS()
+        runtime = SimpleNamespace(tts=tts)
+        store = RuntimeStore()
+
+        self.assertTrue(_notify_demo_tts(runtime, store, "warning"))
+        self.assertTrue(_notify_demo_tts(runtime, store, "emergency"))
+        self.assertFalse(_notify_demo_tts(runtime, store, "normal-empty"))
+
+        self.assertEqual(
+            [item["risk"]["risk_level"] for item in tts.publications],
+            ["WARNING", "DANGER", "NORMAL"],
+        )
+        self.assertFalse(tts.publications[0]["emergency"]["active"])
+        self.assertTrue(tts.publications[1]["emergency"]["active"])
+        self.assertIsNone(store.latest())
+
     def test_route_contracts_are_complete(self):
         self.assertEqual(set(ROUTE_CONTRACTS), {
             "GET /display",

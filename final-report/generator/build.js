@@ -79,7 +79,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addShape(pptx.ShapeType.line,{x:5.17,y:4.82,w:3.0,h:0,line:{color:LINE,width:1.5}});
   s.addText('가만있어도SANDI',{x:1.0,y:5.12,w:11.3,h:0.50,fontFace:F,fontSize:24,bold:true,color:NAVY,align:'center'});
   s.addText('경희대학교 전자공학과',{x:1.0,y:5.64,w:11.3,h:0.36,fontFace:F,fontSize:16,color:GREY,align:'center'});
-  s.addText('김진수 · 유승하 · 김태균 · 한준우 · 강유나',
+  s.addText('김진수 · 강유나 · 김태균 · 유승하 · 한준우',
     {x:1.0,y:6.06,w:11.3,h:0.34,fontFace:F,fontSize:14,color:GREY,align:'center'});
 }
 

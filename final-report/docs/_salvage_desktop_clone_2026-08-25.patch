@@ -1,0 +1,112 @@
+diff --git "a/final-report/2026ESWContest_\354\236\220\354\234\240\352\263\265\353\252\250_\352\260\200\353\247\214\354\236\210\354\226\264\353\217\204SANDI_\352\260\234\353\260\234\354\231\204\353\243\214\353\263\264\352\263\240\354\204\234.pdf" "b/final-report/2026ESWContest_\354\236\220\354\234\240\352\263\265\353\252\250_\352\260\200\353\247\214\354\236\210\354\226\264\353\217\204SANDI_\352\260\234\353\260\234\354\231\204\353\243\214\353\263\264\352\263\240\354\204\234.pdf"
+index 8dc90af..7a0aec2 100644
+Binary files "a/final-report/2026ESWContest_\354\236\220\354\234\240\352\263\265\353\252\250_\352\260\200\353\247\214\354\236\210\354\226\264\353\217\204SANDI_\352\260\234\353\260\234\354\231\204\353\243\214\353\263\264\352\263\240\354\204\234.pdf" and "b/final-report/2026ESWContest_\354\236\220\354\234\240\352\263\265\353\252\250_\352\260\200\353\247\214\354\236\210\354\226\264\353\217\204SANDI_\352\260\234\353\260\234\354\231\204\353\243\214\353\263\264\352\263\240\354\204\234.pdf" differ
+diff --git "a/final-report/2026ESWContest_\354\236\220\354\234\240\352\263\265\353\252\250_\352\260\200\353\247\214\354\236\210\354\226\264\353\217\204SANDI_\352\260\234\353\260\234\354\231\204\353\243\214\353\263\264\352\263\240\354\204\234.pptx" "b/final-report/2026ESWContest_\354\236\220\354\234\240\352\263\265\353\252\250_\352\260\200\353\247\214\354\236\210\354\226\264\353\217\204SANDI_\352\260\234\353\260\234\354\231\204\353\243\214\353\263\264\352\263\240\354\204\234.pptx"
+index 74e4c1a..d4995f4 100644
+Binary files "a/final-report/2026ESWContest_\354\236\220\354\234\240\352\263\265\353\252\250_\352\260\200\353\247\214\354\236\210\354\226\264\353\217\204SANDI_\352\260\234\353\260\234\354\231\204\353\243\214\353\263\264\352\263\240\354\204\234.pptx" and "b/final-report/2026ESWContest_\354\236\220\354\234\240\352\263\265\353\252\250_\352\260\200\353\247\214\354\236\210\354\226\264\353\217\204SANDI_\352\260\234\353\260\234\354\231\204\353\243\214\353\263\264\352\263\240\354\204\234.pptx" differ
+diff --git a/final-report/generator/build.js b/final-report/generator/build.js
+index 7ea92f7..bae46fd 100644
+--- a/final-report/generator/build.js
++++ b/final-report/generator/build.js
+@@ -79,7 +79,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
+   s.addShape(pptx.ShapeType.line,{x:5.17,y:4.82,w:3.0,h:0,line:{color:LINE,width:1.5}});
+   s.addText('가만있어도SANDI',{x:1.0,y:5.12,w:11.3,h:0.50,fontFace:F,fontSize:24,bold:true,color:NAVY,align:'center'});
+   s.addText('경희대학교 전자공학과',{x:1.0,y:5.64,w:11.3,h:0.36,fontFace:F,fontSize:16,color:GREY,align:'center'});
+-  s.addText('김진수 · 유승하 · 김태균 · 한준우 · 강유나',
++  s.addText('김진수 · 강유나 · 김태균 · 유승하 · 한준우',
+     {x:1.0,y:6.06,w:11.3,h:0.34,fontFace:F,fontSize:14,color:GREY,align:'center'});
+ }
+ 
+@@ -95,17 +95,20 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
+     s.addText(v[0],{x:4.20,y:yy,w:1.15,h:0.58,fontFace:F,fontSize:20,bold:true,color:i===3?RED:NAVY,valign:'middle'});
+     s.addText(v[1],{x:5.42,y:yy,w:2.05,h:0.58,fontFace:F,fontSize:i===3?9.5:11.5,color:INK,valign:'middle',lineSpacing:13});
+   });
+-  box(s,7.85,y+0.36,4.93,2.62,SOFT,LINE);
++  box(s,7.85,y+0.36,4.93,2.79,SOFT,LINE);
+   s.addText('제도와 현실의 간극',{x:8.05,y:y+0.46,w:4.5,h:0.34,fontFace:F,fontSize:13.5,bold:true,color:NAVY});
+-  const law=['산업안전보건법 제619조는 밀폐공간 작업 시 산소·유해가스 농도 측정과 감시인 배치를 사업주 의무로 규정한다.',
+-             '중대재해처벌법 확대 적용으로 소규모 사업장까지 예방 설비 수요가 늘었다.',
+-             '감시인 상시 배치가 어려운 소규모 사업장이 대다수여서, 사람의 상태까지 자동으로 확인하는 무인 감시 수단이 필요하다.'];
+-  law.forEach((t,i)=>{
+-    s.addText([{text:'· ',options:{bold:true,color:BLUE}},{text:t,options:{color:INK}}],
+-      {x:8.05,y:y+0.82+i*0.70,w:4.55,h:0.66,fontFace:F,fontSize:12,lineSpacing:17,valign:'top'});
+-  });
++  s.addText([
++    {text:'· ',options:{bold:true,color:BLUE}},
++    {text:'산업안전보건법 제619조는 밀폐공간 작업 시 산소·유해가스 농도 측정과 감시인 배치를 사업주 의무로 규정한다.\n',options:{color:INK}},
++    {text:'· ',options:{bold:true,color:BLUE}},
++    {text:'그러나 2026년 6월 진안 맨홀 사고에서는 작업지침이 있는데도 현장 보고가 누락되었고, 8월에는 유제품 공장 저장탱크 청소 중 2명이 쓰러져 1명이 사망하였다.\n',options:{color:INK}},
++    {text:'· ',options:{bold:true,color:BLUE}},
++    {text:'같은 달 인천시와 고용노동부는 맨홀 질식사고 추방을 공동선언하고 사전 안전확인 시스템 구축에 합의하였다.\n',options:{color:INK}},
++    {text:'· ',options:{bold:true,color:BLUE}},
++    {text:'감시인 상시 배치가 어려운 소규모 사업장이 대다수여서, 사람의 상태까지 자동으로 확인하는 무인 감시 수단이 필요하다.',options:{color:INK}}
++  ],{x:8.05,y:y+0.78,w:4.55,h:2.30,fontFace:F,fontSize:10,lineSpacing:14.5,valign:'top'});
+   sub(s,0.55,y+3.22,'사고 진행 단계와 현재 감시 수단의 공백');
+-  const fy=y+3.64;
++  const fy=y+3.58;
+   const flow=[['작업자 진입','밀폐공간 내부'],['이상 발생','산소결핍·유해가스'],['움직임 정지','스스로 신고 불가'],['발견 지연','감시인 부재'],['사고 확정','구조 골든타임 경과']];
+   flow.forEach((f,i)=>{
+     const x=0.55+i*2.47;
+@@ -119,8 +122,8 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
+   s.addText('▼',{x:6.55,y:fy+0.34,w:0.3,h:0.20,fontFace:F,fontSize:9,color:AMBER,align:'center'});
+   s.addText('▼',{x:8.85,y:fy+0.34,w:0.3,h:0.20,fontFace:F,fontSize:9,color:AMBER,align:'center'});
+   s.addText('SafeNest는 이 구간에서 사람의 존재와 상태를 자동으로 확인하고 현장에 경보를 낸다.',
+-    {x:0.55,y:fy+1.46,w:12.23,h:0.30,fontFace:F,fontSize:13.5,bold:true,color:NAVY});
+-  note(s,'※ 출처 : 고용노동부 밀폐공간 질식재해 예방 보도자료(2024), 경향신문 밀폐공간 중대재해 분석 보도(2025). 법령 : 산업안전보건법 제619조.');
++    {x:0.55,y:fy+1.40,w:12.23,h:0.30,fontFace:F,fontSize:13,bold:true,color:NAVY});
++  note(s,'※ 출처 : 고용노동부 질식재해 예방 보도자료(2024) · 경향신문 중대재해 분석(2025) · 뉴시스(2026-06-22 · 2026-08-06) · 매일경제(2026-08-09). 법령 : 산업안전보건법 제619조.', 6.74);
+ }
+ 
+ /* ============ P2 ============ */
+@@ -703,10 +706,10 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
+     s.addText(u[3],{x:0.74,y:yy+0.52,w:5.84,h:0.58,fontFace:F,fontSize:10.5,color:INK,lineSpacing:14,valign:'top'});
+   });
+ 
+-  s.addImage({ path:A+'/ui_web.png', x:6.85, y:y+1.18, w:5.93, h:3.51 });
+-  s.addShape(pptx.ShapeType.rect,{x:6.85,y:y+1.18,w:5.93,h:3.51,fill:{type:'none'},line:{color:LINE,width:1}});
++  s.addImage({ path:A+'/ui_web_crop.png', x:6.85, y:y+1.30, w:5.93, h:2.98 });
++  s.addShape(pptx.ShapeType.rect,{x:6.85,y:y+1.30,w:5.93,h:2.98,fill:{type:'none'},line:{color:LINE,width:1}});
+   s.addText('[그림 6] Express 5 관제 웹. QR 로 공간을 식별해 밀폐공간 A-01, 통학차량 B-02, 창고 C-03 을 등록·조회한다. 화면에 남는 것은 영상이 아니라 상태값이다.',
+-    {x:6.85,y:y+4.76,w:5.93,h:0.40,fontFace:F,fontSize:9.5,color:GREY,lineSpacing:13,valign:'top'});
++    {x:6.85,y:y+4.36,w:5.93,h:0.40,fontFace:F,fontSize:9.5,color:GREY,lineSpacing:13,valign:'top'});
+   note(s,'근거 : 산업안전보건법 제619조 · 시행규칙 별표18 · 도로교통법 제53조 제4항·제5항. 감지 거리 : replay_v5/benchmark_summary.csv.');
+ }
+ 
+@@ -751,7 +754,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
+     {x:6.85,y:y+2.52,w:5.93,h:0.50,fontFace:F,fontSize:10,color:INK,lineSpacing:14,valign:'top'});
+ 
+   sub(s,6.85,y+3.06,'시장성 : 수요가 법령으로 발생하는 시장');
+-  const mk=[['밀폐공간', BLUE,'산업안전보건법 제619조가 산소·유해가스 농도 측정과 감시인 배치를 사업주 의무로 규정한다. 최근 10년 질식재해 174건 · 재해자 338명 · 사망 136명.'],
++  const mk=[['밀폐공간', BLUE,'산업안전보건법 제619조가 측정·감시인 배치를 사업주 의무로 규정한다. 2026년 8월 인천시와 고용노동부가 사전 안전확인 시스템 구축을 공동선언하였다.'],
+     ['어린이 통학차량', GREEN,'도로교통법 제53조가 하차 확인과 어린이 하차확인장치 작동을 의무화하고 있어 장착 수요가 이미 제도화되어 있다.'],
+     ['보안 통제구역', NAVY,'촬영 장비 반입이 통제되어 CCTV 로 대체할 수 없는 구간이다. 영상을 만들지 않는 감시 수단에 대한 대체재가 없다.']];
+   mk.forEach((m,i)=>{
+@@ -804,10 +807,10 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
+   const {s,y} = page(20,'7.2  업무 분장 및 협업 구조');
+   const team=[
+    ['김진수','팀장','mmWave 펌웨어·어댑터·실측, 저장소 구조 통합, 문서 총괄','devices/mmwave/ · docs/ · 저장소 전체 기본 리뷰어','MR60 실측 로그 30분·31분, 라이브 검증(9.990 Hz), 리플레이 벤치 12종'],
+-   ['유승하','팀원','CO₂(SCD40) 연동·실측, ESP32 4센서 노드 펌웨어, Pi LCD·부저 서버, 회로','devices/co2/ · devices/esp32_node/ · integration/','esp32_sensor_node.ino(741줄), CO₂ 실측 4세션·검증 리포트, TCP v1 송·수신'],
++   ['강유나','팀원','PIR 어댑터, 3D 하우징 CAD 설계 및 출력, LCD·Web 초기 골격','devices/pir/ · hardware/3d_models/','STL 4종 + 설계사양 2종, 하우징 출력·조립, PIR 어댑터, LCD 초기 서버'],
+    ['김태균','팀원','Thermal-90 드라이버·프레임 파서·전처리, 열화상 온디바이스 AI 검증','devices/thermal/ · docs/thermal/','레거시 v0.1.0 경로 E2E 관통, fail-closed 6종, Pi 5 지연 실측(p95 173.9 ms)'],
+-   ['한준우','팀원','데이터셋 출처·분할, 모델 학습·비교·재현, Pi AI 준비, 위험 판단 연계','ondevice_ai/ · shared/contracts/','모델 3종 매니페스트, 재현 검증·클래스 붕괴 발견 및 배포 차단'],
+-   ['강유나','팀원','PIR 어댑터, 3D 하우징 CAD 설계 및 출력, LCD·Web 초기 골격','devices/pir/ · hardware/3d_models/','STL 4종 + 설계사양 2종, 하우징 출력·조립, PIR 어댑터, LCD 초기 서버']];
++   ['유승하','팀원','CO₂(SCD40) 연동·실측, ESP32 4센서 노드 펌웨어, Pi LCD·부저 서버, 회로','devices/co2/ · devices/esp32_node/ · integration/','esp32_sensor_node.ino(741줄), CO₂ 실측 4세션·검증 리포트, TCP v1 송·수신'],
++   ['한준우','팀원','데이터셋 출처·분할, 모델 학습·비교·재현, Pi AI 준비, 위험 판단 연계','ondevice_ai/ · shared/contracts/','모델 3종 매니페스트, 재현 검증·클래스 붕괴 발견 및 배포 차단']];
+   const rows=[[hdr('성명'),hdr('구분'),hdr('담당 업무'),hdr('책임 영역 (CODEOWNERS)'),hdr('주요 산출물')]];
+   team.forEach(t=>rows.push(t));
+   s.addTable(rows.map((r,ri)=>r.map((c,ci)=>typeof c==='string'?{text:c,options:{bold:ci===0,align:ci<=1?'center':'left'}}:c)),
+diff --git a/final-report/previews/pdf/p-01.png b/final-report/previews/pdf/p-01.png
+index 058ad1d..cc3e072 100644
+Binary files a/final-report/previews/pdf/p-01.png and b/final-report/previews/pdf/p-01.png differ
+diff --git a/final-report/previews/pdf/p-02.png b/final-report/previews/pdf/p-02.png
+index 807eb7e..df519aa 100644
+Binary files a/final-report/previews/pdf/p-02.png and b/final-report/previews/pdf/p-02.png differ
+diff --git a/final-report/previews/pdf/p-18.png b/final-report/previews/pdf/p-18.png
+index b0538fb..07c75b6 100644
+Binary files a/final-report/previews/pdf/p-18.png and b/final-report/previews/pdf/p-18.png differ
+diff --git a/final-report/previews/pdf/p-19.png b/final-report/previews/pdf/p-19.png
+index ac0b765..4d4abf3 100644
+Binary files a/final-report/previews/pdf/p-19.png and b/final-report/previews/pdf/p-19.png differ
+diff --git a/final-report/previews/pdf/p-21.png b/final-report/previews/pdf/p-21.png
+index 34816e5..33e334d 100644
+Binary files a/final-report/previews/pdf/p-21.png and b/final-report/previews/pdf/p-21.png differ

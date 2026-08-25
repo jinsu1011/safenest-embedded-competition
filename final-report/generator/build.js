@@ -492,10 +492,14 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 /* ============ P11 ============ */
 {
   const {s,y} = page(11,'3.6  실측 검증 결과','채널별로 서로 다른 조건에서 수행한 결과이며, 통합 시스템 성능 지표와는 구분해 제시한다');
-  sub(s,0.55,y,'① CO₂ 센서 연속 수신 검증');
-  s.addText('ESP32 192.168.1.16 → Pi 5 192.168.1.44:9000, TCP 실경로, 2026-08-12',
-    {x:3.05,y:y+0.02,w:3.55,h:0.26,fontFace:F,fontSize:9.5,color:GREY,valign:'middle'});
-  s.addImage({ path: PV+'/chart_co2.png', x:0.55, y:y+0.34, w:6.03, h:2.48 });
+  function blk(x,w,yy,n,t,note){
+    s.addShape(pptx.ShapeType.rect,{x,y:yy,w:0.06,h:0.30,fill:{color:BLUE}});
+    s.addText(n+'  '+t,{x:x+0.20,y:yy,w:w-0.20,h:0.30,fontFace:F,fontSize:14,bold:true,color:NAVY,valign:'middle'});
+    if(note) s.addText(note,{x:x+0.20,y:yy,w:w-0.20,h:0.30,fontFace:F,fontSize:9,color:GREY,align:'right',valign:'middle'});
+  }
+
+  blk(0.55,6.03,y+0.02,'①','CO₂ 센서 연속 수신 검증','ESP32 → Pi 5 TCP 실경로 · 2026-08-12');
+  s.addImage({ path: PV+'/chart_co2.png', x:0.55, y:y+0.46, w:5.86, h:2.41 });
   const co2=[[hdr('세션'),hdr('유효 표본'),hdr('결측률'),hdr('판정')],
     ['프리플라이트 30초','30 / 30','0 %','PASS'],
     ['baseline 5분 (최초)','277 / 300','7.67 %','FAIL'],
@@ -503,21 +507,22 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     ['호기 6분','329 / 360','8.61 %','PASS']];
   s.addTable(co2.map(r=>r.map(c=>typeof c==='string'?{text:c,options:{align:c==='PASS'||c==='FAIL'?'center':'left',
     bold:c==='PASS'||c==='FAIL', color:c==='FAIL'?RED:(c==='PASS'?GREEN:INK)}}:c)),
-    {x:0.55,y:y+2.92,w:6.03,colW:[2.34,1.40,1.19,1.10],rowH:0.32,...TB,fontSize:11});
-  s.addText('최초 baseline 의 결측은 원본 그대로 보존한 뒤 재측정하였다. 호기 세션 최고 1,493 ppm, 종료 634 ppm.\nESP32 펌웨어 빌드 자원 : RAM 32,356 / 327,680 B (9.9 %), Flash 268,765 / 1,310,720 B (20.5 %).',
-    {x:0.55,y:y+4.58,w:6.03,h:0.80,fontFace:F,fontSize:10.5,color:INK,lineSpacing:15,valign:'top'});
+    {x:0.55,y:y+3.06,w:5.86,colW:[2.26,1.36,1.16,1.08],rowH:0.30,...TB,fontSize:11});
+  s.addText('최초 baseline 의 결측은 원본 그대로 보존한 뒤 재측정하였다. 호기 세션 최고 1,493 ppm, 종료 634 ppm.',
+    {x:0.55,y:y+4.66,w:5.86,h:0.42,fontFace:F,fontSize:10.5,color:INK,lineSpacing:16,valign:'top'});
 
-  sub(s,6.85,y,'② mmWave 수신 안정성 및 리플레이 결과');
-  s.addImage({ path: PV+'/chart_mmwave.png', x:6.85, y:y+0.34, w:5.93, h:1.98 });
-  box(s,6.85,y+2.42,5.93,0.92,SOFT,LINE);
-  s.addText('라이브 UART 수신 (2026-08-08)',{x:7.03,y:y+2.46,w:5.6,h:0.28,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
-  s.addText('9.990 Hz · 1,201 레코드 · 199/199 창 파싱 · 시퀀스 누락 0 · UART / checksum / parser 오류 0 / 0 / 0',
-    {x:7.03,y:y+2.72,w:5.6,h:0.56,fontFace:F,fontSize:11,color:INK,lineSpacing:17,valign:'top'});
-  sub(s,6.85,y+3.46,'③ Thermal 실기기 E2E (Production 경로)');
-  box(s,6.85,y+3.78,5.93,1.46,SOFT,LINE);
-  s.addText('Raspberry Pi 5, 30.06 s / 138회 측정',{x:7.03,y:y+3.82,w:5.6,h:0.28,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
-  s.addText('p50 162.70 ms · p95 173.90 ms · 평균 167.92 ms  (per-frame min-max)\n유효 프레임 135 / 138 (97.8 %) · 처리량 4.6 FPS\nfail-closed 6종 실기기 PASS (순서위반 · NaN/Inf · 형식오류 · 단선 · 복구 · close 후 read)',
-    {x:7.03,y:y+4.06,w:5.6,h:1.12,fontFace:F,fontSize:10.5,color:INK,lineSpacing:16,valign:'top'});
+  blk(6.85,5.93,y+0.02,'②','mmWave 수신 안정성 및 리플레이 결과',null);
+  s.addImage({ path: PV+'/chart_mmwave.png', x:6.85, y:y+0.46, w:5.93, h:1.98 });
+  box(s,6.85,y+2.64,5.93,0.88,SOFT,LINE);
+  s.addText('라이브 UART 수신 (2026-08-08)',{x:7.09,y:y+2.70,w:5.5,h:0.26,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
+  s.addText('9.990 Hz · 1,201 레코드 · 199/199 창 파싱 · 시퀀스 누락 0\nUART / checksum / parser 오류 0 / 0 / 0',
+    {x:7.09,y:y+2.96,w:5.5,h:0.50,fontFace:F,fontSize:11,color:INK,lineSpacing:17,valign:'top'});
+
+  blk(6.85,5.93,y+3.70,'③','Thermal 실기기 E2E (Production 경로)',null);
+  box(s,6.85,y+4.14,5.93,1.12,SOFT,LINE);
+  s.addText('Raspberry Pi 5 · 30.06 s / 138회 측정',{x:7.09,y:y+4.20,w:5.5,h:0.26,fontFace:F,fontSize:11.5,bold:true,color:NAVY});
+  s.addText('p50 162.70 ms · p95 173.90 ms · 평균 167.92 ms (per-frame min-max)\n유효 프레임 135 / 138 (97.8 %) · 처리량 4.6 FPS\nfail-closed 6종 실기기 PASS (순서위반 · NaN/Inf · 형식오류 · 단선 · 복구 · close 후 read)',
+    {x:7.09,y:y+4.46,w:5.5,h:0.74,fontFace:F,fontSize:10.5,color:INK,lineSpacing:16,valign:'top'});
 }
 
 /* ============ P12 ============ */

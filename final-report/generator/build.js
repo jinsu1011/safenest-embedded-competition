@@ -703,10 +703,10 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     s.addText(u[3],{x:0.74,y:yy+0.52,w:5.84,h:0.58,fontFace:F,fontSize:10.5,color:INK,lineSpacing:14,valign:'top'});
   });
 
-  s.addImage({ path:A+'/ui_web.png', x:6.85, y:y+1.18, w:5.93, h:3.51 });
-  s.addShape(pptx.ShapeType.rect,{x:6.85,y:y+1.18,w:5.93,h:3.51,fill:{type:'none'},line:{color:LINE,width:1}});
+  s.addImage({ path:A+'/ui_web.png', x:6.85, y:y+1.08, w:5.93, h:3.00 });
+  s.addShape(pptx.ShapeType.rect,{x:6.85,y:y+1.08,w:5.93,h:3.00,fill:{type:'none'},line:{color:LINE,width:1}});
   s.addText('[그림 6] 관제 웹 화면. QR 로 공간을 식별해 밀폐공간 A-01, 통학차량 B-02, 창고 C-03 을 등록·조회한다. 화면에는 RGB 영상 없이 상태값만 남는다.',
-    {x:6.85,y:y+4.76,w:5.93,h:0.40,fontFace:F,fontSize:9.5,color:GREY,lineSpacing:13,valign:'top'});
+    {x:6.85,y:y+4.20,w:5.93,h:0.40,fontFace:F,fontSize:9.5,color:GREY,lineSpacing:13,valign:'top'});
   note(s,'근거 : 산업안전보건법 제619조 · 시행규칙 별표18 · 도로교통법 제53조 제4항·제5항. 감지 거리 : archive/legacy_main_repo/devices/mmwave/validation_results/replay_v5/benchmark_summary.csv.');
 }
 
@@ -805,10 +805,10 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   const {s,y} = page(20,'7.2  업무 분장 및 협업 구조');
   const team=[
    ['김진수','팀장','mmWave 펌웨어·어댑터·실측, 저장소 구조 통합, 문서 총괄','ESP32/reference/mmwave_platformio/ · archive/ · .github/ · 저장소 전체 기본 리뷰어','MR60 실측 로그 30분·31분, 라이브 검증(9.990 Hz), 리플레이 벤치 12종'],
-   ['유승하','팀원','CO₂(SCD40) 연동·실측, ESP32 4센서 노드 펌웨어, Pi LCD·부저 서버, 회로','ESP32/ · RaspberryPi/Runtime/ · RaspberryPi/Web/','esp32_sensor_node.ino(1,042줄), CO₂ 실측 4세션·검증 리포트, TCP v1 송·수신'],
+   ['강유나','팀원','PIR 어댑터, 3D 하우징 CAD 설계 및 출력, LCD·Web 초기 골격','hardware/ · RaspberryPi/Ondevice_AI/sensors/pir/','STL 4종 + 설계사양 2종, 하우징 출력·조립, PIR 어댑터, LCD 초기 서버'],
    ['김태균','팀원','Thermal-90 드라이버·프레임 파서·전처리, 열화상 온디바이스 AI 검증','RaspberryPi/Ondevice_AI/sensors/thermal44/ · research/thermal_ai/','Production 경로 E2E 관통, fail-closed 6종, Pi 5 지연 실측(p95 173.9 ms)'],
-   ['한준우','팀원','데이터셋 출처·분할, 모델 학습·비교·재현, Pi AI 준비, 위험 판단 연계','RaspberryPi/Ondevice_AI/','모델 3종 매니페스트, 재현 검증·클래스 붕괴 발견 및 배포 차단'],
-   ['강유나','팀원','PIR 어댑터, 3D 하우징 CAD 설계 및 출력, LCD·Web 초기 골격','hardware/ · RaspberryPi/Ondevice_AI/sensors/pir/','STL 4종 + 설계사양 2종, 하우징 출력·조립, PIR 어댑터, LCD 초기 서버']];
+   ['유승하','팀원','CO₂(SCD40) 연동·실측, ESP32 4센서 노드 펌웨어, Pi LCD·부저 서버, 회로','ESP32/ · RaspberryPi/Runtime/ · RaspberryPi/Web/','esp32_sensor_node.ino(1,042줄), CO₂ 실측 4세션·검증 리포트, TCP v1 송·수신'],
+   ['한준우','팀원','데이터셋 출처·분할, 모델 학습·비교·재현, Pi AI 준비, 위험 판단 연계','RaspberryPi/Ondevice_AI/','모델 3종 매니페스트, 재현 검증·클래스 붕괴 발견 및 배포 차단']];
   const rows=[[hdr('성명'),hdr('구분'),hdr('담당 업무'),hdr('책임 영역 (저장소 경로)'),hdr('주요 산출물')]];
   team.forEach(t=>rows.push(t));
   s.addTable(rows.map((r,ri)=>r.map((c,ci)=>typeof c==='string'?{text:c,options:{bold:ci===0,align:ci<=1?'center':'left'}}:c)),

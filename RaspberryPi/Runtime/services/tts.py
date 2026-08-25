@@ -7,11 +7,13 @@ risk and keeps synthesis/playback on a dedicated worker with one pending slot.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import importlib.util
 import logging
 import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -20,6 +22,12 @@ from typing import Any, Callable, Mapping, Protocol
 
 LOGGER = logging.getLogger(__name__)
 _PRIORITY = {"WARNING": 1, "DANGER": 2}
+_DEFAULT_PIPER_MODEL = (
+    Path(__file__).resolve().parents[1]
+    / "data"
+    / "tts"
+    / "ko_KR-kss-medium.onnx"
+)
 
 
 class TTSProtocol(Protocol):
@@ -118,7 +126,9 @@ class SubprocessSpeechBackend:
                 if self.piper_model is None or not self.piper_model.is_file():
                     raise RuntimeError("Piper Korean model file is unavailable")
                 command = [
-                    self.engine,
+                    sys.executable,
+                    "-m",
+                    "piper",
                     "--model",
                     str(self.piper_model),
                     "--output_file",
@@ -461,7 +471,11 @@ def create_tts_from_env(
         return DisabledTTS("disabled")
 
     piper_model_value = os.getenv("SAFENEST_TTS_PIPER_MODEL", "").strip()
-    piper_model = Path(piper_model_value).expanduser() if piper_model_value else None
+    piper_model = (
+        Path(piper_model_value).expanduser()
+        if piper_model_value
+        else _DEFAULT_PIPER_MODEL
+    )
     engine = _select_engine(mode, piper_model)
     if shutil.which("aplay") is None or engine is None:
         detail = "aplay or an offline Korean TTS engine is unavailable"
@@ -490,16 +504,23 @@ def create_tts_from_env(
 
 def _select_engine(mode: str, piper_model: Path | None) -> str | None:
     if mode == "auto":
-        if piper_model is not None and piper_model.is_file() and shutil.which("piper"):
+        if piper_model is not None and piper_model.is_file() and _piper_available():
             return "piper"
         for candidate in ("espeak-ng", "espeak"):
             if shutil.which(candidate):
                 return candidate
         return None
-    if mode in {"piper", "espeak-ng", "espeak"} and shutil.which(mode):
-        if mode != "piper" or (piper_model is not None and piper_model.is_file()):
+    if mode == "piper":
+        if piper_model is not None and piper_model.is_file() and _piper_available():
             return mode
+        return None
+    if mode in {"espeak-ng", "espeak"} and shutil.which(mode):
+        return mode
     return None
+
+
+def _piper_available() -> bool:
+    return importlib.util.find_spec("piper") is not None
 
 
 def _contains(reasons: set[str], *tokens: str) -> bool:

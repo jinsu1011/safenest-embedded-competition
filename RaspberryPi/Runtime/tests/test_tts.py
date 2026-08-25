@@ -12,6 +12,8 @@ from backend.store import RuntimeStore
 from services.tts import (
     AsyncRiskTTS,
     SpeechInterrupted,
+    SubprocessSpeechBackend,
+    _select_engine,
     effective_risk_level,
     message_for_publication,
 )
@@ -151,6 +153,35 @@ class RiskAwareTTSTests(unittest.TestCase):
         self.assertIn("호흡 이상", message_for_publication(apnea, "DANGER"))
         self.assertIn("이산화탄소", message_for_publication(co2, "DANGER"))
         self.assertIn("호흡 이상", message_for_publication(respiration, "WARNING"))
+
+
+class KoreanPiperBackendTests(unittest.TestCase):
+    def test_auto_prefers_installed_piper_model(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            model = Path(temporary) / "ko_KR-kss-medium.onnx"
+            model.write_bytes(b"model")
+            with mock.patch("services.tts._piper_available", return_value=True):
+                self.assertEqual(_select_engine("auto", model), "piper")
+
+    def test_piper_runs_from_the_runtime_python_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            model = Path(temporary) / "ko_KR-kss-medium.onnx"
+            model.write_bytes(b"model")
+            backend = SubprocessSpeechBackend(engine="piper", piper_model=model)
+            commands: list[tuple[list[str], str | None]] = []
+
+            def fake_run(command, _cancel_event, *, input_text=None) -> None:
+                commands.append((command, input_text))
+                if "--output_file" in command:
+                    output = Path(command[command.index("--output_file") + 1])
+                    output.write_bytes(b"0" * 45)
+
+            with mock.patch.object(backend, "_run", side_effect=fake_run):
+                backend.speak("주의가 필요합니다.", "WARNING", threading.Event())
+
+        self.assertEqual(commands[0][0][1:3], ["-m", "piper"])
+        self.assertEqual(commands[0][1], "주의가 필요합니다.")
+        self.assertEqual(commands[1][0][:2], ["aplay", "-q"])
 
 
 class ExplodingTTS:

@@ -41,6 +41,7 @@ RaspberryPi/Runtime/data/*.db-shm
 RaspberryPi/Runtime/data/mmwave/*
 RaspberryPi/Runtime/data/co2/*
 RaspberryPi/Runtime/data/thermal/*
+RaspberryPi/Runtime/data/tts/*
 !RaspberryPi/Runtime/data/**/.gitkeep
 *.sqlite
 *.sqlite3

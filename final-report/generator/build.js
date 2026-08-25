@@ -191,7 +191,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     down(s,x,dy+0.52,1.70);
   });
   dy+=0.78;
-  const out=[['부저','GPIO18 · 880 Hz'],['LCD','상태 6종 표시'],['Web 관제','Express 5 · QR 공간코드']];
+  const out=[['부저','GPIO18 · 880 Hz'],['LCD','상태 6종 표시'],['Web 관제','QR 공간코드 · 실시간 대시보드']];
   out.forEach((v,i)=>{
     const x=D0+i*2.39;
     box(s,x,dy,2.30,0.52,LBLUE,BLUE);
@@ -233,16 +233,16 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   });
   sub(s,0.55,y+1.98,'개발 환경');
   const env=[[hdr('구분'),hdr('사용 기술'),hdr('대상 기기'),hdr('저장소 근거 경로')],
-   ['MCU 펌웨어','Arduino / PlatformIO (C++)','ESP32 Dev Module','devices/esp32_node/firmware/'],
-   ['수신·표시 서버','Python 3 표준 라이브러리 (http.server, socket, struct)','Raspberry Pi 5','integration/pi_lcd/server.py'],
-   ['온디바이스 AI','TensorFlow Lite INT8 추론 / 학습·검증 TensorFlow 2.19.1','Raspberry Pi 5','ondevice_ai/inference/, models/'],
-   ['위험도 엔진','Python + NumPy','Raspberry Pi 5','ondevice_ai/risk/risk_engine.py'],
-   ['웹 관제','Node.js Express 5 (bcryptjs · jsonwebtoken · qrcode)','Raspberry Pi 5','integration/web/'],
-   ['센서 계약','Python 추상 인터페이스','전 영역 공통','shared/contracts/base_sensor.py'],
+   ['MCU 펌웨어','Arduino (C++) / FreeRTOS 태스크','ESP32 Dev Module','ESP32/Arduino/esp32_sensor_node/'],
+   ['수신·표시 서버','Python 3 표준 라이브러리 (http.server, socket, struct)','Raspberry Pi 5','RaspberryPi/LCD/server.py'],
+   ['온디바이스 AI','TensorFlow Lite INT8 추론 / 학습·검증 TensorFlow 2.19.1','Raspberry Pi 5','RaspberryPi/Ondevice_AI/inference/, models/'],
+   ['위험도 엔진','Python + NumPy','Raspberry Pi 5','RaspberryPi/Ondevice_AI/risk/'],
+   ['관제 백엔드·웹','Python FastAPI + Uvicorn, qrcode, SQLite 영속화','Raspberry Pi 5','RaspberryPi/Runtime/backend/ · RaspberryPi/Web/'],
+   ['센서 계약','Python 추상 인터페이스','전 영역 공통','RaspberryPi/Ondevice_AI/sensors/base_sensor.py'],
    ['외함','3D CAD → STL 4종','FDM 출력','hardware/3d_models/']];
   s.addTable(env.map(r=>r.map(c=>typeof c==='string'?{text:c}:c)),
-    {x:0.55,y:y+2.34,w:12.23,colW:[1.85,4.75,2.15,3.48],rowH:0.36,...TB,fontSize:11.5});
-  note(s,'저장소 전체 파일 수 1,904개 (패키징 시점 개발 스냅샷, commit 3f22fb1). 위 표는 개발 환경에 해당하는 구성만 발췌한 것이다.');
+    {x:0.55,y:y+2.34,w:12.23,colW:[1.72,4.13,1.82,4.56],rowH:0.36,...TB,fontSize:10.5});
+  note(s,'저장소 전체 파일 수 4,316개 (main 8413d2f 기준). 이 중 2,253개는 archive/ 에 보존한 과거 구현과 측정 증거이며, 위 표는 개발 환경에 해당하는 구성만 발췌한 것이다.');
 }
 
 /* ============ P5 ============ */
@@ -275,14 +275,14 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   const {s,y} = page(6,'3.1  파일 구성과 함수별 기능');
   sub(s,0.55,y,'파일 구성');
   const mod=[[hdr('경로'),hdr('역할')],
-   ['esp32_node/firmware/esp32_sensor_node.ino','4센서 수집, 유효성 판정, 패킷화 (741줄)'],
-   ['devices/{mmwave,co2,pir,thermal}/src/','센서별 어댑터, mock, 설정'],
-   ['shared/contracts/base_sensor.py','모든 영역이 의존하는 공용 센서 계약'],
-   ['integration/pi_lcd/server.py','TCP 9000 수신, HTTP 8080 API, 상태 6종, 부저'],
-   ['ondevice_ai/inference/','TFLite Interpreter, 모델 레지스트리, 검증기'],
-   ['ondevice_ai/risk/{risk_engine,fallback}.py','가중 융합 위험도, fail-closed 판정'],
-   ['ondevice_ai/integrated_node/run_node.py','통합 실행 노드, 외부 provider 주입'],
-   ['integration/web/','Express 5 관제 웹, QR 생성, 시뮬레이터'],
+   ['ESP32/Arduino/esp32_sensor_node/','4센서 수집, 유효성 판정, 패킷화 (1,042줄)'],
+   ['RaspberryPi/LCD/server.py','TCP 9000 수신, HTTP 8080 API, 상태 6종, 부저'],
+   ['RaspberryPi/Ondevice_AI/sensors/','센서별 어댑터·mock, 공용 계약 base_sensor.py'],
+   ['RaspberryPi/Ondevice_AI/inference/','TFLite Interpreter, 모델 레지스트리, 검증기'],
+   ['RaspberryPi/Ondevice_AI/risk/','가중 융합 위험도, fail-closed 판정'],
+   ['RaspberryPi/Ondevice_AI/integrated_node/','통합 실행 노드, 외부 provider 주입'],
+   ['RaspberryPi/Runtime/backend/','관제 API, QR 공간 식별, 상태 영속화'],
+   ['RaspberryPi/Web/','관제 화면, 방문자 화면, 실시간 대시보드'],
    ['hardware/3d_models/','외함 CAD STL 4종 + 설계사양 2종']];
   s.addTable(mod.map((r,ri)=>r.map((c,ci)=>typeof c==='string'?{text:c,options:{fontFace:ci===0?M:F,fontSize:ci===0?8.5:10}}:c)),
     {x:0.55,y:y+0.36,w:6.03,colW:[2.95,3.08],rowH:0.30,...TB});
@@ -308,7 +308,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     {text:'데이터셋 : ',options:{bold:true,color:NAVY}},
     {text:'Zenodo mmWave vital-sign (DOI 10.5281/zenodo.18599983, CC BY 4.0) · UCI Occupancy Detection (ID 357, CC BY 4.0) · SDT Thermal (TU Wien / Zenodo 4124309)\n',options:{color:INK}},
     {text:'라이브러리 : ',options:{bold:true,color:NAVY}},
-    {text:'TensorFlow Lite, Sensirion SCD4x, Seeed mmWave, Express 5, gpiozero, NumPy.  위 자산은 학습·추론·통신에 활용하였으며, 센서 통합 펌웨어와 통신 프로토콜, 상태 관리, 위험도 엔진은 팀 자체 구현이다.',options:{color:INK}}
+    {text:'TensorFlow Lite, Sensirion SCD4x, Seeed mmWave, FastAPI · Uvicorn, gpiozero, NumPy.  위 자산은 학습·추론·통신에 활용하였으며, 센서 통합 펌웨어와 통신 프로토콜, 상태 관리, 위험도 엔진은 팀 자체 구현이다.',options:{color:INK}}
   ],{x:0.78,y:y+4.32,w:11.77,h:0.74,fontFace:F,fontSize:10,lineSpacing:14,valign:'top'});
   note(s,'저장소는 파일 종류 대신 기기와 책임 영역을 기준으로 분할하였다. 각 디렉터리의 소유자는 .github/CODEOWNERS 에 정의되어 있다.');
 }
@@ -355,7 +355,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     {x:0.55,y:y+4.16,w:8.35,h:0.86,fontFace:M,fontSize:10,color:INK,lineSpacing:16});
   s.addText('0 ppm과 측정 실패를 같은 숫자로 보내면 수신 측은 둘을 구분할 수 없다. 값과 valid 플래그를 함께 보내야 판단 계층이 결측을 정상값으로 오해하지 않는다.',
     {x:9.05,y:y+4.16,w:3.73,h:0.86,fontFace:F,fontSize:11,color:INK,lineSpacing:15,valign:'top'});
-  note(s,'근거 : esp32_sensor_node.ino 프로토콜 정의 L113–124, formatNullableFloat L546–553 · integration/pi_lcd/server.py 의 PACKET_HEADER, recv_exact.', 6.72);
+  note(s,'근거 : esp32_sensor_node.ino 프로토콜 정의 L113–124, formatNullableFloat L546–553 · RaspberryPi/LCD/server.py 의 PACKET_HEADER, recv_exact.', 6.72);
 }
 
 /* ============ P8 ============ */
@@ -388,7 +388,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     {text:'자기진단 : ',options:{bold:true,color:NAVY}},
     {text:'ESP32 는 큐 덮어쓰기·TCP·UDP 송신·CO₂ 판독·열화상 조회 실패 카운터 9종을 telemetry health 블록에 함께 실어 보내고, boot_id 로 재부팅과 재접속을 구분한다.',options:{color:INK}}],
     {x:0.55,y:y+4.24,w:12.23,h:0.92,fontFace:F,fontSize:11,lineSpacing:15,valign:'top'});
-  note(s,'검증 : 본 문서 작성 시점에 integration/pi_lcd 테스트 13건을 실행해 전부 통과하였다. 부분 수신, 잘못된 헤더, 시퀀스 불일치, 신선도 판정이 포함된다.');
+  note(s,'검증 : 본 문서 작성 시점에 RaspberryPi/LCD 테스트 4건을 실행해 전부 통과하였다. 텔레메트리·열화상 패킷 수신, 스키마 위반 거부, 연결 종료 시 STALE 전환, 최신값 스냅샷이 포함된다.');
 }
 
 /* ============ P9 ============ */
@@ -423,7 +423,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   s.addText('적용 범위 및 현재 Production 경로',{x:0.78,y:y+3.68,w:5,h:0.26,fontFace:F,fontSize:12,bold:true,color:'9A5B0B'});
   s.addText('① 현재 Production 열화상 경로는 per-frame min-max + thermal_fall_int8 v0.1.0 이다. ℃ 변환 → P1 z-score → FULL_INT8(B5) 경로는 오프라인 진단·호환성 검증용으로 분리해 관리한다.\n② FPN 및 die-temperature drift 보정식은 레거시 시험 코드에서 구현·검증하였으며, Production 추론 경로와 분리해 운용한다.\n③ HUMAN_FALL 은 눕기(LYING) 정적 자세를 기준으로 학습한 자세 분류이며, 열화상이 산출하는 값은 표면 온도이다.\n④ 필드 관측에서 열화상 수신·저장·추론 경로의 정상 동작을 확인하였다. NOT_HUMAN 편향은 전처리·도메인 정합 과제로 분리해 관리한다.\n⑤ mmWave 호흡 신호는 임상 진단 용도가 아니며, v0.2.0 후보 지표는 합성 데이터 기준값이다.',
     {x:0.78,y:y+3.94,w:11.77,h:1.06,fontFace:F,fontSize:10,color:INK,lineSpacing:14.5,valign:'top'});
-  note(s,'근거 : ondevice_ai/models/model_manifest.json · 03_Evidence/Thermal/phase4_6_inference_report.md · research/thermal_ai/ 의 T-B1·T-B5 리포트 및 정적 세션 검토(2026-08-16).');
+  note(s,'근거 : RaspberryPi/Ondevice_AI/models/model_manifest.json · archive/legacy_main_repo/docs/thermal/v5_validation/reports/phase4_6_inference_report.md · research/thermal_ai/ 의 T-B1·T-B5 리포트 및 정적 세션 검토(2026-08-16).');
 }
 
 /* ============ P10 ============ */
@@ -459,7 +459,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     {text:'\nsystem_health = DEGRADED, stale_sensors = [thermal]',options:{fontFace:M,fontSize:10,color:GREY}}
   ],{x:0.75,y:y+2.92,w:6.95,h:1.34,fontFace:F,fontSize:11.5,lineSpacing:19,valign:'top'});
   box(s,8.10,y+2.82,4.68,1.52,'FFFFFF',RED);
-  s.addText('fail-closed 구현 (ondevice_ai/risk/fallback.py)',{x:8.30,y:y+2.90,w:4.3,h:0.24,fontFace:F,fontSize:11,bold:true,color:RED});
+  s.addText('fail-closed 구현 (RaspberryPi/Ondevice_AI/risk/fallback.py)',{x:8.30,y:y+2.90,w:4.38,h:0.24,fontFace:F,fontSize:10,bold:true,color:RED});
   s.addText('if system_health == "FAILED":\n    risk_score = None   # 0점으로 대체하지 않는다\n    risk_level = None   # 등급 자체를 내지 않는다\n    reasons.insert(0,\n        "ALL_SENSORS_FAULT_OR_MISSING")',
     {x:8.30,y:y+3.14,w:4.3,h:1.14,fontFace:M,fontSize:10,color:INK,lineSpacing:16});
   s.addText([
@@ -561,16 +561,16 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
   });
   s.addText('세 사례 모두 증상을 감추는 대신 원인을 제거하는 방향으로 해결하였고, 검증되지 않은 구성요소를 안전 판단 경로에 올리지 않는다는 원칙을 개발 전 과정에 적용하였다.',
     {x:0.55,y:cy+0.02,w:12.23,h:0.44,fontFace:F,fontSize:12,bold:true,color:NAVY,lineSpacing:18,valign:'top'});
-  note(s,'근거 : esp32_sensor_node.ino (핀 상수 · THERMAL_SPI_HZ · Wire.setClock · recoverThermalIfStale) · ondevice_ai/models/model_manifest.json (validation_status: BLOCKED).', 6.66);
+  note(s,'근거 : esp32_sensor_node.ino (핀 상수 · THERMAL_SPI_HZ · Wire.setClock · recoverThermalIfStale) · RaspberryPi/Ondevice_AI/models/model_manifest.json (validation_status: BLOCKED).', 6.66);
 }
 
 /* ============ P14 ============ */
 {
   const {s,y} = page(14,'5.1  기술적 차별성');
   const big=[
-    ['fail-closed 판단 보류','증거가 무효이거나 결측이면 마지막 정상값을 재사용하지 않는다. 네 채널이 모두 무효이면 risk_score 와 risk_level 을 None 으로 두고 system_health 를 FAILED 로 기록한다. 무응답을 정상으로 해석하지 않는다.','ondevice_ai/risk/fallback.py','SW 검증','sw'],
+    ['fail-closed 판단 보류','증거가 무효이거나 결측이면 마지막 정상값을 재사용하지 않는다. 네 채널이 모두 무효이면 risk_score 와 risk_level 을 None 으로 두고 system_health 를 FAILED 로 기록한다. 무응답을 정상으로 해석하지 않는다.','RaspberryPi/Ondevice_AI/risk/fallback.py','SW 검증','sw'],
     ['유효성·신선도의 1급 상태 관리','값과 함께 valid 플래그를 전송하며, 유효하지 않은 수치는 0으로 대체하지 않고 null 로 보낸다. ESP32 와 Raspberry Pi 가 신선도를 각각 독립적으로 판정하고, STALE 입력은 판단에서 제외한다.','formatNullableFloat() · SensorStore','SW 검증','sw'],
-    ['카메라 없는 이종 센서 증거 융합','영상 센서를 쓰지 않는다. mmWave 의 미세 움직임, 열화상의 저해상도 열 분포, CO₂ 의 환경 추세, PIR 의 움직임 이벤트가 서로 다른 실패 모드를 상쇄한다. 열화상 80×62 는 개인 식별이 불가능한 해상도이므로, 촬영 장비 반입이 통제되는 보안 구역에도 적용할 수 있다.','ondevice_ai/risk/risk_engine.py','SW 검증','sw']];
+    ['카메라 없는 이종 센서 증거 융합','영상 센서를 쓰지 않는다. mmWave 의 미세 움직임, 열화상의 저해상도 열 분포, CO₂ 의 환경 추세, PIR 의 움직임 이벤트가 서로 다른 실패 모드를 상쇄한다. 열화상 80×62 는 개인 식별이 불가능한 해상도이므로, 촬영 장비 반입이 통제되는 보안 구역에도 적용할 수 있다.','RaspberryPi/Ondevice_AI/risk/risk_engine.py','SW 검증','sw']];
   big.forEach((r,i)=>{
     const yy=y+0.06+i*1.22;
     s.addShape(pptx.ShapeType.roundRect,{x:0.55,y:yy,w:0.56,h:1.12,fill:{color:BLUE},line:{color:BLUE},rectRadius:0.06});
@@ -580,7 +580,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
     s.addText(r[2],{x:1.36,y:yy+0.72,w:2.86,h:0.26,fontFace:M,fontSize:8.5,color:BLUE,valign:'middle'});
     s.addText(r[1],{x:4.34,y:yy+0.06,w:3.80,h:1.00,fontFace:F,fontSize:10,color:INK,lineSpacing:14,valign:'middle'});
   });
-  const small=[['검증 등급에 따른 배포 통제','모델마다 검증 범위와 배포 허용 여부를 매니페스트에 기록한다. 재현 검증에 실패한 모델은 실제로 배포가 차단되었다.','models/model_manifest.json','오프라인 검증','warn'],
+  const small=[['검증 등급에 따른 배포 통제','모델마다 검증 범위와 배포 허용 여부를 매니페스트에 기록한다. 재현 검증에 실패한 모델은 실제로 배포가 차단되었다.','RaspberryPi/Ondevice_AI/models/model_manifest.json','오프라인 검증','warn'],
                ['프레임 무결성과 자동 복구','CRC-16/CCITT-FALSE 검사, 헤더 범위 재계산, 시퀀스 교차 확인을 거치며 30초 무프레임 시 GPIO RESET 으로 센서를 재초기화한다.','thermalFrameCrc() · recoverThermalIfStale()','실기기 검증','hw']];
   small.forEach((r,i)=>{
     const yy=y+3.86+i*0.76;
@@ -705,9 +705,9 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 
   s.addImage({ path:A+'/ui_web.png', x:6.85, y:y+1.18, w:5.93, h:3.51 });
   s.addShape(pptx.ShapeType.rect,{x:6.85,y:y+1.18,w:5.93,h:3.51,fill:{type:'none'},line:{color:LINE,width:1}});
-  s.addText('[그림 6] Express 5 관제 웹. QR 로 공간을 식별해 밀폐공간 A-01, 통학차량 B-02, 창고 C-03 을 등록·조회한다. 화면에 남는 것은 영상이 아니라 상태값이다.',
+  s.addText('[그림 6] 관제 웹 화면. QR 로 공간을 식별해 밀폐공간 A-01, 통학차량 B-02, 창고 C-03 을 등록·조회한다. 화면에 남는 것은 영상이 아니라 상태값이다.',
     {x:6.85,y:y+4.76,w:5.93,h:0.40,fontFace:F,fontSize:9.5,color:GREY,lineSpacing:13,valign:'top'});
-  note(s,'근거 : 산업안전보건법 제619조 · 시행규칙 별표18 · 도로교통법 제53조 제4항·제5항. 감지 거리 : replay_v5/benchmark_summary.csv.');
+  note(s,'근거 : 산업안전보건법 제619조 · 시행규칙 별표18 · 도로교통법 제53조 제4항·제5항. 감지 거리 : archive/legacy_main_repo/devices/mmwave/validation_results/replay_v5/benchmark_summary.csv.');
 }
 
 /* ============ P18 ============ */
@@ -803,17 +803,17 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 {
   const {s,y} = page(20,'7.2  업무 분장 및 협업 구조');
   const team=[
-   ['김진수','팀장','mmWave 펌웨어·어댑터·실측, 저장소 구조 통합, 문서 총괄','devices/mmwave/ · docs/ · 저장소 전체 기본 리뷰어','MR60 실측 로그 30분·31분, 라이브 검증(9.990 Hz), 리플레이 벤치 12종'],
-   ['유승하','팀원','CO₂(SCD40) 연동·실측, ESP32 4센서 노드 펌웨어, Pi LCD·부저 서버, 회로','devices/co2/ · devices/esp32_node/ · integration/','esp32_sensor_node.ino(741줄), CO₂ 실측 4세션·검증 리포트, TCP v1 송·수신'],
-   ['김태균','팀원','Thermal-90 드라이버·프레임 파서·전처리, 열화상 온디바이스 AI 검증','devices/thermal/ · docs/thermal/','레거시 v0.1.0 경로 E2E 관통, fail-closed 6종, Pi 5 지연 실측(p95 173.9 ms)'],
-   ['한준우','팀원','데이터셋 출처·분할, 모델 학습·비교·재현, Pi AI 준비, 위험 판단 연계','ondevice_ai/ · shared/contracts/','모델 3종 매니페스트, 재현 검증·클래스 붕괴 발견 및 배포 차단'],
-   ['강유나','팀원','PIR 어댑터, 3D 하우징 CAD 설계 및 출력, LCD·Web 초기 골격','devices/pir/ · hardware/3d_models/','STL 4종 + 설계사양 2종, 하우징 출력·조립, PIR 어댑터, LCD 초기 서버']];
-  const rows=[[hdr('성명'),hdr('구분'),hdr('담당 업무'),hdr('책임 영역 (CODEOWNERS)'),hdr('주요 산출물')]];
+   ['김진수','팀장','mmWave 펌웨어·어댑터·실측, 저장소 구조 통합, 문서 총괄','ESP32/reference/mmwave_platformio/ · archive/ · .github/ · 저장소 전체 기본 리뷰어','MR60 실측 로그 30분·31분, 라이브 검증(9.990 Hz), 리플레이 벤치 12종'],
+   ['유승하','팀원','CO₂(SCD40) 연동·실측, ESP32 4센서 노드 펌웨어, Pi LCD·부저 서버, 회로','ESP32/ · RaspberryPi/Runtime/ · RaspberryPi/Web/','esp32_sensor_node.ino(1,042줄), CO₂ 실측 4세션·검증 리포트, TCP v1 송·수신'],
+   ['김태균','팀원','Thermal-90 드라이버·프레임 파서·전처리, 열화상 온디바이스 AI 검증','RaspberryPi/Ondevice_AI/sensors/thermal44/ · research/thermal_ai/','레거시 v0.1.0 경로 E2E 관통, fail-closed 6종, Pi 5 지연 실측(p95 173.9 ms)'],
+   ['한준우','팀원','데이터셋 출처·분할, 모델 학습·비교·재현, Pi AI 준비, 위험 판단 연계','RaspberryPi/Ondevice_AI/','모델 3종 매니페스트, 재현 검증·클래스 붕괴 발견 및 배포 차단'],
+   ['강유나','팀원','PIR 어댑터, 3D 하우징 CAD 설계 및 출력, LCD·Web 초기 골격','hardware/ · RaspberryPi/Ondevice_AI/sensors/pir/','STL 4종 + 설계사양 2종, 하우징 출력·조립, PIR 어댑터, LCD 초기 서버']];
+  const rows=[[hdr('성명'),hdr('구분'),hdr('담당 업무'),hdr('책임 영역 (저장소 경로)'),hdr('주요 산출물')]];
   team.forEach(t=>rows.push(t));
   s.addTable(rows.map((r,ri)=>r.map((c,ci)=>typeof c==='string'?{text:c,options:{bold:ci===0,align:ci<=1?'center':'left'}}:c)),
     {x:0.55,y:y+0.04,w:12.23,colW:[1.05,0.80,3.35,3.08,3.95],rowH:0.48,...TB,fontSize:10.5});
   sub(s,0.55,y+3.16,'담당 경계를 고정한 협업 인터페이스');
-  const ifc=[['센서 계약','shared/contracts/base_sensor.py','모든 센서 담당자 ↔ AI 담당자'],
+  const ifc=[['센서 계약','RaspberryPi/Ondevice_AI/sensors/base_sensor.py','모든 센서 담당자 ↔ AI 담당자'],
     ['텔레메트리 스키마','safenest.telemetry.v1 (valid 블록 포함)','ESP32 담당 ↔ 수신 서버 담당'],
     ['패킷 규격','SafeNest TCP protocol v1 (16 B 헤더)','ESP32 담당 ↔ Pi 수신 담당'],
     ['추론 결과 계약','InferenceResult / SensorState','센서 담당 ↔ 위험도 담당'],

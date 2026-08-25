@@ -99,7 +99,7 @@ cd final-report/generator
 grep -c "—" build.js                                                    # 0
 grep -nE "page\([0-9]+, *'[^']*다'" build.js                             # 결과 없음
 grep -nE "이 아니라|가 아니라|핵심은|본질적으로|완벽하|혁신적" build.js      # 결과 없음
-grep -nE "FastAPI|SQLite|WebSocket|팀번호|DRAFT|1,483 tests" build.js     # 결과 없음
+grep -nE "팀번호|DRAFT|1,483 tests|Express 5" build.js                     # 결과 없음
 ```
 네 줄 모두 통과해야 한다.
 
@@ -156,10 +156,9 @@ Thermal 담당 수정 반영 + 전체 레이아웃·문체 정리.
   공간 확장 시 단가가 내려가는 것을 감시인 인건비와 대비해 제시한다.
 - 14페이지 차별성 3번에 보안 구역 적용 논거를 추가했다.
 
-**저장소 경로 불일치 (미해결)**
-- 보고서가 인용하는 `devices/` · `integration/` · `ondevice_ai/` 경로는 `main` 에서 재편되어
-  현재 `ESP32/` · `RaspberryPi/` 아래에 있고, 옛 경로는 `archive/legacy_main_repo/` 에만 남아 있다.
-  4·6·14·20페이지와 대부분의 각주가 해당된다. **제출 전 반드시 치환해야 한다.**
+**저장소 경로 불일치 → 4차 개정에서 해소**
+- 보고서가 인용하던 `devices/` · `integration/` · `ondevice_ai/` 경로를 `main` 정본 경로로 전부 치환했다.
+  자세한 내용은 아래 `2026-08-25 4차 개정` 을 본다.
 
 ---
 
@@ -190,3 +189,57 @@ Thermal 담당 수정 반영 + 전체 레이아웃·문체 정리.
 - 저장소 명명 규칙은 `github.com/사용자이름/2026ESWContest_free_가만있어도SANDI` 이다.
 - 시연동영상은 3분 이내 · 720p 이상 · 제목 `2026ESWContest_자유공모_가만있어도SANDI_시연동영상` 이다.
 - 수상 시 저장소는 Public 유지 의무가 있다.
+
+---
+
+## 2026-08-25 4차 개정 : 저장소 경로를 `main` 정본으로 치환
+
+3차까지의 보고서는 2026-08-17 canonical 재구성 **이전** 트리를 인용하고 있었다.
+심사위원이 제출 저장소에서 그 경로를 열면 아무것도 나오지 않는다.
+`archive/README.md` 의 canonical 대체표와 `COMPONENT_SOURCES.json` 을 기준으로 전부 치환했다.
+
+| 보고서 구 인용 | 치환한 정본 경로 |
+|---|---|
+| `devices/esp32_node/firmware/` | `ESP32/Arduino/esp32_sensor_node/` |
+| `integration/pi_lcd/server.py` | `RaspberryPi/LCD/server.py` |
+| `ondevice_ai/…` | `RaspberryPi/Ondevice_AI/…` |
+| `devices/{mmwave,co2,pir,thermal}/src/` | `RaspberryPi/Ondevice_AI/sensors/` |
+| `shared/contracts/base_sensor.py` | `RaspberryPi/Ondevice_AI/sensors/base_sensor.py` |
+| `integration/web/` | `RaspberryPi/Runtime/backend/` + `RaspberryPi/Web/` |
+| `models/model_manifest.json` | `RaspberryPi/Ondevice_AI/models/model_manifest.json` |
+| `03_Evidence/Thermal/phase4_6_inference_report.md` | `archive/legacy_main_repo/docs/thermal/v5_validation/reports/…` |
+| `replay_v5/benchmark_summary.csv` | `archive/legacy_main_repo/devices/mmwave/validation_results/replay_v5/…` |
+| `devices/thermal/ · docs/thermal/` (P20) | `RaspberryPi/Ondevice_AI/sensors/thermal44/ · research/thermal_ai/` |
+
+측정 증거는 `archive/legacy_main_repo/` 안에만 있으므로 그 경로를 그대로 인용한다.
+`archive/README.md` 가 "재현 불가능한 측정 증거라서 보존한다" 고 밝히고 있어 근거로 성립한다.
+
+**경로 치환 때문에 같이 바로잡은 사실관계**
+
+- **`FastAPI` 금지 해제.** `04_SOURCE_CONFLICT_AUDIT.md` 의 C1 은 FastAPI·SQLite·WebSocket 이
+  정본 401개 코드 파일에 0건이던 스냅샷을 근거로 "언급 금지" 라고 결론냈다. 그 판단은 더 이상 유효하지 않다.
+  현재 `main` 의 `COMPONENT_SOURCES.json` 은 `canonical_runtime_entrypoint` 를
+  `./run_safenest.sh → RaspberryPi/Runtime/deployment/run_pi.sh → RaspberryPi/Runtime/backend/run_backend.py`
+  로 명시하고, `fastapi_backend` · `sqlite` · `web_dashboard` 를 `INTEGRATION_OWNED` 컴포넌트로 등록해 두었다.
+  반대로 Express 5 관제 웹(`bcryptjs`·`jsonwebtoken`·`qrcode`)은 `archive/legacy_main_repo/integration/web/` 로 내려갔다.
+  따라서 4페이지 개발환경 표의 `웹 관제` 행과 6페이지 오픈소스 고지, 3페이지 구성도, 17페이지 그림 6 캡션에서
+  Express 표기를 걷어내고 정본 스택으로 바꿨다. **이제 금지어는 `Express 5` 쪽이다.**
+- **`esp32_sensor_node.ino` 741줄 → 1,042줄.** 741 은 구 트리 기준이었다. 정본 파일 실측이 1,042 줄이다.
+  6페이지 파일 구성표와 20페이지 산출물 칸을 같이 고쳤다.
+- **LCD 테스트 13건 → 4건.** 13 건은 `archive/legacy_main_repo/integration/pi_lcd/tests`
+  (`test_sensor_receiver` 11 + `test_buzzer` 2) 기준이었다. 정본 `RaspberryPi/LCD/tests` 를
+  실제로 실행하면 `Ran 4 tests … OK` 다. 8페이지 각주를 실행 결과대로 4건으로 낮추고,
+  포함 항목도 실제 테스트 이름(텔레메트리·열화상 패킷 수신, 스키마 위반 거부, 연결 종료 시 STALE 전환, 최신값 스냅샷)에 맞췄다.
+- **저장소 파일 수 1,904개(commit `3f22fb1`) → 4,316개(main `8413d2f`).**
+  `3f22fb1` 은 이 저장소에 존재하지 않는 커밋이라 심사위원이 확인할 수 없었다.
+  4,316개 중 2,253개가 `archive/` 라는 점을 각주에 함께 적었다.
+- **20페이지 표 머리글 `책임 영역 (CODEOWNERS)` → `책임 영역 (저장소 경로)`.**
+  `.github/CODEOWNERS` 에는 thermal·pir 개별 규칙이 없어(주석에 그 이유가 적혀 있다)
+  머리글을 CODEOWNERS 라고 쓰면 표의 일부가 근거를 넘어선다.
+
+**레이아웃**
+- 4페이지 개발환경 표는 경로가 길어져 열 폭을 `[1.72, 4.13, 1.82, 4.56]`, 글자를 11.5 → 10.5 pt 로 조정했다.
+- 6페이지 파일 구성표는 `shared/contracts` 행을 `sensors/` 행에 합쳐 9행을 유지했다.
+- 10페이지 fail-closed 라벨은 경로가 길어져 11 → 10 pt.
+
+**아직 비어 있는 칸은 그대로다** (본문 3페이지) : 소스코드(GitHub) · 시연동영상(YouTube).

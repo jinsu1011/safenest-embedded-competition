@@ -50,7 +50,7 @@ Republication of the same nested `mmwave.seq` across 100 ms snapshots does not c
 
 Invalid/stale source (null phase, stale `phase_age_ms`, missing timestamp, missing nested seq) invalidates any previously ready window. `boot_id` change resets immediately, before inspecting the first new-boot packet.
 
-`valid.respiration` / vendor RR validity does **not** gate B23 waveform admission. `Sample.health_ok` is waveform/source health.
+`valid.respiration` / vendor RR validity does **not** gate B23 waveform admission. `Sample.health_ok` is waveform/source health. Team `SensorStateManager` treats mmWave as valid when a structural B23 phase source is present (`breath_phase`, `ts_monotonic_ms`, `phase_age_ms`, `mmwave_sequence`) **or** vendor respiration **or** vendor heart. Missing phase and missing both vendor scalars remains INVALID.
 
 ESP firmware is **not** modified in M-PROT-5B.
 
@@ -121,4 +121,6 @@ M_PROT_3_FROZEN_SEQ_BOUNDARY_RESTORED: YES
 SEQ_JUMP_CAUSAL_WINDOW_BRIDGED: NO
 STALE_PHASE_INVALIDATES_READY_WINDOW: YES
 VENDOR_RR_VALIDITY_GATES_B23: NO
+VENDOR_HEART_VALIDITY_GATES_B23: NO
+PHASE_VALIDITY_RECOGNIZED_BY_STATE_MANAGER: YES
 ```

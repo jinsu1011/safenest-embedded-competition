@@ -69,6 +69,7 @@ def telemetry(
     publication_seq=None,
     device_id: str = "mprot5b-fixture",
     valid_respiration: bool = True,
+    valid_heart: bool = True,
     boot_id: str = "boot-a",
     breath_rate_raw: float | None = None,
 ) -> TelemetryPayload:
@@ -84,11 +85,11 @@ def telemetry(
         header=PacketHeader(1, outer, 8),
         device_id=device_id,
         uptime_ms=int(ts) + 10,
-        respiration_rate_bpm=16.0,
-        heart_rate_bpm=62.0,
+        respiration_rate_bpm=16.0 if valid_respiration else None,
+        heart_rate_bpm=62.0 if valid_heart else None,
         co2_ppm=800.0,
         pir_motion=False,
-        valid={"respiration": valid_respiration, "heart": True, "co2": True},
+        valid={"respiration": valid_respiration, "heart": valid_heart, "co2": True},
         boot_id=boot_id,
         breath_phase=phase,
         ts_monotonic_ms=ts,
@@ -645,6 +646,58 @@ class FailClosedWindowTests(unittest.TestCase):
         self.assertTrue(sample.health_ok)
         self.assertIsNone(sample.scalar_rr)
         self.assertEqual(sample.seq, packet.mmwave_sequence)
+
+
+class EndToEndPhaseValidityTests(unittest.TestCase):
+    """State-manager validity must not require vendor RR/heart for B23."""
+
+    def test_vendor_scalars_unavailable_does_not_yield_sensor_invalid(self) -> None:
+        manager = SensorStateManager()
+        pipeline = OnDeviceAIPipeline(manager, {"mmwave": CountingMN9(), "thermal": FakeThermal()})
+        n = ready_count(10.0)
+        result = {"available": False, "error": None, "state": None}
+        for i in range(n):
+            packet = telemetry(i, valid_respiration=False, valid_heart=False, presence=True)
+            self.assertIsNone(packet.respiration_rate_bpm)
+            self.assertIsNone(packet.heart_rate_bpm)
+            self.assertFalse(packet.valid["respiration"])
+            self.assertFalse(packet.valid["heart"])
+            now = feed(pipeline, manager, packet, i)
+            snap = manager.snapshot(now=now, monotonic_now=now)
+            mm = snap["sensors"]["mmwave"]
+            self.assertNotEqual(mm["status"], "INVALID")
+            self.assertTrue(mm["valid"])
+            self.assertEqual(mm["status"], "LIVE")
+            result = pipeline.evaluate(snap)["ai"]["mmwave"]
+        self.assertNotEqual(result.get("error"), "SENSOR_INVALID")
+        self.assertNotEqual(result.get("state"), "SENSOR_INVALID")
+        self.assertNotIn("SENSOR_INVALID", str(result.get("error") or ""))
+        self.assertEqual(pipeline.models["mmwave"].calls, [])
+        self.assertGreaterEqual(pipeline._mmwave_b23.buffered_count, 300)
+        self.assertIn(
+            result["state"],
+            PHYSIOLOGY_OK | {"WINDOW_NOT_READY", "QUALITY_SUPPRESSED", "RR_UNAVAILABLE", "PRESENCE_UNAVAILABLE"},
+        )
+        if result["available"]:
+            self.assertEqual(result["source"], "pytorch")
+
+    def test_no_phase_and_no_vendor_scalars_is_fail_closed(self) -> None:
+        manager = SensorStateManager()
+        pipeline = OnDeviceAIPipeline(manager, {"mmwave": CountingMN9()})
+        packet = telemetry(0, valid_respiration=False, valid_heart=False, presence=True)
+        object.__setattr__(packet, "breath_phase", None)
+        object.__setattr__(packet, "ts_monotonic_ms", None)
+        object.__setattr__(packet, "phase_age_ms", None)
+        object.__setattr__(packet, "mmwave_sequence", None)
+        now = feed(pipeline, manager, packet, 0)
+        snap = manager.snapshot(now=now, monotonic_now=now)
+        mm = snap["sensors"]["mmwave"]
+        self.assertFalse(mm["valid"])
+        self.assertEqual(mm["status"], "INVALID")
+        result = pipeline.evaluate(snap)["ai"]["mmwave"]
+        self.assertFalse(result["available"])
+        self.assertEqual(result["error"], "SENSOR_INVALID")
+        self.assertEqual(pipeline.models["mmwave"].calls, [])
 
 
 if __name__ == "__main__":

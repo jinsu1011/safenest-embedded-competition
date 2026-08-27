@@ -239,7 +239,9 @@ class B23PipelinePathTests(unittest.TestCase):
         self._feed(telemetry(1, seq=103, publication_seq=501), 1)
         result = self._evaluate()
         self._assert_not_mn9(result)
-        self.assertEqual(self.pipeline._mmwave_b23.buffered_count, 2)
+        self.assertEqual(self.pipeline._mmwave_b23.buffered_count, 1)
+        self.assertFalse(result["available"])
+        self.assertEqual(result["state"], "WINDOW_NOT_READY")
         monitor = result["metadata"]["live_phase_seq_monitor"]
         self.assertEqual(monitor["previous_nested_phase_seq"], 101)
         self.assertEqual(monitor["current_nested_phase_seq"], 103)
@@ -541,6 +543,108 @@ class ESPProducerContractTests(unittest.TestCase):
         self.assertNotIn("ts_ms) - float(age_ms)", runtime_text)
         self.assertIn("update_ms = float(ts_ms) - float(age_ms)", canonical_text)
         self.assertEqual(observation_timestamp_s(10_000, 80), 10.0)
+
+
+def sensor_view(packet: TelemetryPayload) -> dict:
+    return {
+        "status": "LIVE",
+        "device_id": packet.device_id,
+        "boot_id": packet.boot_id,
+        "sequence": packet.header.sequence,
+        "values": {
+            "breath_phase": packet.breath_phase,
+            "ts_monotonic_ms": packet.ts_monotonic_ms,
+            "phase_age_ms": packet.phase_age_ms,
+            "mmwave_sequence": packet.mmwave_sequence,
+            "presence": packet.human_detected_raw,
+            "presence_available": isinstance(packet.human_detected_raw, bool),
+            "human_detected_raw": packet.human_detected_raw,
+            "respiration_valid": packet.valid.get("respiration"),
+            "session_id": packet.session_id,
+        },
+    }
+
+
+class FailClosedWindowTests(unittest.TestCase):
+    """Invalid/stale source must drop a previously ready B23 window."""
+
+    def _ready(self, *, boot_id: str = "boot-a") -> tuple[B23TeamRuntime, int]:
+        runtime = B23TeamRuntime()
+        n = ready_count(10.0)
+        for i in range(n):
+            runtime.observe_packet(telemetry(i, boot_id=boot_id))
+        self.assertGreaterEqual(runtime.buffered_count, 300)
+        return runtime, n
+
+    def _assert_no_old_inference(self, runtime: B23TeamRuntime, packet: TelemetryPayload) -> None:
+        result = runtime.evaluate(sensor_view(packet), 20_000.0)
+        self.assertEqual(runtime.buffered_count, 0)
+        self.assertFalse(result.available)
+        self.assertEqual(result.state, "WINDOW_NOT_READY")
+        self.assertNotEqual(result.state, "PHYSIOLOGY_ELIGIBLE")
+        self.assertFalse(result.metadata.get("window_ready"))
+
+    def test_a_ready_window_stale_phase_drops_old_inference(self) -> None:
+        runtime, n = self._ready()
+        stale = telemetry(n, phase_age_ms=5_000.0)
+        runtime.observe_packet(stale)
+        self._assert_no_old_inference(runtime, stale)
+        self.assertEqual(runtime.evaluate(sensor_view(stale), 20_000.0).error, "PHASE_STALE")
+
+    def test_b_ready_window_null_phase_drops_old_inference(self) -> None:
+        runtime, n = self._ready()
+        missing = telemetry(n)
+        object.__setattr__(missing, "breath_phase", None)
+        runtime.observe_packet(missing)
+        self._assert_no_old_inference(runtime, missing)
+        self.assertEqual(runtime.evaluate(sensor_view(missing), 20_000.0).error, "PHASE_MISSING")
+
+    def test_c_ready_window_missing_nested_seq_drops_old_inference(self) -> None:
+        runtime, n = self._ready()
+        missing = telemetry(n)
+        object.__setattr__(missing, "mmwave_sequence", None)
+        runtime.observe_packet(missing)
+        self._assert_no_old_inference(runtime, missing)
+        self.assertEqual(
+            runtime.evaluate(sensor_view(missing), 20_000.0).error,
+            "PHASE_SEQUENCE_MISSING",
+        )
+
+    def test_d_new_boot_invalid_phase_resets_immediately(self) -> None:
+        runtime, n = self._ready(boot_id="boot-a")
+        invalid = telemetry(n, boot_id="boot-b")
+        object.__setattr__(invalid, "breath_phase", None)
+        runtime.observe_packet(invalid)
+        self._assert_no_old_inference(runtime, invalid)
+        self.assertEqual(runtime.evaluate(sensor_view(invalid), 20_000.0).error, "BOOT_BOUNDARY")
+        still_invalid = telemetry(n + 1, boot_id="boot-b")
+        object.__setattr__(still_invalid, "breath_phase", None)
+        runtime.observe_packet(still_invalid)
+        self.assertEqual(runtime.buffered_count, 0)
+
+    def test_e_valid_samples_after_failure_start_fresh_window(self) -> None:
+        runtime, n = self._ready()
+        before = runtime.buffered_count
+        stale = telemetry(n, phase_age_ms=5_000.0)
+        runtime.observe_packet(stale)
+        self.assertEqual(runtime.buffered_count, 0)
+        for i in range(n, n + 12):
+            runtime.observe_packet(telemetry(i))
+        self.assertEqual(runtime.buffered_count, 12)
+        self.assertLess(runtime.buffered_count, before)
+        result = runtime.evaluate(sensor_view(telemetry(n + 11)), 20_000.0)
+        self.assertFalse(result.available)
+        self.assertEqual(result.state, "WINDOW_NOT_READY")
+
+    def test_vendor_rr_validity_does_not_gate_b23_phase_admission(self) -> None:
+        runtime = B23TeamRuntime()
+        packet = telemetry(0, valid_respiration=False)
+        runtime.observe_packet(packet)
+        self.assertEqual(runtime.buffered_count, 1)
+        sample = bundle_from_packet(packet).samples[0]
+        self.assertTrue(sample.health_ok)
+        self.assertIsNone(sample.scalar_rr)
+        self.assertEqual(sample.seq, packet.mmwave_sequence)
 
 
 if __name__ == "__main__":

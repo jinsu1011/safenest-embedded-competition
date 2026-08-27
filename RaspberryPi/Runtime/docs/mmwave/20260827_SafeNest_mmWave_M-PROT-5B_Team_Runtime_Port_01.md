@@ -46,7 +46,11 @@ Presence comes only from explicit occupancy (`human_detected_raw` / `presence` +
 | `human_detected_raw` | tri-state presence gate |
 | `breath_rate_raw` | logged/diagnostic; `Sample.scalar_rr` stays `None` |
 
-Republication of the same nested `mmwave.seq` across 100 ms snapshots does not create another waveform sample. A nested-seq jump `> 1` is recorded for M-PROT-5C (`previous`, `current`, `delta`, `missing_phase_event_count`) and does not fail the whole runtime unless SW-01 max-gap requires it.
+Republication of the same nested `mmwave.seq` across 100 ms snapshots does not create another waveform sample. A nested-seq jump `> 1` increments M-PROT-5C diagnostic counters (`previous`, `current`, `delta`, `missing_phase_event_count`) and is a frozen M-PROT-3 temporal discontinuity: the previous causal window is not bridged; a new admission starts; the runtime stays alive and returns `WINDOW_NOT_READY` until coverage is rebuilt.
+
+Invalid/stale source (null phase, stale `phase_age_ms`, missing timestamp, missing nested seq) invalidates any previously ready window. `boot_id` change resets immediately, before inspecting the first new-boot packet.
+
+`valid.respiration` / vendor RR validity does **not** gate B23 waveform admission. `Sample.health_ok` is waveform/source health.
 
 ESP firmware is **not** modified in M-PROT-5B.
 
@@ -113,4 +117,8 @@ OUTER_SEQUENCE_ROLE: TRANSPORT_PUBLICATION_ONLY
 REPUBLISH_DEDUPLICATION: PASS
 BOOT_ID_BOUNDARY: PASS
 LIVE_PHASE_SEQ_JUMP_MONITOR: PREPARED_FOR_M_PROT_5C
+M_PROT_3_FROZEN_SEQ_BOUNDARY_RESTORED: YES
+SEQ_JUMP_CAUSAL_WINDOW_BRIDGED: NO
+STALE_PHASE_INVALIDATES_READY_WINDOW: YES
+VENDOR_RR_VALIDITY_GATES_B23: NO
 ```

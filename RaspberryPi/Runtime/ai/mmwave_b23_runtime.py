@@ -106,58 +106,28 @@ class B23TeamRuntime:
                 boot_id=packet.boot_id if isinstance(packet.boot_id, str) else None,
                 packet_session_id=packet.session_id,
                 device_id=packet.device_id,
-                health_ok=not (
-                    isinstance(packet.valid, dict) and packet.valid.get("respiration") is False
-                ),
             )
 
     def observe_sensor(self, sensor: Mapping[str, object]) -> None:
         with self._lock:
-            values = sensor.get("values") if isinstance(sensor.get("values"), Mapping) else {}
-            if not isinstance(values, Mapping):
-                values = {}
-            boot = sensor.get("boot_id")
-            self._admit(
-                phase=values.get("breath_phase"),
-                ts_monotonic_ms=values.get("ts_monotonic_ms"),
-                phase_age_ms=values.get("phase_age_ms"),
-                nested_seq=_int_or_none(values.get("mmwave_sequence")),
-                boot_id=boot if isinstance(boot, str) else None,
-                packet_session_id=values.get("session_id") if isinstance(values.get("session_id"), str) else None,
-                device_id=sensor.get("device_id") if isinstance(sensor.get("device_id"), str) else None,
-                health_ok=values.get("respiration_valid") is not False,
-            )
+            self._admit_from_sensor(sensor)
 
     def evaluate(self, sensor: Mapping[str, object], now: float) -> AIResult:
         with self._lock:
             if not self._wire_observed:
-                values = sensor.get("values") if isinstance(sensor.get("values"), Mapping) else {}
-                if not isinstance(values, Mapping):
-                    values = {}
-                boot = sensor.get("boot_id")
-                self._admit(
-                    phase=values.get("breath_phase"),
-                    ts_monotonic_ms=values.get("ts_monotonic_ms"),
-                    phase_age_ms=values.get("phase_age_ms"),
-                    nested_seq=_int_or_none(values.get("mmwave_sequence")),
-                    boot_id=boot if isinstance(boot, str) else None,
-                    packet_session_id=values.get("session_id") if isinstance(values.get("session_id"), str) else None,
-                    device_id=sensor.get("device_id") if isinstance(sensor.get("device_id"), str) else None,
-                    health_ok=values.get("respiration_valid") is not False,
-                )
-            if self._last_ingest_error is not None:
-                return _unavailable(
-                    now,
-                    self._last_ingest_error,
-                    self._last_ingest_error,
-                    self._metadata_extras(),
-                )
+                self._admit_from_sensor(sensor)
+            extras = self._metadata_extras()
             if self._runtime.composer.buffered_count == 0:
+                reason = self._last_ingest_error or "WINDOW_NOT_READY"
+                extras["fail_closed_code"] = reason
+                return _unavailable(now, "WINDOW_NOT_READY", reason, extras)
+            if self._last_ingest_error is not None:
+                extras["fail_closed_code"] = self._last_ingest_error
                 return _unavailable(
                     now,
-                    "WINDOW_NOT_READY",
-                    "WINDOW_NOT_READY",
-                    self._metadata_extras(),
+                    self._last_ingest_error,
+                    self._last_ingest_error,
+                    extras,
                 )
             presence_available, presence_true = presence_from_sensor(sensor)
             receipt = self._runtime.try_infer(
@@ -169,8 +139,28 @@ class B23TeamRuntime:
                 now=now,
                 presence_available=presence_available,
                 presence_true=presence_true,
-                extras=self._metadata_extras(),
+                extras=extras,
             )
+
+    def _admit_from_sensor(self, sensor: Mapping[str, object]) -> None:
+        values = sensor.get("values") if isinstance(sensor.get("values"), Mapping) else {}
+        if not isinstance(values, Mapping):
+            values = {}
+        boot = sensor.get("boot_id")
+        self._admit(
+            phase=values.get("breath_phase"),
+            ts_monotonic_ms=values.get("ts_monotonic_ms"),
+            phase_age_ms=values.get("phase_age_ms"),
+            nested_seq=_int_or_none(values.get("mmwave_sequence")),
+            boot_id=boot if isinstance(boot, str) else None,
+            packet_session_id=values.get("session_id") if isinstance(values.get("session_id"), str) else None,
+            device_id=sensor.get("device_id") if isinstance(sensor.get("device_id"), str) else None,
+        )
+
+    def _invalidate_source(self) -> None:
+        """Drop any previously ready causal window. Runtime stays alive."""
+
+        self._runtime.reset()
 
     def _admit(
         self,
@@ -182,7 +172,6 @@ class B23TeamRuntime:
         boot_id: str | None,
         packet_session_id: str | None,
         device_id: str | None,
-        health_ok: bool,
     ) -> None:
         boot_changed = (
             boot_id is not None
@@ -190,24 +179,40 @@ class B23TeamRuntime:
             and boot_id != self._last_boot_id
         )
         if boot_changed:
+            # Harder than ordinary stale: reset BEFORE inspecting the first
+            # packet of the new boot. Invalid new-boot phase must not keep
+            # the previous boot's ready window.
+            self._invalidate_source()
             self._last_nested_seq = None
             self._missing_phase_event_count = 0
             self._republish_skip_count = 0
             self._phase_seq_prev = None
             self._phase_seq_curr = None
             self._phase_seq_delta = None
+            self._last_ingest_error = "BOOT_BOUNDARY"
+        if boot_id is not None:
+            self._last_boot_id = boot_id
 
-        # Stale / null phase, missing physical time, or missing nested sequence
-        # must not be admitted as a new B23 observation (and must not masquerade
-        # as a repeated valid sample).
         if not _finite(phase):
+            if not boot_changed:
+                self._invalidate_source()
+            self._last_ingest_error = "BOOT_BOUNDARY" if boot_changed else "PHASE_MISSING"
             return
         if not phase_age_is_fresh(phase_age_ms):
+            if not boot_changed:
+                self._invalidate_source()
+            self._last_ingest_error = "BOOT_BOUNDARY" if boot_changed else "PHASE_STALE"
             return
         t = physical_timestamp_s(ts_monotonic_ms)
         if t is None:
+            if not boot_changed:
+                self._invalidate_source()
+            self._last_ingest_error = "BOOT_BOUNDARY" if boot_changed else "TIMESTAMP_INVALID"
             return
         if nested_seq is None:
+            if not boot_changed:
+                self._invalidate_source()
+            self._last_ingest_error = "BOOT_BOUNDARY" if boot_changed else "PHASE_SEQUENCE_MISSING"
             return
 
         if (
@@ -234,7 +239,7 @@ class B23TeamRuntime:
                     t=t,
                     phase=float(phase),
                     seq=int(nested_seq),
-                    health_ok=health_ok,
+                    health_ok=True,
                     session_id=mprot3_session_id(
                         boot_id=boot_id,
                         packet_session_id=packet_session_id,
@@ -248,7 +253,6 @@ class B23TeamRuntime:
             self._runtime.ingest_bundle(bundle)
             self._last_ingest_error = None
             self._last_nested_seq = nested_seq
-            self._last_boot_id = boot_id
             self._note_seq(nested_seq)
         except MProt3FailClosed as exc:
             self._last_ingest_error = exc.code
@@ -281,6 +285,7 @@ class B23TeamRuntime:
             "b23_source_sequence": "NESTED_MMWAVE_SEQ",
             "outer_sequence_role": "TRANSPORT_PUBLICATION_ONLY",
             "vendor_rr_model_input": False,
+            "vendor_rr_validity_gates_b23": False,
             "m_n9_fallback": False,
             "double_age_subtraction": "NOT_PRESENT_IN_NEW_B23_PATH",
             "mprot3_session_mapping": "boot:{boot_id}",

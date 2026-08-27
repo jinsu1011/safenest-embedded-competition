@@ -105,9 +105,9 @@ def bundle_from_sensor(
         boot_id=sensor.get("boot_id"),
         packet_session_id=values.get("session_id"),
     )
+    # SW-01 requires explicit health_ok. This is waveform/source health, not
+    # vendor scalar respiration-rate validity.
     health_ok = True
-    if values.get("respiration_valid") is False:
-        health_ok = False
     device = device_identity or _string(sensor.get("device_id")) or "safenest-mmwave"
     sample = Sample(
         t=t,
@@ -129,14 +129,11 @@ def bundle_from_sensor(
 
 def bundle_from_packet(packet: TelemetryPayload, *, reset_flag: bool = False) -> StreamBundle:
     t = physical_timestamp_s(packet.ts_monotonic_ms)
-    health_ok = True
-    if isinstance(packet.valid, dict) and packet.valid.get("respiration") is False:
-        health_ok = False
     sample = Sample(
         t=t,
         phase=float(packet.breath_phase) if _finite(packet.breath_phase) else None,
         seq=_int_or_none(packet.mmwave_sequence),
-        health_ok=health_ok,
+        health_ok=True,
         session_id=mprot3_session_id(
             boot_id=packet.boot_id,
             packet_session_id=packet.session_id,

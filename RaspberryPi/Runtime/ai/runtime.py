@@ -27,7 +27,8 @@ class LazyModel:
     # C-B6 reduced-feature contract while models.co2 is retained as history.
     _ADAPTERS = {
         "thermal": ("thermal_interpreter.py", "ThermalInterpreter", "thermal"),
-        "mmwave": ("mmwave_m_n9_interpreter.py", "MN9Interpreter", "mmwave"),
+        # Legacy M-N9 adapter only. Default inference is B23 in pipeline.py.
+        "mmwave": ("mmwave_m_n9_interpreter.py", "MN9Interpreter", "mmwave_m_n9"),
         "co2": ("co2_c_b6_interpreter.py", "CB6Interpreter", "co2_occupancy_c_b6"),
     }
 

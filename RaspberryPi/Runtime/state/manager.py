@@ -183,7 +183,7 @@ class SensorStateManager:
         monotonic: float,
     ) -> None:
         self._device_health = copy.deepcopy(packet.health)
-        mmwave_valid = packet.valid["respiration"] or packet.valid["heart"]
+        mmwave_valid = _mmwave_record_valid(packet)
         self._update(
             "mmwave",
             peer=peer,
@@ -202,6 +202,9 @@ class SensorStateManager:
                 "breath_phase": packet.breath_phase,
                 "ts_monotonic_ms": packet.ts_monotonic_ms,
                 "phase_age_ms": packet.phase_age_ms,
+                "mmwave_sequence": packet.mmwave_sequence,
+                "publication_sequence": packet.header.sequence,
+                "breath_rate_raw": packet.breath_rate_raw,
                 "session_id": packet.session_id,
                 "respiration_rate_bpm": packet.respiration_rate_bpm,
                 "heart_rate_bpm": packet.heart_rate_bpm,
@@ -407,6 +410,39 @@ class SensorStateManager:
             "error": record.error,
             "values": values,
         }
+
+
+def _finite_number(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))
+
+
+def _mmwave_phase_source_structurally_valid(packet: TelemetryPayload) -> bool:
+    """True when parsed B23 phase-source fields are structurally present.
+
+    Freshness, continuity, and boot boundaries remain B23TeamRuntime
+    fail-closed checks. This does not subtract phase_age_ms from time.
+    """
+
+    return (
+        _finite_number(packet.breath_phase)
+        and _finite_number(packet.ts_monotonic_ms)
+        and _finite_number(packet.phase_age_ms)
+        and isinstance(packet.mmwave_sequence, int)
+        and not isinstance(packet.mmwave_sequence, bool)
+    )
+
+
+def _mmwave_record_valid(packet: TelemetryPayload) -> bool:
+    """mmWave snapshot validity: phase source OR vendor respiration OR vendor heart.
+
+    Vendor scalar telemetry is not mandatory for a valid B23 phase stream.
+    """
+
+    return (
+        _mmwave_phase_source_structurally_valid(packet)
+        or packet.valid["respiration"]
+        or packet.valid["heart"]
+    )
 
 
 def _finite_time(value: float, field: str) -> float:

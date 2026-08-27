@@ -32,6 +32,11 @@ def telemetry(
     pir_event_id: int | None = None,
     pir_transition_ms: int | None = None,
     health: dict[str, int] | None = None,
+    breath_phase: float | None = None,
+    ts_monotonic_ms: float | None = None,
+    phase_age_ms: float | None = None,
+    mmwave_sequence: int | None = None,
+    human_detected_raw: bool | None = None,
 ) -> TelemetryPayload:
     valid = {
         "respiration": respiration is not None,
@@ -54,6 +59,11 @@ def telemetry(
         pir_event_id=pir_event_id,
         pir_last_transition_monotonic_ms=pir_transition_ms,
         health=health,
+        breath_phase=breath_phase,
+        ts_monotonic_ms=ts_monotonic_ms,
+        phase_age_ms=phase_age_ms,
+        human_detected_raw=human_detected_raw,
+        mmwave_sequence=mmwave_sequence,
     )
 
 
@@ -301,6 +311,42 @@ class SensorStateManagerTests(unittest.TestCase):
         thread.join(timeout=2.0)
         self.assertFalse(thread.is_alive())
         self.assertEqual(errors, [])
+
+    def test_phase_source_keeps_mmwave_live_when_vendor_scalars_are_unavailable(self) -> None:
+        manager = SensorStateManager()
+        manager.ingest(
+            telemetry(
+                1,
+                respiration=None,
+                heart=None,
+                boot_id="boot-a",
+                breath_phase=0.25,
+                ts_monotonic_ms=10_000.0,
+                phase_age_ms=80.0,
+                mmwave_sequence=101,
+                human_detected_raw=True,
+            ),
+            PEER,
+            received_at=100.0,
+            monotonic_at=10.0,
+        )
+        mm = manager.snapshot(now=100.0, monotonic_now=10.0)["sensors"]["mmwave"]
+        self.assertTrue(mm["valid"])
+        self.assertEqual(mm["status"], "LIVE")
+        self.assertNotEqual(mm["error"], "MMWAVE_VALUES_INVALID")
+
+    def test_no_phase_and_no_vendor_scalars_marks_mmwave_invalid(self) -> None:
+        manager = SensorStateManager()
+        manager.ingest(
+            telemetry(1, respiration=None, heart=None),
+            PEER,
+            received_at=100.0,
+            monotonic_at=10.0,
+        )
+        mm = manager.snapshot(now=100.0, monotonic_now=10.0)["sensors"]["mmwave"]
+        self.assertFalse(mm["valid"])
+        self.assertEqual(mm["status"], "INVALID")
+        self.assertEqual(mm["error"], "MMWAVE_VALUES_INVALID")
 
 
 if __name__ == "__main__":

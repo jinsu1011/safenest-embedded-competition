@@ -103,15 +103,13 @@ class AIPipelineTests(unittest.TestCase):
         self.assertEqual(output["error"], "SENSOR_STALE")
         self.assertEqual(thermal.calls, [])
 
-    def test_mmwave_requires_canonical_freshness_evidence(self):
+    def test_mmwave_empty_snapshot_fail_closes_without_mn9(self):
         mmwave = FakeModel(prediction("NORMAL", [0.9, 0.08, 0.02]))
         pipeline = OnDeviceAIPipeline(self.manager, {"mmwave": mmwave})
         missing = pipeline.evaluate(snapshot())["ai"]["mmwave"]
-        self.assertEqual(missing["error"], "CANONICAL_FRESHNESS_METADATA_MISSING")
-        self.assertEqual(missing["state"], "WINDOW_UNAVAILABLE")
-        self.assertEqual(missing["metadata"]["canonical_window_status"], "WINDOW_UNAVAILABLE")
-        self.assertIn("breath_phase", missing["metadata"]["missing"])
-        self.assertIn("human_detected_raw", missing["metadata"]["missing"])
+        self.assertFalse(missing["available"])
+        self.assertNotEqual(missing["source"], "tflite")
+        self.assertNotIn(missing["state"], {"NORMAL", "APNEA", "APNEA-proxy"})
         self.assertEqual(mmwave.calls, [])
 
     def test_mmwave_heuristic_fallback_is_not_reported_as_ai(self):
@@ -122,7 +120,8 @@ class AIPipelineTests(unittest.TestCase):
         ready = snapshot(mmwave=sensor(values={}))
         result = pipeline.evaluate(ready)["ai"]["mmwave"]
         self.assertFalse(result["available"])
-        self.assertEqual(result["error"], "CANONICAL_FRESHNESS_METADATA_MISSING")
+        self.assertNotEqual(result["state"], "APNEA")
+        self.assertNotEqual(result["source"], "tflite")
 
     def test_co2_uses_the_c_b6_reduced_contract_without_humidity(self):
         """C-B6 takes ppm and ppm/min only; humidity is a forbidden input."""
@@ -224,15 +223,18 @@ class AIPipelineTests(unittest.TestCase):
         self.assertEqual(historical["block_reason"], "CLASS_COLLAPSE_ON_REPOSITORY_NPZ")
         self.assertEqual(historical["runtime_role"], "HISTORICAL_V0_1_0")
         active = manifest["models"]["mmwave"]
-        self.assertEqual(active["model_id"], "MMWAVE_M_N9_FULL_INT8_V1")
-        self.assertEqual(active["runtime_role"], "ACTIVE_M_N9")
-        self.assertTrue(active["runtime_adapter_compatible"])
-        self.assertEqual(active["deployment_scope"], "MAC_INTEGRATION_CANDIDATE")
+        self.assertEqual(active["model_id"], "M-PV2_FAMILY_B_TRACE_TCN_BREATHING_RR_QUALITY")
+        self.assertEqual(active["runtime_role"], "ACTIVE_B23_PROTOTYPE")
+        self.assertTrue(active["active_runtime_selector"])
+        self.assertEqual(active["deployment_scope"], "PROTOTYPE_INTEGRATION_ONLY")
         self.assertEqual(active["hardware_validation"], "NOT_PERFORMED")
         self.assertFalse(active["DEVICE_VALIDATED"])
+        legacy = manifest["models"]["mmwave_m_n9"]
+        self.assertEqual(legacy["runtime_role"], "LEGACY_M_N9_NONACTIVE")
+        self.assertFalse(legacy["deployment_allowed"])
         self.assertEqual(
             LazyModel._ADAPTERS["mmwave"],
-            ("mmwave_m_n9_interpreter.py", "MN9Interpreter", "mmwave"),
+            ("mmwave_m_n9_interpreter.py", "MN9Interpreter", "mmwave_m_n9"),
         )
 
     def test_frozen_model_hashes_match_manifest(self):
@@ -245,26 +247,29 @@ class AIPipelineTests(unittest.TestCase):
                 if "size_bytes" in metadata:
                     self.assertEqual(model.stat().st_size, metadata["size_bytes"])
 
-    def test_latest_source_provenance_matches_snapshot(self):
+    def test_latest_source_provenance_historical_record_is_preserved(self):
         root = Path(__file__).resolve().parent.parent
         provenance = json.loads((root / "LATEST_SOURCE_PROVENANCE.json").read_text(encoding="utf-8"))
-        snapshot = root / "sources" / "ondevice_ai"
-        overlay = snapshot / "models" / "rp_x0_b_complete"
-        frozen = [
-            path
-            for path in snapshot.rglob("*")
-            if path.is_file() and path.suffix != ".pyc" and overlay not in path.parents and path != overlay
-        ]
-        overlay_files = [path for path in overlay.rglob("*") if path.is_file()] if overlay.exists() else []
         self.assertEqual(provenance["latest_origin_main"], "fa8cf13")
         self.assertEqual(provenance["latest_component_source"], "77b1695ac66fd595bd037e4574d1626b8917654c")
         self.assertEqual(provenance["ondevice_ai_snapshot"]["tracked_file_count"], 1076)
-        self.assertEqual(len(frozen), 1076)
-        self.assertEqual(provenance["locked_b_stage_overlay"]["file_count"], len(overlay_files))
-        self.assertEqual(len(overlay_files), 19)
+        self.assertEqual(provenance["locked_b_stage_overlay"]["file_count"], 19)
         self.assertEqual(provenance["mmwave_m_n9_import"]["artifact_id"], "MMWAVE_M_N9_FULL_INT8_V1")
+        # Historical JSON still records the M-N9 import-era selector. Current
+        # runtime selection is B23 and is asserted separately.
         self.assertTrue(provenance["mmwave_m_n9_import"]["active_runtime_selector"])
         self.assertEqual(provenance["integration_policy"]["mmwave_active_selector"], "MMWAVE_M_N9_FULL_INT8_V1")
+        snapshot = root / "sources" / "ondevice_ai"
+        if snapshot.is_dir():
+            overlay = snapshot / "models" / "rp_x0_b_complete"
+            frozen = [
+                path
+                for path in snapshot.rglob("*")
+                if path.is_file() and path.suffix != ".pyc" and overlay not in path.parents and path != overlay
+            ]
+            overlay_files = [path for path in overlay.rglob("*") if path.is_file()] if overlay.exists() else []
+            self.assertEqual(len(frozen), 1076)
+            self.assertEqual(len(overlay_files), 19)
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ class AIResult:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        if self.source not in {"tflite", "rule", "unavailable"}:
+        if self.source not in {"tflite", "rule", "unavailable", "pytorch"}:
             raise ValueError(f"unsupported AI result source: {self.source}")
         if self.available and self.source == "unavailable":
             raise ValueError("an available result cannot use the unavailable source")

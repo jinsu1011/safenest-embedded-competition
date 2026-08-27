@@ -104,6 +104,9 @@ FORBIDDEN_THERMAL_SELECTORS = (
 MN9_MODEL_ID = "MMWAVE_M_N9_FULL_INT8_V1"
 MN9_RUNTIME_ROLE = "ACTIVE_M_N9"
 MN9_RELATIVE_PATH = "models/mmwave/m_n9/MMWAVE_M_N9_FULL_INT8_V1.tflite"
+B23_MODEL_ID = "M-PV2_FAMILY_B_TRACE_TCN_BREATHING_RR_QUALITY"
+B23_RUNTIME_ROLE = "ACTIVE_B23_PROTOTYPE"
+B23_RELATIVE_PATH = "models/mmwave/m_prot_b23/candidate_seed_23.pt"
 HISTORICAL_V010_FILENAME = "mmwave_resp_int8_v0.1.0.tflite"
 HISTORICAL_B_PATH_MARKERS = ("rp_x0_b_complete", "M-B3_")
 
@@ -284,6 +287,7 @@ def _artifact_selection_checks(root: Path) -> list[dict[str, object]]:
 
 def _mmwave_selector_contract_checks(mmwave: dict[str, object]) -> list[dict[str, object]]:
     path = str(mmwave.get("path") or "")
+    path_is_b23 = path.endswith(B23_RELATIVE_PATH)
     path_is_mn9 = path.endswith(MN9_RELATIVE_PATH)
     path_is_historical_v010 = HISTORICAL_V010_FILENAME in path
     path_is_historical_b = any(marker in path for marker in HISTORICAL_B_PATH_MARKERS)
@@ -298,14 +302,16 @@ def _mmwave_selector_contract_checks(mmwave: dict[str, object]) -> list[dict[str
         "hardware_validation": mmwave.get("hardware_validation"),
         "PI_SMOKE": mmwave.get("PI_SMOKE"),
         "PRESENCE_GATE_REQUIRED": mmwave.get("PRESENCE_GATE_REQUIRED"),
+        "representation": mmwave.get("representation"),
     }
-    selector_is_mn9 = (
-        mmwave.get("model_id") == MN9_MODEL_ID
-        and mmwave.get("runtime_role") == MN9_RUNTIME_ROLE
+    selector_is_b23 = (
+        mmwave.get("model_id") == B23_MODEL_ID
+        and mmwave.get("runtime_role") == B23_RUNTIME_ROLE
         and mmwave.get("active_runtime_selector") is True
         and mmwave.get("deployment_allowed") is True
         and mmwave.get("HISTORICAL_B_NOT_ACTIVE") is True
-        and path_is_mn9
+        and path_is_b23
+        and not path_is_mn9
         and not path_is_historical_v010
         and not path_is_historical_b
     )
@@ -321,7 +327,7 @@ def _mmwave_selector_contract_checks(mmwave: dict[str, object]) -> list[dict[str
         and mmwave.get("PRESENCE_GATE_REQUIRED") is True
     )
     return [
-        _check("mmwave_primary_selector_is_m_n9", selector_is_mn9, observed),
+        _check("mmwave_primary_selector_is_b23", selector_is_b23, observed),
         _check("mmwave_historical_b_not_active", historical_b_inactive, observed),
         _check("mmwave_device_validation_not_overclaimed", device_not_overclaimed, observed),
     ]

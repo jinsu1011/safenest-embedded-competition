@@ -172,9 +172,8 @@ class SafeNestRuntime:
             monotonic_at=monotonic,
         )
         if isinstance(packet, TelemetryPayload):
-            # The MR60 breathing-phase window must accumulate at wire rate; the
-            # publication loop is far too slow to satisfy the 30 s continuity
-            # contract on its own.
+            # B23 needs ~30 s of causal phase at wire rate. Publication is too
+            # slow to satisfy that contract on its own.
             try:
                 self.ai_pipeline.observe_telemetry(packet)
             except Exception as error:

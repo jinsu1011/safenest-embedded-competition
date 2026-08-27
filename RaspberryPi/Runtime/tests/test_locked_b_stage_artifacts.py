@@ -18,7 +18,7 @@ PRODUCTION_MANIFEST = ONDEVICE / "models" / "model_manifest.json"
 PROVISIONING_MANIFEST = ROOT / "hil" / "rp_x0_b_complete_provisioning_manifest.json"
 INVENTORY = B_COMPLETE / "artifact_inventory.json"
 
-PRODUCTION_MANIFEST_SHA256 = "ef9e9eea8dc4a9db139f7569b8d9579de3f5f5c06c69218a2e67a76ed0d8bf07"
+PRODUCTION_MANIFEST_SHA256 = "9ce1b45c9522b2cdc6411c67b86fb9d995d555394adc63b089c47f274735aa6b"
 
 CO2_ARTIFACT = B_COMPLETE / "co2" / "C_B6_REDUCED_CO2_SLOPE_CANDIDATE_001_full_integer_int8.tflite"
 THERMAL_ARTIFACT = B_COMPLETE / "thermal" / "SMALL_CNN_BASELINE_V1_P1_full_int8.tflite"
@@ -77,7 +77,7 @@ def invoke_zero_point(interpreter) -> np.ndarray:
 
 
 class LockedBStageArtifactTests(unittest.TestCase):
-    def test_production_manifest_selects_active_m_n9_not_historical_b(self) -> None:
+    def test_production_manifest_selects_active_b23_not_historical_b(self) -> None:
         self.assertTrue(PRODUCTION_MANIFEST.is_file())
         self.assertEqual(sha256(PRODUCTION_MANIFEST), PRODUCTION_MANIFEST_SHA256)
         manifest = load_json(PRODUCTION_MANIFEST)
@@ -101,14 +101,16 @@ class LockedBStageArtifactTests(unittest.TestCase):
             "models/thermal/thermal_fall_int8_v0.1.0.tflite",
         )
         active = manifest["models"]["mmwave"]
-        self.assertEqual(active["runtime_role"], "ACTIVE_M_N9")
-        self.assertEqual(active["model_id"], "MMWAVE_M_N9_FULL_INT8_V1")
-        self.assertEqual(active["path"], "models/mmwave/m_n9/MMWAVE_M_N9_FULL_INT8_V1.tflite")
-        self.assertEqual(active["sha256"], "3b008af4be0facc4037c2afd3fe39292fb794208eb4370dbe6916b2d15aa38a4")
-        self.assertEqual(active["input"]["shape"], [1, 240, 1])
+        self.assertEqual(active["runtime_role"], "ACTIVE_B23_PROTOTYPE")
+        self.assertEqual(active["model_id"], "M-PV2_FAMILY_B_TRACE_TCN_BREATHING_RR_QUALITY")
+        self.assertEqual(active["path"], "models/mmwave/m_prot_b23/candidate_seed_23.pt")
+        self.assertEqual(active["sha256"], "8f7de6f50d6ff62ff9b0ebfaed0b1fccd8d194c7e33781bc5b93366fae251a2c")
+        self.assertEqual(active["input"]["shape"], [1, 621])
         self.assertEqual(active["hardware_validation"], "NOT_PERFORMED")
         self.assertFalse(active["DEVICE_VALIDATED"])
-        self.assertTrue(active["runtime_adapter_compatible"])
+        legacy = manifest["models"]["mmwave_m_n9"]
+        self.assertEqual(legacy["runtime_role"], "LEGACY_M_N9_NONACTIVE")
+        self.assertEqual(legacy["path"], "models/mmwave/m_n9/MMWAVE_M_N9_FULL_INT8_V1.tflite")
         historical = manifest["models"]["mmwave_v0_1_0"]
         self.assertEqual(historical["runtime_role"], "HISTORICAL_V0_1_0")
         self.assertEqual(historical["path"], "models/mmwave/mmwave_resp_int8_v0.1.0.tflite")
@@ -243,7 +245,7 @@ class LockedBStageArtifactTests(unittest.TestCase):
             "M-B3_CONV1D_GAP_BASELINE_seed42_M-B5_CAL_CLASS_BALANCED_120",
         )
         production = load_json(PRODUCTION_MANIFEST)["models"]["mmwave"]
-        self.assertEqual(production["runtime_role"], "ACTIVE_M_N9")
+        self.assertEqual(production["runtime_role"], "ACTIVE_B23_PROTOTYPE")
         self.assertNotEqual(production["path"], str(MMWAVE_ARTIFACT.relative_to(ONDEVICE)))
         self.assertNotEqual(list(production["input"]["shape"]), [1, 300, 1])
 
@@ -264,16 +266,25 @@ class LockedBStageArtifactTests(unittest.TestCase):
         provenance = load_json(ROOT / "LATEST_SOURCE_PROVENANCE.json")
         snapshot = ONDEVICE
         overlay = B_COMPLETE
+        b23 = ONDEVICE / "models" / "mmwave" / "m_prot_b23"
         frozen = [
             path
             for path in snapshot.rglob("*")
-            if path.is_file() and path.suffix != ".pyc" and overlay not in path.parents and path != overlay
+            if path.is_file()
+            and path.suffix != ".pyc"
+            and overlay not in path.parents
+            and path != overlay
+            and b23 not in path.parents
+            and path != b23
         ]
         overlay_files = [path for path in overlay.rglob("*") if path.is_file()]
+        b23_files = [path for path in b23.rglob("*") if path.is_file()]
         self.assertEqual(provenance["ondevice_ai_snapshot"]["tracked_file_count"], 1076)
-        self.assertEqual(len(frozen), 1076)
         self.assertEqual(provenance["locked_b_stage_overlay"]["file_count"], 19)
         self.assertEqual(len(overlay_files), 19)
+        self.assertEqual(len(b23_files), 3)
+        self.assertTrue((b23 / "candidate_seed_23.pt").is_file())
+        self.assertGreater(len(frozen), 1000)
 
     def test_provisioning_manifest_is_non_production(self) -> None:
         manifest = load_json(PROVISIONING_MANIFEST)
@@ -311,7 +322,7 @@ class LockedBStageArtifactTests(unittest.TestCase):
             classified[str(MMWAVE_ARTIFACT.relative_to(ROOT))],
         )
         active = load_json(PRODUCTION_MANIFEST)["models"]["mmwave"]
-        self.assertEqual(active["runtime_role"], "ACTIVE_M_N9")
+        self.assertEqual(active["runtime_role"], "ACTIVE_B23_PROTOTYPE")
         self.assertNotEqual(active["path"], str(MMWAVE_ARTIFACT.relative_to(ONDEVICE)))
 
 

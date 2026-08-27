@@ -1,7 +1,10 @@
-"""Spectral respiration estimate on the M-N4 canonical window.
+"""LEGACY / NON-AUTHORITATIVE spectral readout on the M-N4 canonical window.
 
-Purpose: give the runtime a trustworthy mmWave respiration signal *today*, while
-M-N9 is still ``DEVICE_VALIDATED: NO``.
+Not the default physiology path. B23 outputs must not be overridden by this
+estimator. Retained for debug/legacy tests only.
+
+Historical purpose (M-N9 era): give the runtime a DSP respiration readout while
+M-N9 was still ``DEVICE_VALIDATED: NO``.
 
 This is deliberately not a model. It is a deterministic DSP readout of the same
 frozen ``[1, 240, 1]`` canonical window the neural head consumes (8 Hz x 30 s,

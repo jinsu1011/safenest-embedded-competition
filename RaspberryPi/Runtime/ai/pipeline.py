@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import math
 import time
 from typing import Mapping
 
 from ai.result import AIResult
 from ai.runtime import LazyModel
 from ai.co2_canonical_runtime import CO2SlopeWindowBuilder
-from ai.mmwave_canonical_runtime import MR60CanonicalWindowBuilder
-from ai.mmwave_spectral_runtime import estimate_respiration
+from ai.mmwave_b23_runtime import B23TeamRuntime
 from gateway.protocol import TelemetryPayload, ThermalFrame
 from state.manager import SensorStateManager
 
@@ -30,7 +28,7 @@ class OnDeviceAIPipeline:
             for sensor_id in ("thermal", "mmwave", "co2")
         }
         self._clock = clock
-        self._mmwave_window = MR60CanonicalWindowBuilder()
+        self._mmwave_b23 = B23TeamRuntime()
         self._mmwave_wire_observed = False
         self._co2_window = CO2SlopeWindowBuilder()
         self._co2_wire_observed = False
@@ -38,26 +36,14 @@ class OnDeviceAIPipeline:
     def observe_telemetry(self, packet: TelemetryPayload) -> None:
         """Accumulate the MR60 phase stream at wire rate, not at publication rate.
 
-        Both accumulators are fed here. The M-N4 canonical window needs 30
-        continuous seconds of ~8 Hz phase events with no gap wider than
-        ``max(400 ms, 4x median dt)``, and the C-B6 CO2 slope needs >=150 s of
-        measurement-event history. Feeding either from ``evaluate`` would sample
-        the stream once per publication interval (15 s by default), which can
-        never satisfy those contracts.
+        Both accumulators are fed here. B23 needs ~30 s of causal phase
+        coverage (R1 owns resampling to 300 @ 10 Hz). The C-B6 CO2 slope needs
+        >=150 s of measurement-event history. Feeding either from ``evaluate``
+        would sample the stream once per publication interval (15 s by default),
+        which can never satisfy those contracts.
         """
 
-        self._mmwave_window.ingest(
-            {
-                "sequence": packet.header.sequence,
-                "boot_id": packet.boot_id,
-                "values": {
-                    "breath_phase": packet.breath_phase,
-                    "ts_monotonic_ms": packet.ts_monotonic_ms,
-                    "phase_age_ms": packet.phase_age_ms,
-                    "session_id": packet.session_id,
-                },
-            }
-        )
+        self._mmwave_b23.observe_packet(packet)
         self._mmwave_wire_observed = True
         self.observe_co2(
             {
@@ -148,116 +134,10 @@ class OnDeviceAIPipeline:
         unavailable = self._sensor_unavailable("mmwave", sensor, now)
         if unavailable:
             return unavailable
-        values = sensor.get("values") if isinstance(sensor.get("values"), dict) else {}
-        missing = _mmwave_missing_fields(values)
-        if not self._mmwave_wire_observed:
-            # Snapshot-driven callers (offline replay, unit tests) have no wire
-            # feed; live runtimes use observe_telemetry and must not double-count.
-            self._mmwave_window.ingest(sensor)
-        window = self._mmwave_window.latest()
-        diagnostics = {
-            "canonical_window_status": window.status,
-            "missing": missing,
-            **window.metadata,
-        }
-        if window.status != "CANONICAL_WINDOW_READY" or window.tensor is None:
-            return self._unavailable(
-                "mmwave",
-                now,
-                window.reason or window.status,
-                diagnostics,
-                state=window.status,
-            )
-        presence = values.get("presence")
-        presence_available = values.get("presence_available") is True
-        if presence_available is not True or not isinstance(presence, bool):
-            return self._suppressed(
-                "mmwave",
-                now,
-                "PRESENCE_STATE_UNAVAILABLE",
-                {
-                    **diagnostics,
-                    "suppressed": True,
-                    "suppression_reason": "PRESENCE_STATE_UNAVAILABLE",
-                },
-            )
-        if presence is False:
-            return self._suppressed(
-                "mmwave",
-                now,
-                "NO_VALID_PERSON",
-                {
-                    **diagnostics,
-                    "suppressed": True,
-                    "suppression_reason": "NO_VALID_PERSON",
-                    "presence_valid": False,
-                },
-            )
-        # Deterministic DSP readout of the same canonical window. It is the
-        # trustworthy respiration signal while M-N9 is DEVICE_VALIDATED: NO, and
-        # it is what contradicts a physically impossible APNEA-proxy class.
-        spectral = estimate_respiration(window.tensor)
-        diagnostics = {
-            **diagnostics,
-            "spectral_status": spectral.status,
-            "spectral_rate_rpm": spectral.rate_rpm,
-            "spectral_band_power_fraction": spectral.band_power_fraction,
-            "spectral_hold_evidence": spectral.hold_evidence,
-            "spectral_contradicts_apnea": spectral.contradicts_apnea,
-            **spectral.metadata,
-        }
-        try:
-            prediction = self.models["mmwave"].predict(window.tensor)
-            if bool(getattr(prediction, "fallback_used", False)):
-                return self._unavailable(
-                    "mmwave",
-                    now,
-                    "MODEL_RUNTIME_UNAVAILABLE",
-                    {
-                        **diagnostics,
-                        "heuristic_state": prediction.class_name,
-                        "fallback_reason": getattr(prediction, "fallback_reason", None),
-                    },
-                )
-            if (
-                str(prediction.class_name) in _APNEA_STATES
-                and spectral.contradicts_apnea
-            ):
-                # The window is periodic in the respiration band and contains no
-                # quiet stretch as long as the 6 s hold the APNEA label requires,
-                # so a breath-hold did not occur. Refuse rather than publish it.
-                return self._unavailable(
-                    "mmwave",
-                    now,
-                    "APNEA_CONTRADICTED_BY_SPECTRUM",
-                    {
-                        **diagnostics,
-                        "refused_class": str(prediction.class_name),
-                        "refused_confidence": float(prediction.confidence),
-                        "refused_probabilities": list(prediction.probabilities),
-                    },
-                    state="RESPIRATORY_INFERENCE_REFUSED",
-                )
-            risk = {"NORMAL": 0.0, "RAPID_OR_ABNORMAL": 0.5, "APNEA-proxy": 1.0}
-            return self._prediction_result(
-                "mmwave",
-                prediction,
-                now,
-                score=risk.get(prediction.class_name, 0.5),
-                metadata={
-                    **diagnostics,
-                    "probabilities": list(prediction.probabilities),
-                    "dequantized_scores": list(prediction.probabilities),
-                    "model_sha256": getattr(prediction, "model_sha256", None),
-                    "contract_id": "MMWAVE_MR60_COMPAT_INPUT_DATASET_V1",
-                    "presence_valid": True,
-                    "suppressed": False,
-                    "canonical_window_status": window.status,
-                    "apnea_verified": False,
-                },
-            )
-        except Exception as error:
-            return self._model_error("mmwave", now, error, diagnostics)
+        # Default active path is frozen B23. The injected LazyModel/M-N9 adapter
+        # is never called. Snapshot-driven tests without observe_telemetry are
+        # admitted inside B23TeamRuntime.evaluate.
+        return self._mmwave_b23.evaluate(sensor, now)
 
     def _co2(self, sensor: dict[str, object], now: float) -> AIResult:
         unavailable = self._sensor_unavailable("co2", sensor, now)
@@ -398,29 +278,6 @@ class OnDeviceAIPipeline:
             error=reason,
             metadata=metadata,
         )
-
-
-_APNEA_STATES = frozenset({"APNEA", "APNEA-proxy"})
-
-
-def _mmwave_missing_fields(values: dict[str, object]) -> list[str]:
-    missing: list[str] = []
-    for field in ("breath_phase", "ts_monotonic_ms", "phase_age_ms"):
-        if not _finite_number(values.get(field)):
-            missing.append(field)
-    if not isinstance(values.get("human_detected_raw"), bool) and not isinstance(
-        values.get("presence"), bool
-    ):
-        missing.append("human_detected_raw")
-    return missing
-
-
-def _finite_number(value: object) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))
-
-
-def _all_finite(values: list[object]) -> bool:
-    return all(_finite_number(value) for value in values)
 
 
 def _thermal_preview(pixels: object, width: int = 20, height: int = 16) -> dict[str, object]:

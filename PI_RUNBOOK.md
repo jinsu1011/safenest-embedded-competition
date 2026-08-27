@@ -71,6 +71,13 @@ bash ./run_safenest.sh --install
 - `.env` 존재 (비밀값 포함 — git에 올리지 말 것)
 - `RaspberryPi/LCD/static/display.html` 존재
 
+### M-PROT-5B software note (live Pi not verified)
+
+Default mmWave AI in this repository is now the **B23 PyTorch prototype**, not M-N9 INT8.
+`RaspberryPi/Ondevice_AI/requirements-pi.txt` keeps `torch` commented (`PI_TORCH_NOT_LIVE_VERIFIED`).
+Mac/dev tests may install torch via `requirements.txt` / `requirements-mac.txt`.
+Do **not** claim the updated path has already run on the Pi. **M-PROT-5C live verification pending.**
+
 ### `/display` 라우트 (필드 필수)
 
 팀 `main` 원본 `backend/app.py`에는 `/display`가 없을 수 있다.  

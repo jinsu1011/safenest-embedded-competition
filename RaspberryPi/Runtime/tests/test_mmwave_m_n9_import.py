@@ -55,19 +55,24 @@ class TestMmwaveMN9TeamImport(unittest.TestCase):
         self.assertIn("DEVICE_VALIDATED = NO", text)
         self.assertIn("PRESENCE_GATE_REQUIRED = YES", text)
 
-    def test_manifest_selector_is_m_n9_but_adapter_not_rewired(self) -> None:
+    def test_manifest_selector_is_b23_and_mn9_is_legacy(self) -> None:
         manifest = json.loads(MODEL_MANIFEST.read_text(encoding="utf-8"))
         active = manifest["models"]["mmwave"]
-        self.assertEqual(active["model_id"], "MMWAVE_M_N9_FULL_INT8_V1")
-        self.assertEqual(active["runtime_role"], "ACTIVE_M_N9")
+        self.assertEqual(active["model_id"], "M-PV2_FAMILY_B_TRACE_TCN_BREATHING_RR_QUALITY")
+        self.assertEqual(active["runtime_role"], "ACTIVE_B23_PROTOTYPE")
         self.assertTrue(active["active_runtime_selector"])
         self.assertTrue(active["HISTORICAL_B_NOT_ACTIVE"])
         self.assertFalse(active["DEVICE_VALIDATED"])
-        self.assertEqual(active["sha256"], EXPECTED_SHA)
-        self.assertFalse(manifest["mmwave_active_locked_artifact"]["runtime_wired"])
+        self.assertEqual(active["sha256"], "8f7de6f50d6ff62ff9b0ebfaed0b1fccd8d194c7e33781bc5b93366fae251a2c")
+        legacy = manifest["models"]["mmwave_m_n9"]
+        self.assertEqual(legacy["model_id"], "MMWAVE_M_N9_FULL_INT8_V1")
+        self.assertEqual(legacy["runtime_role"], "LEGACY_M_N9_NONACTIVE")
+        self.assertFalse(legacy["deployment_allowed"])
         runtime = (RUNTIME_ROOT / "ai" / "runtime.py").read_text(encoding="utf-8")
-        self.assertIn("mmwave_interpreter.py", runtime)
-        self.assertNotIn("mmwave_m_n9_interpreter.py", runtime)
+        self.assertIn("mmwave_m_n9_interpreter.py", runtime)
+        pipeline = (RUNTIME_ROOT / "ai" / "pipeline.py").read_text(encoding="utf-8")
+        self.assertIn("B23TeamRuntime", pipeline)
+        self.assertNotIn("MR60CanonicalWindowBuilder", pipeline)
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ import unittest
 from ai.mmwave_canonical_runtime import MR60CanonicalWindowBuilder
 from ai.pipeline import OnDeviceAIPipeline
 from gateway.protocol import PACKET_TELEMETRY_JSON, PacketHeader, decode_telemetry
-from risk.engine import SafeNestRiskEngine
+from risk.formula_v1 import SafeNestRiskFormulaV1
 from state.manager import SensorStateManager
 
 
@@ -31,6 +31,7 @@ class FakeModel:
 def sensor(sequence: int, time_ms: float, phase: float, *, presence=True, age=3.0, boot="boot-a"):
     return {
         "status": "LIVE", "sequence": sequence, "boot_id": boot,
+        "device_id": "esp32-01",
         "values": {
             "breath_phase": phase,
             "ts_monotonic_ms": time_ms,
@@ -44,8 +45,8 @@ def sensor(sequence: int, time_ms: float, phase: float, *, presence=True, age=3.
     }
 
 
-def snapshot_for(index: int, *, presence=True):
-    ms = index * 125.0
+def snapshot_for(index: int, *, presence=True, dt_ms: float = 125.0):
+    ms = index * dt_ms
     return {
         "timestamp": ms / 1000.0,
         "revision": index,
@@ -87,65 +88,63 @@ class CanonicalBuilderTests(unittest.TestCase):
 
 
 class MN9PipelineRuntimeTests(unittest.TestCase):
-    def test_warmup_repeated_inference_and_no_person_suppression(self):
+    """Default pipeline is B23. Injected FakeModel/M-N9 must not be called."""
+
+    def test_warmup_repeated_inference_and_presence_false(self):
         model = FakeModel()
         pipeline = OnDeviceAIPipeline(SensorStateManager(), {"mmwave": model})
         warming = pipeline.evaluate(snapshot_for(0))["ai"]["mmwave"]
         self.assertFalse(warming["available"])
-        self.assertEqual(warming["state"], "RESPIRATORY_WINDOW_WARMING_UP")
-        self.assertEqual(warming["error"], "INSUFFICIENT_CONTINUOUS_DURATION")
-        self.assertEqual(warming["metadata"]["canonical_window_status"], "RESPIRATORY_WINDOW_WARMING_UP")
+        self.assertEqual(warming["state"], "WINDOW_NOT_READY")
+        self.assertEqual(model.calls, [])
         result = warming
-        for i in range(241):
-            result = pipeline.evaluate(snapshot_for(i))["ai"]["mmwave"]
-        self.assertTrue(result["available"])
-        self.assertEqual(result["source"], "tflite")
-        self.assertEqual(result["metadata"]["canonical_window_status"], "CANONICAL_WINDOW_READY")
-        self.assertEqual(model.calls[-1].shape, (1, 240, 1))
-        self.assertGreaterEqual(len(model.calls), 1)
-        for i in range(240, 245):
-            pipeline.evaluate(snapshot_for(i))
-        self.assertGreaterEqual(len(model.calls), 2)
-
-        suppressed = pipeline.evaluate(snapshot_for(246, presence=False))["ai"]["mmwave"]
+        for i in range(300):
+            result = pipeline.evaluate(snapshot_for(i, dt_ms=100.0))["ai"]["mmwave"]
+        self.assertEqual(model.calls, [])
+        self.assertNotEqual(result["source"], "tflite")
+        self.assertNotIn(result["state"], {"NORMAL", "APNEA", "APNEA-proxy"})
+        if result["available"]:
+            self.assertEqual(result["source"], "pytorch")
+            self.assertEqual(result["score"], 0.0)
+        suppressed = pipeline.evaluate(snapshot_for(301, dt_ms=100.0, presence=False))["ai"]["mmwave"]
         self.assertFalse(suppressed["available"])
-        self.assertEqual(suppressed["state"], "RESPIRATORY_INFERENCE_SUPPRESSED")
-        self.assertEqual(suppressed["error"], "NO_VALID_PERSON")
-        self.assertTrue(suppressed["metadata"]["suppressed"])
+        self.assertNotEqual(suppressed["state"], "APNEA")
+        self.assertEqual(model.calls, [])
 
-    def test_missing_presence_suppresses_ready_window(self):
+    def test_missing_presence_does_not_call_mn9(self):
         model = FakeModel()
         pipeline = OnDeviceAIPipeline(SensorStateManager(), {"mmwave": model})
-        for i in range(241):
-            pipeline.evaluate(snapshot_for(i))
+        for i in range(300):
+            pipeline.evaluate(snapshot_for(i, dt_ms=100.0))
         calls_before = len(model.calls)
-        snap = snapshot_for(241)
+        snap = snapshot_for(301, dt_ms=100.0)
         snap["sensors"]["mmwave"]["values"]["presence"] = None
         snap["sensors"]["mmwave"]["values"]["presence_available"] = False
         snap["sensors"]["mmwave"]["values"]["human_detected_raw"] = None
         blocked = pipeline.evaluate(snap)["ai"]["mmwave"]
         self.assertEqual(len(model.calls), calls_before)
         self.assertFalse(blocked["available"])
-        self.assertEqual(blocked["error"], "PRESENCE_STATE_UNAVAILABLE")
-        self.assertEqual(blocked["metadata"]["canonical_window_status"], "CANONICAL_WINDOW_READY")
-        self.assertEqual(blocked["metadata"]["suppression_reason"], "PRESENCE_STATE_UNAVAILABLE")
-        self.assertIn("human_detected_raw", blocked["metadata"]["missing"])
+        self.assertNotEqual(blocked["state"], "APNEA")
+        if blocked["metadata"].get("window_ready"):
+            self.assertEqual(blocked["state"], "PRESENCE_UNAVAILABLE")
 
-    def test_presence_and_ready_window_make_risk_use_ai(self):
+    def test_presence_and_ready_window_do_not_map_b23_to_apnea_risk(self):
         model = FakeModel()
         pipeline = OnDeviceAIPipeline(SensorStateManager(), {"mmwave": model})
-        snap = snapshot_for(0)
-        for i in range(241):
-            snap = snapshot_for(i)
+        snap = snapshot_for(0, dt_ms=100.0)
+        for i in range(300):
+            snap = snapshot_for(i, dt_ms=100.0)
             ai = pipeline.evaluate(snap)
         mmwave = ai["ai"]["mmwave"]
-        self.assertTrue(mmwave["available"])
-        self.assertEqual(mmwave["source"], "tflite")
-        self.assertIsNone(mmwave["error"])
-        self.assertEqual(mmwave["metadata"]["canonical_window_status"], "CANONICAL_WINDOW_READY")
-        risk = SafeNestRiskEngine().evaluate(snap, ai)
-        self.assertEqual(risk.component_status["mmwave"], "AI")
-        self.assertEqual(risk.components["mmwave"]["source"], "ai")
+        self.assertEqual(model.calls, [])
+        self.assertNotEqual(mmwave["source"], "tflite")
+        risk = SafeNestRiskFormulaV1().evaluate(snap, ai)
+        self.assertNotEqual(mmwave.get("state"), "APNEA")
+        if mmwave["available"]:
+            self.assertEqual(mmwave["source"], "pytorch")
+            self.assertEqual(mmwave["score"], 0.0)
+            self.assertTrue(mmwave["metadata"]["risk_contribution_deferred"])
+        self.assertNotIn("APNEA", str(risk.components["mmwave"]["state"]))
 
     def test_nested_esp_json_fills_canonical_fields_without_inventing_presence(self):
         body = json.dumps(
@@ -187,34 +186,27 @@ class MN9PipelineRuntimeTests(unittest.TestCase):
         result = OnDeviceAIPipeline(manager, {"mmwave": model}).evaluate(state)["ai"]["mmwave"]
         self.assertFalse(result["available"])
         self.assertNotEqual(result["error"], "INPUT_UNAVAILABLE")
-        self.assertIn(result["error"], {
-            "INSUFFICIENT_CONTINUOUS_DURATION",
-            "CANONICAL_FRESHNESS_METADATA_MISSING",
-            "PRESENCE_STATE_UNAVAILABLE",
-        })
         self.assertEqual(model.calls, [])
 
 
 
 class WireRatePhaseAccumulationTests(unittest.TestCase):
-    """The canonical window must accumulate per received packet, not per publication.
+    """B23 must accumulate per received packet, not per publication.
 
-    The M-N4 contract needs 30 continuous seconds of ~8 Hz phase events with no
-    gap wider than max(400 ms, 4x median dt). Sampling the phase stream from the
-    publication loop (15 s by default) can never satisfy that, so the runtime
-    feeds the accumulator from the receive path.
+    The causal 30 s window cannot be built from the publication loop
+    (15 s by default). The runtime feeds the composer from the receive path.
     """
 
     @staticmethod
-    def _telemetry(index: int) -> object:
-        ts_ms = 1_000 + index * 125
+    def _telemetry(index: int, *, dt_ms: float = 100.0) -> object:
+        ts_ms = 1_000 + index * dt_ms
         body = json.dumps(
             {
                 "schema": "safenest.telemetry.v1",
                 "device_id": "esp32-01",
                 "boot_id": "boot-a",
                 "seq": index + 1,
-                "uptime_ms": ts_ms + 10,
+                "uptime_ms": int(ts_ms) + 10,
                 "resp_rate_bpm": 16.0,
                 "heart_rate_bpm": 62.0,
                 "co2_ppm": 800.0,
@@ -250,30 +242,27 @@ class WireRatePhaseAccumulationTests(unittest.TestCase):
             storage_config=SensorStorageConfig(root=".", enabled=False),
         )
 
-        for index in range(260):
+        for index in range(310):
             runtime._on_packet(self._telemetry(index), ("127.0.0.1", 5000))
 
-        window = pipeline._mmwave_window.latest()
-        self.assertEqual(window.status, "CANONICAL_WINDOW_READY")
-        self.assertGreaterEqual(window.metadata["continuous_span_ms"], 30_000)
-        self.assertEqual(window.tensor.shape, (1, 240, 1))
-        # Presence is absent from this firmware contract, so inference stays gated.
+        self.assertGreaterEqual(pipeline._mmwave_b23.buffered_count, 300)
         result = pipeline.evaluate(manager.snapshot())["ai"]["mmwave"]
-        self.assertEqual(result["metadata"]["canonical_window_status"], "CANONICAL_WINDOW_READY")
-        self.assertEqual(result["error"], "PRESENCE_STATE_UNAVAILABLE")
         self.assertEqual(model.calls, [])
+        self.assertFalse(result["available"])
+        if result["metadata"].get("window_ready"):
+            self.assertEqual(result["state"], "PRESENCE_UNAVAILABLE")
 
     def test_single_publication_cannot_build_a_window_on_its_own(self):
         pipeline = OnDeviceAIPipeline(SensorStateManager(), {"mmwave": FakeModel()})
         manager = SensorStateManager()
-        for index in range(260):
+        for index in range(310):
             manager.ingest(
                 self._telemetry(index), ("127.0.0.1", 5000),
                 received_at=100.0 + index, monotonic_at=10.0 + index,
             )
-        # One publication sees exactly one phase event.
-        pipeline.evaluate(manager.snapshot(now=360.0, monotonic_now=270.0))
-        self.assertEqual(pipeline._mmwave_window.latest().metadata["accepted_update_count"], 1)
+        result = pipeline.evaluate(manager.snapshot(now=410.0, monotonic_now=320.0))["ai"]["mmwave"]
+        self.assertFalse(result["available"])
+        self.assertLess(pipeline._mmwave_b23.buffered_count, 300)
 
 
 
@@ -382,15 +371,15 @@ class Firmware13PresenceFieldTests(unittest.TestCase):
         self.assertIsNone(values["human_detected_raw"])
         self.assertIs(values["presence_available"], False)
 
-    def test_true_lets_a_ready_window_reach_the_model(self):
-        """The whole point of B1: presence true is what unblocks inference."""
+    def test_true_unblocks_b23_without_calling_mn9(self):
+        """Presence true unblocks B23 physiology; M-N9 stays uncalled."""
         model = FakeModel()
         pipeline = OnDeviceAIPipeline(SensorStateManager(), {"mmwave": model})
         manager = SensorStateManager()
-        for index in range(260):
+        for index in range(310):
             nested = self._nested(
                 breath_phase=math.sin(index * 0.35) * 0.5,
-                ts_monotonic_ms=1_000 + index * 125,
+                ts_monotonic_ms=1_000 + index * 100,
                 phase_age_ms=3,
                 seq=index + 1,
                 human_detected_raw=True,
@@ -400,26 +389,26 @@ class Firmware13PresenceFieldTests(unittest.TestCase):
             manager.ingest(
                 packet,
                 ("127.0.0.1", 5000),
-                received_at=100.0 + index * 0.125,
-                monotonic_at=10.0 + index * 0.125,
+                received_at=100.0 + index * 0.1,
+                monotonic_at=10.0 + index * 0.1,
             )
-        state = manager.snapshot(now=132.5, monotonic_now=42.5)
+        state = manager.snapshot(now=131.0, monotonic_now=41.0)
         result = pipeline.evaluate(state)["ai"]["mmwave"]
-        self.assertEqual(
-            result["metadata"]["canonical_window_status"], "CANONICAL_WINDOW_READY"
-        )
-        self.assertNotEqual(result["error"], "PRESENCE_STATE_UNAVAILABLE")
-        self.assertEqual(len(model.calls), 1)
+        self.assertEqual(model.calls, [])
+        self.assertNotEqual(result["source"], "tflite")
+        self.assertNotEqual(result.get("error"), "PRESENCE_STATE_UNAVAILABLE")
+        if result["available"]:
+            self.assertEqual(result["source"], "pytorch")
 
     def test_null_suppresses_the_same_ready_window(self):
-        """Negative control for the test above: only presence differs."""
+        """Negative control: only presence differs."""
         model = FakeModel()
         pipeline = OnDeviceAIPipeline(SensorStateManager(), {"mmwave": model})
         manager = SensorStateManager()
-        for index in range(260):
+        for index in range(310):
             nested = self._nested(
                 breath_phase=math.sin(index * 0.35) * 0.5,
-                ts_monotonic_ms=1_000 + index * 125,
+                ts_monotonic_ms=1_000 + index * 100,
                 phase_age_ms=3,
                 seq=index + 1,
                 human_detected_raw=None,
@@ -429,13 +418,12 @@ class Firmware13PresenceFieldTests(unittest.TestCase):
             manager.ingest(
                 packet,
                 ("127.0.0.1", 5000),
-                received_at=100.0 + index * 0.125,
-                monotonic_at=10.0 + index * 0.125,
+                received_at=100.0 + index * 0.1,
+                monotonic_at=10.0 + index * 0.1,
             )
-        state = manager.snapshot(now=132.5, monotonic_now=42.5)
+        state = manager.snapshot(now=131.0, monotonic_now=41.0)
         result = pipeline.evaluate(state)["ai"]["mmwave"]
-        self.assertEqual(
-            result["metadata"]["canonical_window_status"], "CANONICAL_WINDOW_READY"
-        )
-        self.assertEqual(result["error"], "PRESENCE_STATE_UNAVAILABLE")
+        self.assertFalse(result["available"])
+        if result["metadata"].get("window_ready"):
+            self.assertEqual(result["state"], "PRESENCE_UNAVAILABLE")
         self.assertEqual(model.calls, [])

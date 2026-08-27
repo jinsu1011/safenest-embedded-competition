@@ -8,7 +8,7 @@
 #   - SafeNest TCP v1 gateway            (scalar mmWave / CO2 / PIR telemetry, :9000)
 #   - SafeNest Thermal UDP v1 receiver   (chunked 80x62 thermal frames, :5005)
 #   - Sensor State Manager               (freshness, validity, device health)
-#   - On-device AI pipeline              (RaspberryPi/Ondevice_AI TFLite adapters)
+#   - On-device AI pipeline              (Thermal/CO2 TFLite + mmWave B23 prototype)
 #   - Rule / Risk engine                 (frozen V4 risk contract)
 #   - SQLite persistence                 (RaspberryPi/Runtime/data/safenest.db)
 #   - FastAPI backend + WebSocket        (:8000)

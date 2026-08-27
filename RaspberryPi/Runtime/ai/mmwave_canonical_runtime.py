@@ -1,7 +1,8 @@
-"""Live M-N4 window reconstruction for the locked M-N9 runtime.
+"""LEGACY / NON-ACTIVE M-N4 window reconstruction (M-N9 240-sample path).
 
-The canonical math remains in the imported frozen M-N4 module.  This class
-only supplies streaming/session semantics around that exact implementation.
+Default team runtime is B23: ``ai/mmwave_b23_runtime.py``. This module is
+retained for isolated contract tests and must not be called from
+``OnDeviceAIPipeline``.
 """
 
 from __future__ import annotations

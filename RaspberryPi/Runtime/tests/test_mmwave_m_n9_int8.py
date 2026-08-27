@@ -95,17 +95,20 @@ class MN9Int8ArtifactTests(unittest.TestCase):
         self.assertEqual(output.dtype, np.int8)
         np.testing.assert_array_equal(output.reshape(-1), np.array([-128, -128, 127], dtype=np.int8))
 
-    def test_active_pointer_is_m_n9_not_historical_b(self) -> None:
+    def test_active_pointer_is_b23_not_historical_b(self) -> None:
         manifest = json.loads(PRODUCTION_MANIFEST.read_text(encoding="utf-8"))
         active = manifest["models"]["mmwave"]
-        self.assertEqual(active["runtime_role"], "ACTIVE_M_N9")
-        self.assertEqual(active["model_id"], "MMWAVE_M_N9_FULL_INT8_V1")
-        self.assertEqual(active["path"], "models/mmwave/m_n9/MMWAVE_M_N9_FULL_INT8_V1.tflite")
-        self.assertEqual(active["sha256"], INT8_SHA256)
+        self.assertEqual(active["runtime_role"], "ACTIVE_B23_PROTOTYPE")
+        self.assertEqual(active["model_id"], "M-PV2_FAMILY_B_TRACE_TCN_BREATHING_RR_QUALITY")
+        self.assertEqual(active["path"], "models/mmwave/m_prot_b23/candidate_seed_23.pt")
+        self.assertEqual(active["sha256"], "8f7de6f50d6ff62ff9b0ebfaed0b1fccd8d194c7e33781bc5b93366fae251a2c")
         self.assertEqual(active["hardware_validation"], "NOT_PERFORMED")
         self.assertFalse(active["DEVICE_VALIDATED"])
         self.assertTrue(active["PRESENCE_GATE_REQUIRED"])
-        self.assertTrue(active["runtime_adapter_compatible"])
+        legacy = manifest["models"]["mmwave_m_n9"]
+        self.assertEqual(legacy["path"], "models/mmwave/m_n9/MMWAVE_M_N9_FULL_INT8_V1.tflite")
+        self.assertEqual(legacy["sha256"], INT8_SHA256)
+        self.assertFalse(legacy["deployment_allowed"])
         self.assertEqual(manifest["models"]["co2"]["path"], "models/co2/co2_occupancy_int8_v0.1.0.tflite")
         self.assertEqual(
             manifest["models"]["thermal"]["path"],

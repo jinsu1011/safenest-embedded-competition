@@ -8,6 +8,7 @@ import json
 import sys
 import unittest
 
+from paths import MODEL_MANIFEST
 from backend.runtime_status import runtime_status_document
 from backend.views import status_document
 from deployment.verify_bundle import verify
@@ -54,14 +55,14 @@ class Stage7OfflinePreflightTests(unittest.TestCase):
         names = {item["name"]: item for item in self.document["checks"]}
         self.assertTrue(names["thermal_production_path_is_historical_v0_1_0"]["passed"])
         self.assertNotIn("mmwave_primary_deployment_blocked", names)
-        self.assertTrue(names["mmwave_primary_selector_is_m_n9"]["passed"])
+        self.assertTrue(names["mmwave_primary_selector_is_b23"]["passed"])
         self.assertTrue(names["mmwave_historical_b_not_active"]["passed"])
         self.assertTrue(names["mmwave_device_validation_not_overclaimed"]["passed"])
         self.assertTrue(names["model_thermal_sha256"]["passed"])
         self.assertTrue(names["model_mmwave_sha256"]["passed"])
-        observed = names["mmwave_primary_selector_is_m_n9"]["observed"]
-        self.assertEqual(observed["model_id"], "MMWAVE_M_N9_FULL_INT8_V1")
-        self.assertEqual(observed["runtime_role"], "ACTIVE_M_N9")
+        observed = names["mmwave_primary_selector_is_b23"]["observed"]
+        self.assertEqual(observed["model_id"], "M-PV2_FAMILY_B_TRACE_TCN_BREATHING_RR_QUALITY")
+        self.assertEqual(observed["runtime_role"], "ACTIVE_B23_PROTOTYPE")
         self.assertTrue(observed["active_runtime_selector"])
         self.assertTrue(observed["deployment_allowed"])
         self.assertTrue(observed["HISTORICAL_B_NOT_ACTIVE"])
@@ -69,21 +70,21 @@ class Stage7OfflinePreflightTests(unittest.TestCase):
         self.assertEqual(observed["hardware_validation"], "NOT_PERFORMED")
         self.assertEqual(observed["PI_SMOKE"], "NOT_PERFORMED")
         self.assertTrue(observed["PRESENCE_GATE_REQUIRED"])
-        self.assertTrue(str(observed["path"]).endswith("models/mmwave/m_n9/MMWAVE_M_N9_FULL_INT8_V1.tflite"))
+        self.assertTrue(str(observed["path"]).endswith("models/mmwave/m_prot_b23/candidate_seed_23.pt"))
 
     def test_historical_v010_primary_selector_fails_offline_preflight(self) -> None:
-        manifest = json.loads((ROOT / "sources" / "ondevice_ai" / "models" / "model_manifest.json").read_text(encoding="utf-8"))
+        manifest = json.loads(MODEL_MANIFEST.read_text(encoding="utf-8"))
         fixture = dict(manifest["models"]["mmwave_v0_1_0"])
         fixture["active_runtime_selector"] = True
         checks = _mmwave_selector_contract_checks(fixture)
         names = {item["name"]: item for item in checks}
-        self.assertFalse(names["mmwave_primary_selector_is_m_n9"]["passed"])
-        self.assertTrue(names["mmwave_primary_selector_is_m_n9"]["required"])
+        self.assertFalse(names["mmwave_primary_selector_is_b23"]["passed"])
+        self.assertTrue(names["mmwave_primary_selector_is_b23"]["required"])
         with patch("hil.preflight._mmwave_selector_contract_checks", return_value=checks):
             document = offline_preflight_document(ROOT)
         self.assertFalse(document["ok"])
         failed = {item["name"]: item for item in document["checks"] if item["required"] and not item["passed"]}
-        self.assertIn("mmwave_primary_selector_is_m_n9", failed)
+        self.assertIn("mmwave_primary_selector_is_b23", failed)
 
     def test_historical_b_active_selector_fails(self) -> None:
         fixture = {
@@ -100,22 +101,22 @@ class Stage7OfflinePreflightTests(unittest.TestCase):
         }
         checks = _mmwave_selector_contract_checks(fixture)
         names = {item["name"]: item for item in checks}
-        self.assertFalse(names["mmwave_primary_selector_is_m_n9"]["passed"])
+        self.assertFalse(names["mmwave_primary_selector_is_b23"]["passed"])
         self.assertFalse(names["mmwave_historical_b_not_active"]["passed"])
         self.assertTrue(names["mmwave_historical_b_not_active"]["required"])
         with patch("hil.preflight._mmwave_selector_contract_checks", return_value=checks):
             document = offline_preflight_document(ROOT)
         self.assertFalse(document["ok"])
 
-    def test_device_validation_overclaim_fails_even_when_m_n9_identity_is_correct(self) -> None:
-        manifest = json.loads((ROOT / "sources" / "ondevice_ai" / "models" / "model_manifest.json").read_text(encoding="utf-8"))
+    def test_device_validation_overclaim_fails_even_when_b23_identity_is_correct(self) -> None:
+        manifest = json.loads(MODEL_MANIFEST.read_text(encoding="utf-8"))
         fixture = dict(manifest["models"]["mmwave"])
         fixture["DEVICE_VALIDATED"] = True
         fixture["PI_SMOKE"] = "PASS"
         fixture["hardware_validation"] = "PASS"
         checks = _mmwave_selector_contract_checks(fixture)
         names = {item["name"]: item for item in checks}
-        self.assertTrue(names["mmwave_primary_selector_is_m_n9"]["passed"])
+        self.assertTrue(names["mmwave_primary_selector_is_b23"]["passed"])
         self.assertFalse(names["mmwave_device_validation_not_overclaimed"]["passed"])
         self.assertTrue(names["mmwave_device_validation_not_overclaimed"]["required"])
         with patch("hil.preflight._mmwave_selector_contract_checks", return_value=checks):

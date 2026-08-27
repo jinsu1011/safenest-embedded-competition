@@ -89,80 +89,63 @@
       "not_active_reason": "THREE_FEATURE_CONTRACT_REQUIRES_HUMIDITY_WHICH_IS_FORBIDDEN_BY_C_B6"
     },
     "mmwave": {
-      "model_id": "MMWAVE_M_N9_FULL_INT8_V1",
-      "version": "m_n9_full_int8_v1",
-      "status": "mac_integration_candidate",
+      "model_id": "M-PV2_FAMILY_B_TRACE_TCN_BREATHING_RR_QUALITY",
+      "panel_id": "B23",
+      "family": "family_b",
+      "seed": 23,
+      "version": "m_prot_b23_pytorch_float32_v1",
+      "status": "prototype_integration_freeze",
       "artifact_status": "CONFIRMED",
-      "validation_status": "MAC_ISOLATED_SMOKE_ONLY",
+      "validation_status": "TEST_REPO_PREDEPLOYMENT_COMPLETE_TEAM_PORT_UNVERIFIED_ON_PI",
       "deployment_allowed": true,
-      "deployment_scope": "MAC_INTEGRATION_CANDIDATE",
+      "deployment_scope": "PROTOTYPE_INTEGRATION_ONLY",
       "hardware_validation": "NOT_PERFORMED",
       "DEVICE_VALIDATED": false,
       "PI_SMOKE": "NOT_PERFORMED",
       "PRESENCE_GATE_REQUIRED": true,
       "runtime_adapter_compatible": true,
-      "runtime_role": "ACTIVE_M_N9",
+      "runtime_role": "ACTIVE_B23_PROTOTYPE",
       "active_runtime_selector": true,
       "HISTORICAL_B_NOT_ACTIVE": true,
-      "role": "respiration_anomaly_classification",
-      "framework": "TensorFlow Lite",
-      "quantization": "full_int8",
-      "path": "models/mmwave/m_n9/MMWAVE_M_N9_FULL_INT8_V1.tflite",
-      "lock_path": "config/mmwave/m_n9_full_int8_artifact_lock.json",
-      "input_contract_path": "config/mmwave/m_n4_canonical_input_dataset_contract.json",
-      "size_bytes": 11816,
-      "sha256": "3b008af4be0facc4037c2afd3fe39292fb794208eb4370dbe6916b2d15aa38a4",
-      "source_ai_sha": "390f3be3d75987a79a0e0438ba8a9d5e9e19dc97",
-      "lineage_float_sha256": "9de3818c0f4854f8512c9d390d290938b6e562d590e0775cb1dab885cc72e2ab",
-      "M_N8_STATUS": "SKIPPED_NOT_JUSTIFIED",
+      "HISTORICAL_M_N9_NOT_ACTIVE": true,
+      "role": "breathing_rr_quality_prototype",
+      "framework": "PyTorch",
+      "quantization": "float32_state_dict",
+      "representation": "PYTORCH_FLOAT32_STATE_DICT",
+      "path": "models/mmwave/m_prot_b23/candidate_seed_23.pt",
+      "scaler_path": "models/mmwave/m_prot_b23/scaler_statistics.json",
+      "scaler_content_sha256": "5a2583b5b5064be5480b0cf56f2a2c12d40a4a2d005eb087dc8e12106881159c",
+      "parameter_sha256": "6db949c242e25888dd20c3fc8e2305af03448aa229e3ca73e4159216a266d78e",
+      "size_bytes": 76473,
+      "sha256": "8f7de6f50d6ff62ff9b0ebfaed0b1fccd8d194c7e33781bc5b93366fae251a2c",
+      "source_repo": "https://github.com/sheepmeat/test.git",
+      "source_sha": "809b78626b442f146eccd73595f239b93de3ae2e",
+      "source_phase": "M-PROT-5A COMPLETE",
       "input": {
-        "name": "serving_default_canonical_r2:0",
         "shape": [
           1,
-          240,
-          1
+          621
         ],
-        "dtype": "int8",
-        "scale": 0.5623255372047424,
-        "zero_point": 4,
-        "sample_rate_hz": 8,
+        "dtype": "float32",
+        "sample_rate_hz": 10,
         "window_seconds": 30,
-        "semantic": "canonical_window_local_mad_r2",
-        "quantization_formula": "q = clip(round(x / scale + zero_point), -128, 127)"
+        "r1_samples": 300,
+        "semantic": "family_b_trace_mask_scale_quality",
+        "r1_owns_resampling": true
       },
       "output": {
-        "name": "StatefulPartitionedCall_1:0",
-        "shape": [
-          1,
-          3
-        ],
-        "dtype": "int8",
-        "scale": 0.00390625,
-        "zero_point": -128,
-        "semantic": "softmax_probabilities",
-        "dequantization_formula": "x_float = (q - zero_point) * scale"
+        "semantic": "breathing_rr_quality",
+        "heads": [
+          "breathing",
+          "rr",
+          "quality"
+        ]
       },
-      "class_map": {
-        "0": "NORMAL",
-        "1": "RAPID_OR_ABNORMAL",
-        "2": "APNEA-proxy"
-      },
-      "class_semantics": {
-        "NORMAL": "SafeNest rest-condition proxy, not a clinical diagnosis",
-        "RAPID_OR_ABNORMAL": "SafeNest rapid/abnormal proxy",
-        "APNEA": "SafeNest APNEA proxy, not clinical apnea"
-      },
-      "validation": {
-        "artifact_imported": true,
-        "sha256_verified": true,
-        "tensor_contract_verified": true,
-        "local_runtime_smoke_test": true,
-        "raspberry_pi_5_benchmark": false,
-        "real_sensor_csv_validation": false,
-        "MAC_ISOLATED_LOAD": "PASS",
-        "MAC_ISOLATED_INVOKE": "PASS",
-        "MAC_ARTIFACT_SHA_MATCH": "PASS"
-      }
+      "notes": [
+        "PROTOTYPE_INTEGRATION_ONLY / NOT_FINAL_SELECTED_MODEL / SUBJECT_TO_REPLACEMENT",
+        "No M-N9 fallback. No TFLite/INT8 conversion. PI_TORCH_NOT_LIVE_VERIFIED.",
+        "Risk contribution deferred; B23 does not map onto NORMAL/RAPID/APNEA-proxy."
+      ]
     },
     "mmwave_v0_1_0": {
       "model_id": "mmwave_resp_int8",
@@ -406,6 +389,83 @@
         "Artifact physically resides in the rp_x0_b_complete overlay; only this CO2 entry is promoted. The mmWave M-B3 entry stays HISTORICAL_B_NOT_ACTIVE.",
         "Scaler fitted on public TRAIN only; SCD40 domain alignment remains phase C-C."
       ]
+    },
+    "mmwave_m_n9": {
+      "model_id": "MMWAVE_M_N9_FULL_INT8_V1",
+      "version": "m_n9_full_int8_v1",
+      "status": "mac_integration_candidate",
+      "artifact_status": "CONFIRMED",
+      "validation_status": "MAC_ISOLATED_SMOKE_ONLY",
+      "deployment_allowed": false,
+      "deployment_scope": "MAC_INTEGRATION_CANDIDATE",
+      "hardware_validation": "NOT_PERFORMED",
+      "DEVICE_VALIDATED": false,
+      "PI_SMOKE": "NOT_PERFORMED",
+      "PRESENCE_GATE_REQUIRED": true,
+      "runtime_adapter_compatible": true,
+      "runtime_role": "LEGACY_M_N9_NONACTIVE",
+      "active_runtime_selector": false,
+      "HISTORICAL_B_NOT_ACTIVE": true,
+      "role": "respiration_anomaly_classification",
+      "framework": "TensorFlow Lite",
+      "quantization": "full_int8",
+      "path": "models/mmwave/m_n9/MMWAVE_M_N9_FULL_INT8_V1.tflite",
+      "lock_path": "config/mmwave/m_n9_full_int8_artifact_lock.json",
+      "input_contract_path": "config/mmwave/m_n4_canonical_input_dataset_contract.json",
+      "size_bytes": 11816,
+      "sha256": "3b008af4be0facc4037c2afd3fe39292fb794208eb4370dbe6916b2d15aa38a4",
+      "source_ai_sha": "390f3be3d75987a79a0e0438ba8a9d5e9e19dc97",
+      "lineage_float_sha256": "9de3818c0f4854f8512c9d390d290938b6e562d590e0775cb1dab885cc72e2ab",
+      "M_N8_STATUS": "SKIPPED_NOT_JUSTIFIED",
+      "input": {
+        "name": "serving_default_canonical_r2:0",
+        "shape": [
+          1,
+          240,
+          1
+        ],
+        "dtype": "int8",
+        "scale": 0.5623255372047424,
+        "zero_point": 4,
+        "sample_rate_hz": 8,
+        "window_seconds": 30,
+        "semantic": "canonical_window_local_mad_r2",
+        "quantization_formula": "q = clip(round(x / scale + zero_point), -128, 127)"
+      },
+      "output": {
+        "name": "StatefulPartitionedCall_1:0",
+        "shape": [
+          1,
+          3
+        ],
+        "dtype": "int8",
+        "scale": 0.00390625,
+        "zero_point": -128,
+        "semantic": "softmax_probabilities",
+        "dequantization_formula": "x_float = (q - zero_point) * scale"
+      },
+      "class_map": {
+        "0": "NORMAL",
+        "1": "RAPID_OR_ABNORMAL",
+        "2": "APNEA-proxy"
+      },
+      "class_semantics": {
+        "NORMAL": "SafeNest rest-condition proxy, not a clinical diagnosis",
+        "RAPID_OR_ABNORMAL": "SafeNest rapid/abnormal proxy",
+        "APNEA": "SafeNest APNEA proxy, not clinical apnea"
+      },
+      "validation": {
+        "artifact_imported": true,
+        "sha256_verified": true,
+        "tensor_contract_verified": true,
+        "local_runtime_smoke_test": true,
+        "raspberry_pi_5_benchmark": false,
+        "real_sensor_csv_validation": false,
+        "MAC_ISOLATED_LOAD": "PASS",
+        "MAC_ISOLATED_INVOKE": "PASS",
+        "MAC_ARTIFACT_SHA_MATCH": "PASS"
+      },
+      "block_reason": "SUPERSEDED_BY_B23_PROTOTYPE_M_PROT_5B"
     }
   }
 }

@@ -21,7 +21,7 @@
 ## 구현 파일
 
 - `gateway/protocol.py`: header, telemetry, thermal, sequence의 strict decoder
-- `gateway/receiver.py`: 연결 종료·malformed packet 후에도 accept를 계속하는 TCP server
+- `gateway/receiver.py`: 연결 종료·malformed packet 후에도 accept를 계속하는 TCP server. 새 inbound 연결은 stalled 세션을 즉시 preempt 한다 (`listen(16)`).
 - `gateway/run_receiver.py`: Raspberry Pi 실행 entry point
 - `tests/test_gateway_protocol.py`: fragmentation, timeout, malformed, sequence, reconnect 테스트
 
@@ -37,6 +37,7 @@
 8. JSON의 NaN/Inf, value/valid 불일치, header/JSON sequence 불일치를 거부한다.
 9. Thermal dimensions, exact payload length, header/meta sequence, pixel min/max를 검증한다.
 10. consumer callback 실패는 framing을 훼손하지 않으며 receiver는 계속 작동한다.
+11. 한 번에 ESP 스트림 하나만 처리한다. 새 TCP 연결이 오면 기존 소켓을 닫고 워커를 교체한다. stalled 세션이 packet deadline(기본 5초) 동안 다음 accept를 막지 못하게 한다.
 
 CRC가 없으므로 min/max 검증만으로 모든 bit corruption을 찾을 수는 없다. Protocol v1 sender와의 호환성을
 깨지 않기 위해 PHASE 3에서 CRC를 임의로 추가하지 않았다. CRC 도입은 protocol v2 변경으로 관리해야 한다.

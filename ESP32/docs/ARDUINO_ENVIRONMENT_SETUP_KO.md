@@ -139,7 +139,7 @@ constexpr uint16_t RPI_PORT = 9000;
 주의 사항:
 
 - ESP32는 이 구성에서 2.4 GHz Wi-Fi를 사용합니다.
-- `RPI_HOST`에는 `localhost`가 아니라 ESP32에서 접근할 수 있는 Raspberry Pi의 LAN IPv4 주소를 넣습니다.
+- `RPI_HOST`에는 `localhost`가 아니라 ESP32에서 접근할 수 있는 Raspberry Pi의 LAN IPv4 주소를 넣습니다. 이 값은 **Pi 목적지**이지 ESP32 자신의 DHCP 주소가 아닙니다.
 - `RPI_PORT`는 Raspberry Pi 수신 서버의 TCP 포트 `9000`과 같아야 합니다.
 - 열화상 UDP 포트 `5005`는 현재 `.ino`의 `THERMAL_UDP_PORT`에 정의되어 있습니다.
 - 실제 `secrets.h`를 메신저, 문서 또는 Git으로 공유하지 마십시오. 다른 사용자는 예제 파일에서 자신의 값을 만들어야 합니다.
@@ -207,7 +207,7 @@ Raspberry Pi 쪽에서도 TCP `9000`과 UDP `5005`가 수신 대기 중이어야
 
 ## 8. 선택 사항: Arduino CLI로 동일 환경 만들기
 
-다음 명령은 Arduino CLI가 설치되어 있고 터미널에서 `arduino-cli`를 실행할 수 있다는 전제입니다.
+다음 명령은 Arduino CLI가 설치되어 있고 터미널에서 `arduino-cli`를 실행할 수 있다는 전제입니다. 2026-08-28 Mac 필드에서는 Arduino IDE 없이 이 절차로 컴파일·업로드·시리얼까지 확인했습니다. 상세 인수인계: [`docs/reports/20260828_Pi_ESP_Field_Handoff_KO.md`](../../docs/reports/20260828_Pi_ESP_Field_Handoff_KO.md).
 
 ```bash
 arduino-cli config init
@@ -215,7 +215,14 @@ arduino-cli config add board_manager.additional_urls https://espressif.github.io
 arduino-cli core update-index
 arduino-cli core install esp32:esp32
 arduino-cli lib install "Sensirion I2C SCD4x"
-arduino-cli lib install "Seeed Arduino mmWave"
+```
+
+`Seeed Arduino mmWave`는 Arduino Library Manager에 없습니다. 24 GHz radar / mmWaveKit 유사 패키지를 설치하지 말고, 공식 저장소에서 받습니다.
+
+```bash
+arduino-cli lib install --git-url https://github.com/Seeed-Projects/Seeed-mmWave-library.git
+arduino-cli lib install "Adafruit NeoPixel"
+arduino-cli lib install "hp_BH1750"
 ```
 
 컴파일:
@@ -224,13 +231,23 @@ arduino-cli lib install "Seeed Arduino mmWave"
 arduino-cli compile --fqbn esp32:esp32:esp32 ESP32/Arduino/esp32_sensor_node
 ```
 
-업로드 예시:
+업로드 예시. 이 보드에서는 기본 `921600`이 실패하고 **`UploadSpeed=115200`** 이 성공했습니다.
 
 ```bash
-arduino-cli upload --fqbn esp32:esp32:esp32 --port COM5 ESP32/Arduino/esp32_sensor_node
+# Windows
+arduino-cli upload --fqbn esp32:esp32:esp32:UploadSpeed=115200 --port COM5 ESP32/Arduino/esp32_sensor_node
+
+# macOS 예 (포트는 board list로 확인)
+arduino-cli upload --fqbn esp32:esp32:esp32:UploadSpeed=115200 --port /dev/cu.usbserial-110 ESP32/Arduino/esp32_sensor_node
 ```
 
-macOS/Linux에서는 `COM5` 대신 실제 포트(예: `/dev/cu.usbserial-...`, `/dev/ttyUSB0`)를 넣습니다. 포트는 다음 명령으로 확인할 수 있습니다.
+시리얼 모니터. 기본 DTR/RTS는 ESP32를 리셋하므로 끕니다.
+
+```bash
+arduino-cli monitor --port /dev/cu.usbserial-110 --config baudrate=115200,dtr=off,rts=off
+```
+
+포트는 다음 명령으로 확인할 수 있습니다.
 
 ```bash
 arduino-cli board list
@@ -248,22 +265,22 @@ arduino-cli lib list
 
 권장 기록표:
 
-| 구성 요소 | 프로젝트 요구 조건 | 팀 검증 버전 기입란 |
+| 구성 요소 | 프로젝트 요구 조건 | 팀 검증 버전 (2026-08-28 Mac) |
 |---|---|---|
-| Arduino IDE 또는 CLI | IDE 2.x 또는 호환 CLI | `____________` |
-| ESP32 by Espressif Systems | 안정 버전, `ESP32 Dev Module` 지원 | `____________` |
-| Sensirion I2C SCD4x | `1.0.0` 이상 | `____________` |
-| Sensirion Core | SCD4x가 요구하는 버전 | `____________` |
-| Seeed Arduino mmWave | 안정 계열 `1.0.0` | `____________` |
-| Adafruit NeoPixel | Seeed 라이브러리가 요구하는 버전 | `____________` |
-| hp_BH1750 | Seeed 라이브러리가 요구하는 버전 | `____________` |
+| Arduino IDE 또는 CLI | IDE 2.x 또는 호환 CLI | `arduino-cli` 1.5.1 (Homebrew) |
+| ESP32 by Espressif Systems | 안정 버전, `ESP32 Dev Module` 지원 | `esp32:esp32` 3.3.11 |
+| Sensirion I2C SCD4x | `1.0.0` 이상 | 1.1.0 |
+| Sensirion Core | SCD4x가 요구하는 버전 | 0.7.3 |
+| Seeed Arduino mmWave | 안정 계열 `1.0.0`, Library Manager 아님 | GitHub `Seeed-Projects/Seeed-mmWave-library` 1.0.0 |
+| Adafruit NeoPixel | Seeed 라이브러리가 요구하는 버전 | 1.15.5 |
+| hp_BH1750 | Seeed 라이브러리가 요구하는 버전 | 1.0.2 |
 
 버전을 고정한 CLI 설치 예시는 다음 형식입니다.
 
 ```bash
-arduino-cli core install esp32:esp32@<검증한_버전>
-arduino-cli lib install "Sensirion I2C SCD4x@<검증한_버전>"
-arduino-cli lib install "Seeed Arduino mmWave@1.0.0"
+arduino-cli core install esp32:esp32@3.3.11
+arduino-cli lib install "Sensirion I2C SCD4x@1.1.0"
+arduino-cli lib install --git-url https://github.com/Seeed-Projects/Seeed-mmWave-library.git
 ```
 
 ## 10. 자주 발생하는 오류
@@ -271,14 +288,15 @@ arduino-cli lib install "Seeed Arduino mmWave@1.0.0"
 | 오류/증상 | 원인 | 해결 방법 |
 |---|---|---|
 | `SensirionI2cScd4x.h: No such file or directory` | SCD4x 라이브러리가 없거나 구형 라이브러리 설치 | `Sensirion I2C SCD4x` 1.0.0 이상과 `Sensirion Core` 설치 |
-| `Seeed_Arduino_mmWave.h: No such file or directory` | 다른 24 GHz radar 라이브러리를 설치했거나 라이브러리 누락 | 정확히 `Seeed Arduino mmWave` 설치 |
+| `Seeed_Arduino_mmWave.h: No such file or directory` | Library Manager 패키지가 아니거나 24 GHz radar를 설치함 | 공식 GitHub `Seeed-Projects/Seeed-mmWave-library` 1.0.0 설치 |
 | `secrets.h: No such file or directory` | 개인 설정 파일 미생성 | 4절의 명령으로 예제 파일을 복사 |
 | `SCD41_I2C_ADDR_62` 또는 `getDataReadyStatus` 관련 오류 | Sensirion 구형 API 사용 | 구형 SCD4x 라이브러리를 제거하고 1.0.0 이상 설치 |
 | 여러 라이브러리가 발견되었다는 메시지 | 이름이 비슷한 구형/복제 라이브러리가 함께 설치됨 | Arduino libraries 폴더에서 중복을 제거하고 정확한 제공자 버전만 유지 |
 | 포트가 보이지 않음 | USB 케이블 또는 USB-UART 드라이버 문제 | 데이터 케이블, CP210x/CH340 드라이버, 다른 USB 포트 확인 |
-| 업로드 중 연결 실패 | 자동 부트 진입 실패 또는 포트 점유 | Serial Monitor를 닫고 재시도, 필요하면 `BOOT` 버튼 사용 |
+| 업로드 중 연결 실패 | 자동 부트 진입 실패, 포트 점유, 또는 업로드 속도 | Serial Monitor를 닫고 `UploadSpeed=115200`으로 재시도, 필요하면 `BOOT` 버튼 사용 |
 | Wi-Fi 연결 실패 | 5 GHz 전용 SSID, 잘못된 비밀번호 | 2.4 GHz SSID와 `secrets.h` 재확인 |
-| `wifi=up`인데 Pi에 데이터가 없음 | Pi IP/포트/방화벽 또는 수신 서버 문제 | `RPI_HOST`, TCP 9000, UDP 5005, Pi 실행 상태와 방화벽 확인 |
+| `wifi=up`인데 Pi에 데이터가 없음 | Pi IP/포트/방화벽, 수신 서버, 또는 TCP stall | `RPI_HOST`가 **Pi IP**인지, TCP 9000·UDP 5005, Pi 실행 상태 확인. 시리얼 CO₂는 로컬 I²C라서 Pi LIVE 증거가 아님 |
+| `[network] connecting`만 반복 | ESP `connect(..., 1500)` 실패 또는 세션이 페이로드 도중 끊김 | Pi `:9000` listen, 필드 모니터 Δ, `Raspberry Pi connected` 유지 여부. 상세는 2026-08-28 인수인계 |
 | 센서 값만 비어 있음 | 배선, 전원, RX/TX 방향 또는 센서 펌웨어 문제 | 5절 배선과 공통 GND 확인; MR60BHA2는 필요 시 공식 안내에 따라 펌웨어 확인 |
 
 ## 11. 다른 사람에게 전달할 때 체크리스트

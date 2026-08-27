@@ -173,6 +173,7 @@ class MN9PipelineRuntimeTests(unittest.TestCase):
         self.assertAlmostEqual(packet.breath_phase, -0.136825)
         self.assertEqual(packet.ts_monotonic_ms, 3718.0)
         self.assertEqual(packet.phase_age_ms, 12.0)
+        self.assertEqual(packet.mmwave_sequence, 42)
         self.assertIsNone(packet.human_detected_raw)
         manager = SensorStateManager()
         manager.ingest(packet, ("127.0.0.1", 5000), received_at=100.0, monotonic_at=10.0)

@@ -41,6 +41,10 @@ class OnDeviceAIPipeline:
         >=150 s of measurement-event history. Feeding either from ``evaluate``
         would sample the stream once per publication interval (15 s by default),
         which can never satisfy those contracts.
+
+        Nested ``mmwave.seq`` is the physical phase-event identity. Outer
+        packet sequence is publication identity only. Same nested seq across
+        100 ms snapshots is not a new B23 sample.
         """
 
         self._mmwave_b23.observe_packet(packet)

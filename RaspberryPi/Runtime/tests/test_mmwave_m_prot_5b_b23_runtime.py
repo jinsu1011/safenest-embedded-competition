@@ -6,6 +6,7 @@ Goes through OnDeviceAIPipeline. No Raspberry Pi, no MR60, no live hardware.
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import shutil
 import tempfile
@@ -13,6 +14,7 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
+from ai.mmwave_b23_bridge import bundle_from_packet, observation_timestamp_s
 from ai.mmwave_b23_runtime import B23TeamRuntime, MODEL_ID
 from ai.mmwave_prototype.mmwave_m_prot_2_b23_runtime import (
     CANONICAL_PARAMETER_SHA256,
@@ -24,7 +26,7 @@ from ai.mmwave_prototype.mmwave_m_prot_2_b23_runtime import (
 )
 from ai.pipeline import OnDeviceAIPipeline
 from ai.runtime import LazyModel, ModelRuntimeUnavailable
-from gateway.protocol import PacketHeader, TelemetryPayload
+from gateway.protocol import PACKET_TELEMETRY_JSON, PacketHeader, TelemetryPayload, decode_telemetry
 from paths import ONDEVICE_AI_ROOT
 from state.manager import SensorStateManager
 
@@ -64,18 +66,22 @@ def telemetry(
     ts_monotonic_ms=None,
     phase_age_ms: float = 3.0,
     seq=None,
+    publication_seq=None,
     device_id: str = "mprot5b-fixture",
     valid_respiration: bool = True,
+    boot_id: str = "boot-a",
+    breath_rate_raw: float | None = None,
 ) -> TelemetryPayload:
     dt_ms = 1000.0 / rate
     event_ms = float(index) * dt_ms
-    ts = event_ms + phase_age_ms if ts_monotonic_ms is None else float(ts_monotonic_ms)
-    t_s = (ts - phase_age_ms) / 1000.0
+    ts = event_ms if ts_monotonic_ms is None else float(ts_monotonic_ms)
+    t_s = ts / 1000.0
     if phase is None:
         phase = math.sin(2 * math.pi * 0.25 * t_s)
-    sequence = index + 1 if seq is None else seq
+    nested = index + 1 if seq is None else seq
+    outer = index + 1 if publication_seq is None else publication_seq
     return TelemetryPayload(
-        header=PacketHeader(1, sequence, 8),
+        header=PacketHeader(1, outer, 8),
         device_id=device_id,
         uptime_ms=int(ts) + 10,
         respiration_rate_bpm=16.0,
@@ -83,12 +89,14 @@ def telemetry(
         co2_ppm=800.0,
         pir_motion=False,
         valid={"respiration": valid_respiration, "heart": True, "co2": True},
-        boot_id="boot-a",
+        boot_id=boot_id,
         breath_phase=phase,
         ts_monotonic_ms=ts,
         phase_age_ms=phase_age_ms,
         human_detected_raw=presence,
         session_id=session,
+        mmwave_sequence=nested,
+        breath_rate_raw=breath_rate_raw,
     )
 
 
@@ -221,17 +229,23 @@ class B23PipelinePathTests(unittest.TestCase):
 
     def test_timestamp_regression_fail_closed(self) -> None:
         self._feed(telemetry(5, rate=10.0), 5, rate=10.0)
-        self._feed(telemetry(1, rate=10.0, seq=6), 6, rate=10.0)
+        self._feed(telemetry(1, rate=10.0, seq=7, publication_seq=7), 6, rate=10.0)
         result = self._evaluate()
         self.assertFalse(result["available"])
         self._assert_not_mn9(result)
 
-    def test_sequence_gap_fail_closed(self) -> None:
-        self._feed(telemetry(0, seq=1), 0)
-        self._feed(telemetry(1, seq=5), 1)
+    def test_nested_seq_jump_is_diagnostic_not_runtime_failure(self) -> None:
+        self._feed(telemetry(0, seq=101, publication_seq=500), 0)
+        self._feed(telemetry(1, seq=103, publication_seq=501), 1)
         result = self._evaluate()
-        self.assertFalse(result["available"])
         self._assert_not_mn9(result)
+        self.assertEqual(self.pipeline._mmwave_b23.buffered_count, 2)
+        monitor = result["metadata"]["live_phase_seq_monitor"]
+        self.assertEqual(monitor["previous_nested_phase_seq"], 101)
+        self.assertEqual(monitor["current_nested_phase_seq"], 103)
+        self.assertEqual(monitor["delta"], 2)
+        self.assertEqual(monitor["missing_phase_event_count"], 1)
+        self.assertEqual(result["metadata"]["live_phase_seq_jump_monitor"], "PREPARED_FOR_M_PROT_5C")
 
     def test_large_timestamp_gap_does_not_bridge(self) -> None:
         self._feed(telemetry(0, rate=10.0), 0, rate=10.0)
@@ -242,13 +256,14 @@ class B23PipelinePathTests(unittest.TestCase):
         self.assertFalse(result["available"])
         self._assert_not_mn9(result)
 
-    def test_session_transition_does_not_bridge(self) -> None:
+    def test_boot_id_change_does_not_bridge(self) -> None:
         for i in range(50):
-            self._feed(telemetry(i, session="A"), i)
+            self._feed(telemetry(i, boot_id="boot-a"), i)
         for i in range(50, 80):
-            self._feed(telemetry(i, session="B"), i)
+            self._feed(telemetry(i, boot_id="boot-b"), i)
         result = self._evaluate()
         self.assertFalse(result["available"])
+        self.assertLess(self.pipeline._mmwave_b23.buffered_count, 50)
         self._assert_not_mn9(result)
 
     def test_presence_unavailable(self) -> None:
@@ -358,6 +373,174 @@ class B23IdentityTests(unittest.TestCase):
             result = pipeline.evaluate(manager.snapshot(now=now, monotonic_now=now))["ai"]["mmwave"]
             self.assertFalse(result["available"])
             self.assertNotEqual(result["state"], "PHYSIOLOGY_ELIGIBLE")
+
+
+class ESPProducerContractTests(unittest.TestCase):
+    """Independent ESP mmWave audit contract for the M-PROT-5B B23 path."""
+
+    def test_a_physical_timestamp_used_directly(self) -> None:
+        packet = telemetry(0, ts_monotonic_ms=10_000.0, phase_age_ms=80.0, seq=101, publication_seq=500)
+        sample = bundle_from_packet(packet).samples[0]
+        self.assertEqual(sample.t, 10.0)
+        self.assertEqual(observation_timestamp_s(10_000, 80), 10.0)
+
+    def test_b_phase_age_is_not_double_subtracted(self) -> None:
+        packet = telemetry(0, ts_monotonic_ms=10_000.0, phase_age_ms=80.0, seq=101, publication_seq=500)
+        sample = bundle_from_packet(packet).samples[0]
+        self.assertEqual(sample.t, 10.000)
+        self.assertNotEqual(sample.t, 9.920)
+        reconstructed = (10_000.0 - 80.0) / 1000.0
+        self.assertEqual(reconstructed, 9.92)
+        self.assertNotEqual(sample.t, reconstructed)
+
+    def test_c_nested_mmwave_seq_is_parsed(self) -> None:
+        body = json.dumps(
+            {
+                "schema": "safenest.telemetry.v1",
+                "device_id": "esp32-01",
+                "seq": 11,
+                "uptime_ms": 3730,
+                "resp_rate_bpm": 19.0,
+                "heart_rate_bpm": 62.0,
+                "co2_ppm": 800.0,
+                "pir_motion": False,
+                "valid": {"respiration": True, "heart": True, "co2": True},
+                "mmwave": {
+                    "breath_phase": -0.136825,
+                    "phase_age_ms": 12,
+                    "ts_monotonic_ms": 3718,
+                    "seq": 42,
+                    "breath_rate_raw": 7.0,
+                },
+            }
+        ).encode("utf-8")
+        packet = decode_telemetry(PacketHeader(PACKET_TELEMETRY_JSON, 11, len(body)), body)
+        self.assertEqual(packet.mmwave_sequence, 42)
+        self.assertEqual(packet.breath_rate_raw, 7.0)
+
+    def test_d_outer_seq_and_nested_seq_remain_distinct(self) -> None:
+        body = json.dumps(
+            {
+                "schema": "safenest.telemetry.v1",
+                "device_id": "esp32-01",
+                "seq": 11,
+                "uptime_ms": 3730,
+                "resp_rate_bpm": 19.0,
+                "heart_rate_bpm": 62.0,
+                "co2_ppm": 800.0,
+                "pir_motion": False,
+                "valid": {"respiration": True, "heart": True, "co2": True},
+                "mmwave": {
+                    "breath_phase": 0.1,
+                    "phase_age_ms": 12,
+                    "ts_monotonic_ms": 3718,
+                    "seq": 42,
+                },
+            }
+        ).encode("utf-8")
+        packet = decode_telemetry(PacketHeader(PACKET_TELEMETRY_JSON, 11, len(body)), body)
+        self.assertEqual(packet.header.sequence, 11)
+        self.assertEqual(packet.mmwave_sequence, 42)
+        self.assertNotEqual(packet.header.sequence, packet.mmwave_sequence)
+        sample = bundle_from_packet(packet).samples[0]
+        self.assertEqual(sample.seq, 42)
+        self.assertNotEqual(sample.seq, packet.header.sequence)
+
+        legacy = json.dumps(
+            {
+                "schema": "safenest.telemetry.v1",
+                "device_id": "esp32-01",
+                "seq": 9,
+                "uptime_ms": 100,
+                "resp_rate_bpm": 16.0,
+                "heart_rate_bpm": 62.0,
+                "co2_ppm": 800.0,
+                "pir_motion": False,
+                "valid": {"respiration": True, "heart": True, "co2": True},
+            }
+        ).encode("utf-8")
+        no_nested = decode_telemetry(PacketHeader(PACKET_TELEMETRY_JSON, 9, len(legacy)), legacy)
+        self.assertEqual(no_nested.header.sequence, 9)
+        self.assertIsNone(no_nested.mmwave_sequence)
+
+    def test_e_same_nested_seq_across_publications_is_deduplicated(self) -> None:
+        runtime = B23TeamRuntime()
+        runtime.observe_packet(
+            telemetry(0, seq=101, publication_seq=500, ts_monotonic_ms=10_000.0, phase=0.1)
+        )
+        runtime.observe_packet(
+            telemetry(0, seq=101, publication_seq=501, ts_monotonic_ms=10_000.0, phase=0.1)
+        )
+        self.assertEqual(runtime.buffered_count, 1)
+        self.assertEqual(runtime.phase_seq_monitor["republish_skip_count"], 1)
+
+    def test_f_nested_seq_advance_creates_one_new_source_sample(self) -> None:
+        runtime = B23TeamRuntime()
+        runtime.observe_packet(
+            telemetry(0, seq=101, publication_seq=500, ts_monotonic_ms=10_000.0, phase=0.1)
+        )
+        runtime.observe_packet(
+            telemetry(0, seq=101, publication_seq=501, ts_monotonic_ms=10_000.0, phase=0.1)
+        )
+        runtime.observe_packet(
+            telemetry(1, seq=102, publication_seq=502, ts_monotonic_ms=10_100.0, phase=0.2)
+        )
+        self.assertEqual(runtime.buffered_count, 2)
+        self.assertEqual(runtime.phase_seq_monitor["current_nested_phase_seq"], 102)
+        self.assertEqual(runtime.phase_seq_monitor["previous_nested_phase_seq"], 101)
+        self.assertEqual(runtime.phase_seq_monitor["delta"], 1)
+        self.assertEqual(runtime.phase_seq_monitor["missing_phase_event_count"], 0)
+
+    def test_g_boot_id_change_flushes_causal_state(self) -> None:
+        runtime = B23TeamRuntime()
+        for i in range(40):
+            runtime.observe_packet(telemetry(i, boot_id="boot-a"))
+        self.assertEqual(runtime.buffered_count, 40)
+        runtime.observe_packet(telemetry(40, boot_id="boot-b"))
+        self.assertEqual(runtime.buffered_count, 1)
+        sessions = {sample.session_id for sample in runtime._runtime.composer._buf}
+        self.assertEqual(sessions, {"boot:boot-b"})
+
+    def test_h_presence_null_remains_unavailable(self) -> None:
+        manager = SensorStateManager()
+        pipeline = OnDeviceAIPipeline(manager, {"mmwave": CountingMN9()})
+        n = ready_count(10.0)
+        now = 10_000.0
+        for i in range(n):
+            now = feed(pipeline, manager, telemetry(i, presence=None), i)
+        result = pipeline.evaluate(manager.snapshot(now=now, monotonic_now=now))["ai"]["mmwave"]
+        self.assertFalse(result["available"])
+        if result["metadata"].get("window_ready"):
+            self.assertEqual(result["state"], "PRESENCE_UNAVAILABLE")
+        self.assertNotEqual(result["state"], "APNEA")
+        self.assertNotEqual(result["state"], "NORMAL")
+
+    def test_i_breath_rate_raw_is_not_model_input(self) -> None:
+        left = B23TeamRuntime()
+        right = B23TeamRuntime()
+        for i in range(8):
+            left.observe_packet(telemetry(i, breath_rate_raw=7.0))
+            right.observe_packet(telemetry(i, breath_rate_raw=99.0))
+        left_phases = [sample.phase for sample in left._runtime.composer._buf]
+        right_phases = [sample.phase for sample in right._runtime.composer._buf]
+        self.assertEqual(left_phases, right_phases)
+        packet = telemetry(0, breath_rate_raw=18.5, seq=1)
+        sample = bundle_from_packet(packet).samples[0]
+        self.assertIsNone(sample.scalar_rr)
+        self.assertEqual(packet.breath_rate_raw, 18.5)
+
+    def test_j_old_mn4_ts_age_is_not_used_by_active_b23_path(self) -> None:
+        bridge = Path(__file__).resolve().parents[1] / "ai" / "mmwave_b23_bridge.py"
+        runtime = Path(__file__).resolve().parents[1] / "ai" / "mmwave_b23_runtime.py"
+        canonical = Path(__file__).resolve().parents[1] / "ai" / "mmwave_canonical_runtime.py"
+        bridge_text = bridge.read_text(encoding="utf-8")
+        runtime_text = runtime.read_text(encoding="utf-8")
+        canonical_text = canonical.read_text(encoding="utf-8")
+        self.assertNotIn("ts_monotonic_ms) - float(phase_age_ms)", bridge_text)
+        self.assertNotIn("float(ts_monotonic_ms) - float(phase_age_ms)", bridge_text)
+        self.assertNotIn("ts_ms) - float(age_ms)", runtime_text)
+        self.assertIn("update_ms = float(ts_ms) - float(age_ms)", canonical_text)
+        self.assertEqual(observation_timestamp_s(10_000, 80), 10.0)
 
 
 if __name__ == "__main__":

@@ -199,10 +199,29 @@ class ProtocolDecodeTests(unittest.TestCase):
         )
         packet = decode_from_socket(wire_packet(PACKET_TELEMETRY_JSON, 11, payload))
         self.assertEqual(packet.header.sequence, 11)
+        self.assertEqual(packet.mmwave_sequence, 42)
+        self.assertNotEqual(packet.header.sequence, packet.mmwave_sequence)
         self.assertAlmostEqual(packet.breath_phase, -0.136825)
         self.assertEqual(packet.ts_monotonic_ms, 3718.0)
         self.assertEqual(packet.phase_age_ms, 12.0)
+        self.assertEqual(packet.breath_rate_raw, 7.0)
         self.assertIsNone(packet.human_detected_raw)
+
+    def test_outer_json_seq_is_not_promoted_as_mmwave_sequence(self) -> None:
+        payload = telemetry_payload(9)
+        packet = decode_from_socket(wire_packet(PACKET_TELEMETRY_JSON, 9, payload))
+        self.assertEqual(packet.header.sequence, 9)
+        self.assertIsNone(packet.mmwave_sequence)
+
+    def test_explicit_mmwave_sequence_field_wins_over_nested_seq(self) -> None:
+        payload = telemetry_payload(
+            13,
+            mmwave_sequence=99,
+            mmwave={"breath_phase": 0.2, "ts_monotonic_ms": 1000, "phase_age_ms": 4, "seq": 1},
+        )
+        packet = decode_from_socket(wire_packet(PACKET_TELEMETRY_JSON, 13, payload))
+        self.assertEqual(packet.header.sequence, 13)
+        self.assertEqual(packet.mmwave_sequence, 99)
 
     def test_top_level_phase_fields_win_over_nested_mmwave(self) -> None:
         payload = telemetry_payload(

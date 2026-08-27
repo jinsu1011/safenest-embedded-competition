@@ -71,13 +71,19 @@ class TelemetryPayload:
     pir_event_id: int | None = None
     pir_last_transition_monotonic_ms: int | None = None
     health: dict[str, int] | None = None
-    # Optional M-N4/M-N9 evidence.  These are additive to TCP v1: legacy
-    # packets remain decodable, but cannot be treated as canonical AI input.
+    # Optional mmWave evidence. Additive to TCP v1: legacy packets remain
+    # decodable, but cannot be treated as canonical AI input without these.
+    # ts_monotonic_ms is the physical 0x0A13 observation time (ESP millis()).
+    # phase_age_ms is freshness metadata only — not subtracted from that time.
+    # mmwave_sequence is nested mmwave.seq (phase-event identity), distinct
+    # from header.sequence (telemetry publication identity).
     breath_phase: float | None = None
     ts_monotonic_ms: float | None = None
     phase_age_ms: float | None = None
     human_detected_raw: bool | None = None
     session_id: str | None = None
+    mmwave_sequence: int | None = None
+    breath_rate_raw: float | None = None
 
 
 @dataclass(frozen=True)
@@ -240,8 +246,9 @@ def decode_telemetry(header: PacketHeader, payload: bytes) -> TelemetryPayload:
     )
     health = _optional_health(decoded.get("health"))
     nested_mmwave = _optional_mmwave_object(decoded.get("mmwave"))
-    # Live ESP packets nest the M-N4 phase trio under `mmwave`. Top-level
+    # Live ESP packets nest the phase observation under `mmwave`. Top-level
     # keys win when both are present so v1 fixtures stay authoritative.
+    # Nested `mmwave.seq` is NOT the outer JSON `seq` (publication identity).
     breath_phase = _promoted_optional_finite(decoded, nested_mmwave, "breath_phase")
     ts_monotonic_ms = _promoted_optional_finite(decoded, nested_mmwave, "ts_monotonic_ms")
     phase_age_ms = _promoted_optional_finite(decoded, nested_mmwave, "phase_age_ms")
@@ -249,6 +256,8 @@ def decode_telemetry(header: PacketHeader, payload: bytes) -> TelemetryPayload:
         decoded, nested_mmwave, "human_detected_raw"
     )
     session_id = _promoted_optional_identifier(decoded, nested_mmwave, "session_id")
+    mmwave_sequence = _optional_mmwave_sequence(decoded, nested_mmwave)
+    breath_rate_raw = _promoted_optional_finite(decoded, nested_mmwave, "breath_rate_raw")
 
     return TelemetryPayload(
         header=header,
@@ -271,6 +280,8 @@ def decode_telemetry(header: PacketHeader, payload: bytes) -> TelemetryPayload:
         phase_age_ms=phase_age_ms,
         human_detected_raw=human_detected_raw,
         session_id=session_id,
+        mmwave_sequence=mmwave_sequence,
+        breath_rate_raw=breath_rate_raw,
     )
 
 
@@ -365,6 +376,30 @@ def _optional_mmwave_object(value: object) -> dict[str, object] | None:
     if not isinstance(value, dict):
         raise ProtocolError("mmwave must be an object when present")
     return value
+
+
+def _optional_mmwave_sequence(
+    decoded: dict[str, object],
+    nested: dict[str, object] | None,
+) -> int | None:
+    """Parse physical phase-event sequence.
+
+    Accepts explicit payload field ``mmwave_sequence`` or nested ``mmwave.seq``.
+    Never reads outer JSON ``seq`` — that is the publication packet identity
+    already validated against the binary header.
+    """
+
+    if "mmwave_sequence" in decoded:
+        value = decoded["mmwave_sequence"]
+        if value is None:
+            return None
+        return _u32(value, "mmwave_sequence")
+    if nested is not None and "seq" in nested:
+        value = nested["seq"]
+        if value is None:
+            return None
+        return _u32(value, "mmwave.seq")
+    return None
 
 
 def _promoted_optional_finite(

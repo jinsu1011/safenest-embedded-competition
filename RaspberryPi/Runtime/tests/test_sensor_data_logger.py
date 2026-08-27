@@ -116,6 +116,8 @@ class SensorDataLoggerTests(unittest.TestCase):
             self.assertEqual(saved["breath_phase"], 1.25)
             self.assertEqual(saved["ts_monotonic_ms"], 12_500)
             self.assertEqual(saved["phase_age_ms"], 4.0)
+            self.assertIsNone(saved["mmwave_sequence"])
+            self.assertEqual(saved["publication_sequence"], 1)
             self.assertTrue(saved["human_detected_raw"])
             self.assertEqual(saved["boot_id"], "boot-a")
             self.assertEqual(saved["session_id"], "session-a")

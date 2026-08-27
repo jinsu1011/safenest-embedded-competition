@@ -3,8 +3,19 @@
 Does not invent UART decoding. Maps existing SafeNest TCP v1 / snapshot
 fields onto frozen SW-01 Sample semantics.
 
-Required: phase-like waveform + monotonic source timestamp.
-Vendor scalar RR is never used as a B23 model input.
+Current ESP producer (do not modify ESP firmware in M-PROT-5B):
+
+  mmwave.breath_phase     = real MR60 0x0A13 breath-phase observation
+  mmwave.seq              = physical phase-event sequence
+  outer packet seq        = telemetry publication identity (~10 Hz)
+  mmwave.ts_monotonic_ms  = ESP millis() when the physical observation is consumed
+  mmwave.phase_age_ms     = send time minus that physical timestamp (freshness only)
+  boot_id                 = ESP boot/reset boundary
+  human_detected_raw      = tri-state presence (true / false / null)
+  breath_rate_raw         = vendor diagnostic scalar; never B23 model input
+
+Sample.t = ts_monotonic_ms / 1000.0 directly. Do not subtract phase_age_ms.
+Sample.seq = nested mmwave.seq, never the outer publication sequence.
 """
 
 from __future__ import annotations
@@ -19,6 +30,10 @@ INTERFACE_IDENTITY = "safenest.telemetry.v1"
 CONFIGURATION_IDENTITY = "mr60_tcp_v1_phase_waveform"
 OBSERVATION_KIND = "near_raw_phase"
 
+# Freshness bound for the ESP 100 ms latest-only publisher of an ~8.4–10 Hz
+# 0x0A13 stream. Used only to admit/reject; never to reconstruct event time.
+PHASE_AGE_MAX_MS = 1000.0
+
 
 def _finite(value: object) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))
@@ -30,29 +45,66 @@ def _int_or_none(value: object) -> int | None:
     return int(value)
 
 
-def observation_timestamp_s(ts_monotonic_ms: object, phase_age_ms: object) -> float | None:
-    """Source event time = ts_monotonic_ms - phase_age_ms, in seconds.
+def physical_timestamp_s(ts_monotonic_ms: object) -> float | None:
+    """B23 source time: ESP physical observation timestamp, in seconds."""
 
-    Packet receive time is not used when source timing is present.
+    if not _finite(ts_monotonic_ms):
+        return None
+    return float(ts_monotonic_ms) / 1000.0
+
+
+def observation_timestamp_s(ts_monotonic_ms: object, phase_age_ms: object = None) -> float | None:
+    """B23 Sample.t.
+
+    ``phase_age_ms`` is accepted for call-site compatibility with the legacy
+    M-N4 two-argument form. It is **not** subtracted. The current ESP already
+    stores the physical observation time in ``ts_monotonic_ms``.
     """
 
-    if not (_finite(ts_monotonic_ms) and _finite(phase_age_ms)):
-        return None
-    return (float(ts_monotonic_ms) - float(phase_age_ms)) / 1000.0
+    return physical_timestamp_s(ts_monotonic_ms)
+
+
+def phase_age_is_fresh(phase_age_ms: object, *, max_age_ms: float = PHASE_AGE_MAX_MS) -> bool:
+    """True when phase_age_ms can be used as freshness evidence."""
+
+    if not _finite(phase_age_ms):
+        return False
+    age = float(phase_age_ms)
+    return 0.0 <= age <= float(max_age_ms)
+
+
+def mprot3_session_id(*, boot_id: object, packet_session_id: object = None) -> str | None:
+    """Map ESP boot epoch onto the M-PROT-3 session/reset boundary.
+
+    ``boot_id`` is the hard source identity. M-PROT-3 ``session_id`` becomes
+    ``boot:{boot_id}`` when boot_id is present. A separate ESP ``session_id``
+    is not an independent sensor history: it is used only when boot_id is
+    absent (offline fixtures).
+    """
+
+    if isinstance(boot_id, str) and boot_id:
+        return f"boot:{boot_id}"
+    if isinstance(packet_session_id, str) and packet_session_id:
+        return packet_session_id
+    return None
 
 
 def bundle_from_sensor(
     sensor: Mapping[str, object],
     *,
     device_identity: str | None = None,
+    reset_flag: bool = False,
 ) -> StreamBundle:
     values = sensor.get("values") if isinstance(sensor.get("values"), Mapping) else {}
     if not isinstance(values, Mapping):
         values = {}
     phase = values.get("breath_phase")
-    t = observation_timestamp_s(values.get("ts_monotonic_ms"), values.get("phase_age_ms"))
-    seq = _int_or_none(sensor.get("sequence"))
-    session = values.get("session_id")
+    t = physical_timestamp_s(values.get("ts_monotonic_ms"))
+    seq = _int_or_none(values.get("mmwave_sequence"))
+    session = mprot3_session_id(
+        boot_id=sensor.get("boot_id"),
+        packet_session_id=values.get("session_id"),
+    )
     health_ok = True
     if values.get("respiration_valid") is False:
         health_ok = False
@@ -62,8 +114,8 @@ def bundle_from_sensor(
         phase=float(phase) if _finite(phase) else None,
         seq=seq,
         health_ok=health_ok,
-        session_id=session if isinstance(session, str) and session else None,
-        reset_flag=False,
+        session_id=session,
+        reset_flag=reset_flag,
         scalar_rr=None,
     )
     return StreamBundle(
@@ -75,18 +127,21 @@ def bundle_from_sensor(
     )
 
 
-def bundle_from_packet(packet: TelemetryPayload) -> StreamBundle:
-    t = observation_timestamp_s(packet.ts_monotonic_ms, packet.phase_age_ms)
+def bundle_from_packet(packet: TelemetryPayload, *, reset_flag: bool = False) -> StreamBundle:
+    t = physical_timestamp_s(packet.ts_monotonic_ms)
     health_ok = True
     if isinstance(packet.valid, dict) and packet.valid.get("respiration") is False:
         health_ok = False
     sample = Sample(
         t=t,
         phase=float(packet.breath_phase) if _finite(packet.breath_phase) else None,
-        seq=int(packet.header.sequence),
+        seq=_int_or_none(packet.mmwave_sequence),
         health_ok=health_ok,
-        session_id=packet.session_id if packet.session_id else None,
-        reset_flag=False,
+        session_id=mprot3_session_id(
+            boot_id=packet.boot_id,
+            packet_session_id=packet.session_id,
+        ),
+        reset_flag=reset_flag,
         scalar_rr=None,
     )
     return StreamBundle(
@@ -102,7 +157,8 @@ def presence_from_sensor(sensor: Mapping[str, object]) -> tuple[bool, bool]:
     """Return (presence_available, presence_gate_satisfied).
 
     Presence is taken only from the team explicit occupancy field.
-    It is never inferred from RR, breathing probability, quality, or amplitude.
+    null must not collapse to false. It is never inferred from RR,
+    breathing probability, quality, or amplitude.
     """
 
     values = sensor.get("values") if isinstance(sensor.get("values"), Mapping) else {}

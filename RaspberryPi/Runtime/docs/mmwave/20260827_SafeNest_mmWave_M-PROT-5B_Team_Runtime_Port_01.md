@@ -15,16 +15,40 @@ There is no B23→M-N9 fallback, no spectral physiology override, and no vendor-
 
 ## New active path
 
-Team TCP telemetry (`breath_phase`, `ts_monotonic_ms - phase_age_ms`, sequence, `session_id`, `human_detected_raw`)
-→ `ai/mmwave_b23_bridge.py` (SW-01 `StreamBundle`)
-→ M-PROT-3 causal composer
-→ R1 (owns resampling; exactly 300 @ 10 Hz)
+ESP nested telemetry
+→ parse `breath_phase`
+→ parse physical `ts_monotonic_ms / 1000` (**do not** subtract `phase_age_ms`)
+→ parse nested `mmwave.seq` as `mmwave_sequence`
+→ boot_id / tri-state presence
+→ SW-01 / M-PROT-3 `Sample` (`Sample.seq` = nested phase seq)
+→ R1 (exactly 300 @ 10 Hz)
 → R2 (621 features)
 → frozen B23 (`pytorch`)
 → existing `AIResult` / `/api` mmWave state
 
+Not used: ESP → legacy M-N4 `ts - phase_age` reconstruction → M-N9.
+
 Presence comes only from explicit occupancy (`human_detected_raw` / `presence` + `presence_available`).
-ABSENT ≠ APNEA. UNAVAILABLE ≠ NOT BREATHING. RR is not clamped.
+`null` stays unavailable; it is never converted to `false`. ABSENT ≠ APNEA.
+`breath_rate_raw` is diagnostic only and is never B23 model input.
+
+### ESP producer mapping (firmware unchanged)
+
+| ESP field | B23 / M-PROT-3 use |
+|---|---|
+| `mmwave.breath_phase` | `Sample.phase` |
+| `mmwave.ts_monotonic_ms` | `Sample.t = ts_monotonic_ms / 1000.0` (already physical) |
+| `mmwave.phase_age_ms` | freshness gate only (`0 ≤ age ≤ 1000 ms`); **not** subtracted |
+| `mmwave.seq` | `Sample.seq` / `mmwave_sequence` (physical phase-event identity) |
+| outer JSON / header `seq` | transport publication identity only |
+| `boot_id` | hard reset boundary; M-PROT-3 `session_id = boot:{boot_id}` |
+| packet `session_id` | provenance only when `boot_id` is present; not an independent history |
+| `human_detected_raw` | tri-state presence gate |
+| `breath_rate_raw` | logged/diagnostic; `Sample.scalar_rr` stays `None` |
+
+Republication of the same nested `mmwave.seq` across 100 ms snapshots does not create another waveform sample. A nested-seq jump `> 1` is recorded for M-PROT-5C (`previous`, `current`, `delta`, `missing_phase_event_count`) and does not fail the whole runtime unless SW-01 max-gap requires it.
+
+ESP firmware is **not** modified in M-PROT-5B.
 
 ## Risk semantic
 
@@ -71,3 +95,22 @@ When B23 is unavailable, the existing vendor-RR **risk rule_fallback** still app
 
 Install/verify PyTorch on the Pi, pull this branch, run live MR60 smoke.
 Do not start M-PROT-5C from this report.
+
+Live runtime should expose nested phase-seq jump diagnostics already prepared here:
+previous nested phase seq, current nested phase seq, delta, detected missing phase-event count.
+Do not redesign ESP firmware in 5C solely for latest-only 100 ms publication.
+
+## ESP producer contract (M-PROT-5B update)
+
+```
+ESP_FIRMWARE_CHANGED: NO
+PHYSICAL_TIMESTAMP_SEMANTIC: ts_monotonic_ms is physical observation timestamp
+PHASE_AGE_USAGE: FRESHNESS_ONLY
+DOUBLE_AGE_SUBTRACTION: FIXED / NOT_PRESENT_IN_NEW_B23_PATH
+NESTED_MMWAVE_SEQ_PARSED: YES
+B23_SOURCE_SEQUENCE: NESTED_MMWAVE_SEQ
+OUTER_SEQUENCE_ROLE: TRANSPORT_PUBLICATION_ONLY
+REPUBLISH_DEDUPLICATION: PASS
+BOOT_ID_BOUNDARY: PASS
+LIVE_PHASE_SEQ_JUMP_MONITOR: PREPARED_FOR_M_PROT_5C
+```

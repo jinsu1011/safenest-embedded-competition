@@ -18,6 +18,11 @@ Semantics:
   PROTOTYPE_INTEGRATION_ONLY / NOT_FINAL_SELECTED_MODEL / SUBJECT_TO_REPLACEMENT
   PROVISIONAL_INTEGRATION_FREEZE = true
   No M-N9 fallback. No UART protocol invention.
+
+Team ESP adaptation (not a B23 math change): nested mmwave.seq jumps > 1 are
+diagnostic evidence of producer/transport sample loss. Cross-bundle
+continuation is governed by timestamp max-gap, not by failing the whole
+runtime on a single skipped phase event.
 """
 
 from __future__ import annotations
@@ -420,8 +425,14 @@ class MProt3IntegrationRuntime:
         if dt > self.composer.max_gap_s:
             return False
         if first.seq is not None and self._boundary.last_seq is not None:
-            if int(first.seq) != int(self._boundary.last_seq) + 1:
+            delta = int(first.seq) - int(self._boundary.last_seq)
+            if delta <= 0:
+                # Duplicate or regression. ESP republication of the same
+                # nested phase seq must be filtered before ingest.
                 return False
+            # delta > 1: nested phase-event loss. That is diagnostic evidence
+            # for M-PROT-5C, not an automatic whole-runtime failure. Timestamp
+            # max-gap (SW-01) still governs whether the stream continues.
         return True
 
     def _set_boundary_from_sample(self, sample: Sample) -> None:

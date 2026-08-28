@@ -51,14 +51,22 @@ class Stage7OfflinePreflightTests(unittest.TestCase):
         self.assertTrue(names["udp_default_port_5005"]["passed"])
         self.assertTrue(names["http_default_port_8000"]["passed"])
 
-    def test_artifact_selection_does_not_silently_activate_tb5_or_old_b(self) -> None:
+    def test_artifact_selection_activates_public_sdt_and_not_old_b(self) -> None:
         names = {item["name"]: item for item in self.document["checks"]}
-        self.assertTrue(names["thermal_production_path_is_historical_v0_1_0"]["passed"])
+        self.assertTrue(names["thermal_active_selector_is_public_sdt_fp32"]["passed"])
+        self.assertTrue(
+            names["thermal_proxy_risk_is_bounded_without_emergency_authority"]["passed"]
+        )
+        self.assertTrue(names["thermal_legacy_int8_is_nonactive"]["passed"])
         self.assertNotIn("mmwave_primary_deployment_blocked", names)
         self.assertTrue(names["mmwave_primary_selector_is_b23"]["passed"])
         self.assertTrue(names["mmwave_historical_b_not_active"]["passed"])
         self.assertTrue(names["mmwave_device_validation_not_overclaimed"]["passed"])
         self.assertTrue(names["model_thermal_sha256"]["passed"])
+        thermal = names["thermal_active_selector_is_public_sdt_fp32"]["observed"]
+        self.assertEqual(thermal["selector_key"], "thermal_public_sdt_fp32_active")
+        self.assertEqual(thermal["artifact_release"], "FINAL_RUNTIME_MODEL")
+        self.assertEqual(thermal["class_2"], "HUMAN_FALL_PROXY")
         self.assertTrue(names["model_mmwave_sha256"]["passed"])
         observed = names["mmwave_primary_selector_is_b23"]["observed"]
         self.assertEqual(observed["model_id"], "M-PV2_FAMILY_B_TRACE_TCN_BREATHING_RR_QUALITY")
@@ -138,7 +146,7 @@ class Stage7OfflinePreflightTests(unittest.TestCase):
     def test_status_contract_and_partial_availability_are_preserved(self) -> None:
         names = {item["name"]: item for item in self.document["checks"]}
         self.assertTrue(names["ready_with_limitations_preserved"]["passed"])
-        self.assertTrue(names["thermal_ai_blocked_reason_preserved"]["passed"])
+        self.assertTrue(names["thermal_active_limited_risk_status_preserved"]["passed"])
         self.assertTrue(names["pir_not_applicable_preserved"]["passed"])
         publication = {
             "timestamp": 1.0,

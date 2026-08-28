@@ -2,25 +2,28 @@
 
 models:
   thermal:
-    model_id: "thermal_fall_int8"
-    version: "0.1.0"
-    path: "models/thermal/thermal_fall_int8_v0.1.0.tflite"
+    model_id: "thermal_public_sdt_pooled_mlp_fp32_tflite_v1"
+    version: "b6r_p2_fp32_v1"
+    path: "models/thermal/public_sdt/public_sdt_pooled_mlp_fp32_tflite_v1.tflite"
+    metadata_path: "models/thermal/public_sdt/public_sdt_pooled_mlp_fp32_tflite_v1.metadata.json"
     framework: "tflite"
-    quantization: "int8"
+    quantization: "none_fp32"
+    runtime_role: "ACTIVE_THERMAL_PUBLIC_SDT_SOFTWARE_ONLY"
+    active_runtime_selector: true
+    artifact_release: "FINAL_RUNTIME_MODEL"
+    safety_authority: false
+    risk_authority: "LIMITED_POSTURE_PROXY"
+    proxy_risk_score: 0.4
     input:
       shape: [1, 62, 80, 1]
-      dtype: "int8"
-      scale: 0.003921568859368563
-      zero_point: -128
+      dtype: "float32"
     output:
       shape: [1, 3]
-      dtype: "int8"
-      scale: 0.00390625
-      zero_point: -128
+      dtype: "float32"
     class_map:
       0: "NOT_HUMAN"
       1: "HUMAN_NORMAL"
-      2: "HUMAN_FALL"
+      2: "HUMAN_FALL_PROXY"
 
   mmwave:
     model_id: "MMWAVE_M_N9_FULL_INT8_V1"

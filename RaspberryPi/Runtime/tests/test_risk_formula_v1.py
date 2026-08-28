@@ -151,6 +151,59 @@ class DecisivenessGateTests(unittest.TestCase):
 
 
 class EscalationFloorTests(unittest.TestCase):
+    def test_final_thermal_proxy_affects_risk_but_never_emergency(self):
+        engine = SafeNestRiskFormulaV1()
+        state, ai = scene(
+            thermal=sensor(),
+            thermal_ai=ai_entry(
+                state="HUMAN_FALL_PROXY",
+                confidence=0.95,
+                probabilities=(0.01, 0.04, 0.95),
+                extra={
+                    "safety_authority": False,
+                    "risk_authority": "LIMITED_POSTURE_PROXY",
+                    "model_selector": "thermal_public_sdt_fp32_active",
+                },
+            ),
+            co2=sensor(values={"ppm": 500.0}),
+            pir=sensor(values={"motion": True}),
+        )
+        result = engine.evaluate(state, ai)
+        self.assertEqual(result.components["thermal"]["score"], 0.4)
+        self.assertGreater(result.risk_score, 0.0)
+        self.assertFalse(result.is_emergency)
+        self.assertNotEqual(result.risk_level, "DANGER")
+        self.assertIn("THERMAL_FALL_PROXY_LIMITED_RISK_NO_EMERGENCY", result.reasons)
+
+    def test_unscoped_non_authoritative_thermal_model_remains_unavailable(self):
+        engine = SafeNestRiskFormulaV1()
+        state, ai = scene(
+            thermal=sensor(),
+            thermal_ai=ai_entry(
+                state="HUMAN_FALL_PROXY",
+                confidence=0.95,
+                probabilities=(0.01, 0.04, 0.95),
+                extra={"safety_authority": False},
+            ),
+        )
+        result = engine.evaluate(state, ai)
+        self.assertEqual(result.component_status["thermal"], "UNAVAILABLE")
+        self.assertIn("THERMAL_MODEL_SAFETY_AUTHORITY_UNVERIFIED", result.reasons)
+
+    def test_proxy_without_explicit_limited_authority_is_unavailable(self):
+        engine = SafeNestRiskFormulaV1()
+        state, ai = scene(
+            thermal=sensor(),
+            thermal_ai=ai_entry(
+                state="HUMAN_FALL_PROXY",
+                confidence=0.95,
+                probabilities=(0.01, 0.04, 0.95),
+            ),
+        )
+        result = engine.evaluate(state, ai)
+        self.assertEqual(result.component_status["thermal"], "UNAVAILABLE")
+        self.assertIn("THERMAL_PROXY_RISK_AUTHORITY_MISSING", result.reasons)
+
     def test_confident_thermal_fall_is_an_emergency_regardless_of_calm_peers(self):
         engine = SafeNestRiskFormulaV1()
         state, ai = scene(

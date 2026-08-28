@@ -191,17 +191,17 @@ SMS·부저를 쓰려면 저장소 루트에 `.env`를 만듭니다. 템플릿�
 
 ## AI 모델 상태
 
-**중요: 이 저장소의 어떤 모델도 실기기에서 검증되지 않았습니다.** 통합 과정에서 모델을 자동 승격하지 않았습니다.
+**중요: 이 저장소의 어떤 모델도 실기기에서 검증되지 않았습니다.** Thermal 모델은 최종 runtime artifact로 활성화했지만, 이는 Pi/실센서/실제 낙상 검증 완료를 뜻하지 않습니다.
 
 | 센서 | 런타임 모델 | 상태 |
 | --- | --- | --- |
-| Thermal | `thermal_fall_int8_v0.1.0` | candidate, `CONFIRMED_SYNTHETIC_ONLY` |
+| Thermal | `public_sdt_pooled_mlp_fp32_tflite_v1` | **활성 최종 runtime 모델**. `HUMAN_FALL_PROXY`는 위험 점수 0.4로 제한 반영하며 긴급 override는 금지 |
 | CO₂ | `co2_occupancy_int8_v0.1.0` | candidate, `CONFIRMED_SYNTHETIC_ONLY` |
 | mmWave | `mmwave_resp_int8_v0.1.0` | **배포 차단** (`deployment_allowed: false`, `CLASS_COLLAPSE_ON_REPOSITORY_NPZ`) |
 | mmWave v0.2.0 | `mmwave_resp_int8_v0.2.0_candidate` | candidate, `SYNTHETIC_SMOKE_ONLY`, 하드웨어 검증 `BLOCKED_HARDWARE` — 런타임 기본값으로 승격하지 않음 |
 | PIR | 없음 | AI 모델 없음. Rule 전용 센서 |
 
-용어를 구분합니다: 새 모델 파일 ≠ 검증된 모델, offline candidate ≠ 런타임 기본값, 런타임 기본값 ≠ 실기기 검증 완료.
+용어를 구분합니다: 최종 runtime artifact ≠ 실기기 검증 완료, `HUMAN_FALL_PROXY` ≠ 실제 낙상 이벤트, 제한 위험 반영 ≠ 긴급 호출 권한.
 
 권위 있는 상태는 [`RaspberryPi/Ondevice_AI/models/model_manifest.json`](RaspberryPi/Ondevice_AI/models/model_manifest.json)입니다.
 

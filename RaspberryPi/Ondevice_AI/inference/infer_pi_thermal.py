@@ -54,7 +54,14 @@ class PiThermalRunner:
 
         try:
             pred: ThermalPrediction = self.interpreter.predict(frame_80x62)
-            score = 1.0 if pred.class_index == 2 else 0.0
+            model_meta = self.interpreter.model_meta
+            score = (
+                1.0
+                if pred.class_name == "HUMAN_FALL"
+                else float(model_meta.get("proxy_risk_score", 0.4))
+                if pred.class_name == "HUMAN_FALL_PROXY"
+                else 0.0
+            )
             total_lat = (time.perf_counter() - t0) * 1000.0
 
             return InferenceResult(
@@ -65,14 +72,18 @@ class PiThermalRunner:
                 confidence=pred.confidence,
                 valid=True,
                 latency_ms=total_lat,
-                error=pred.fallback_reason,
+                error=getattr(pred, "fallback_reason", None),
                 metadata={
                     "model_id": pred.model_id,
                     "model_version": pred.model_version,
                     "class_index": pred.class_index,
                     "probabilities": pred.probabilities,
                     "infer_latency_ms": pred.latency_ms,
-                    "fallback_used": pred.fallback_used
+                    "fallback_used": bool(getattr(pred, "fallback_used", False)),
+                    "model_selector": self.interpreter.model_selector,
+                    "safety_authority": model_meta.get("safety_authority", True),
+                    "risk_authority": model_meta.get("risk_authority"),
+                    "risk_contribution": model_meta.get("risk_contribution")
                 }
             )
         except Exception as exc:
@@ -105,11 +116,19 @@ class ThermalRealtimeRunner:
 
     def process_frame(self, frame_80x62: np.ndarray, timestamp_s: float | None = None) -> ThermalEvent:
         pred = self.interpreter.predict(frame_80x62) if hasattr(self.interpreter, "predict") else None
-        s4 = 1.0 if (pred and pred.class_index == 2) else 0.0
-        weighted_score = 15.0 if s4 == 1.0 else 0.0
-        risk_score = 100.0 if s4 == 1.0 else 0.0
-        level = "DANGER" if s4 == 1.0 else "NORMAL"
-        emergency_override = (s4 == 1.0)
+        model_meta = getattr(self.interpreter, "model_meta", {})
+        class_name = getattr(pred, "class_name", None)
+        s4 = (
+            1.0
+            if class_name == "HUMAN_FALL"
+            else float(model_meta.get("proxy_risk_score", 0.4))
+            if class_name == "HUMAN_FALL_PROXY"
+            else 0.0
+        )
+        weighted_score = 15.0 * s4
+        emergency_override = class_name == "HUMAN_FALL" and s4 == 1.0
+        risk_score = 100.0 if emergency_override else weighted_score
+        level = "DANGER" if emergency_override else "NORMAL"
 
         fusion_dict = {
             "sensor_scores": {"S4": s4},
@@ -120,7 +139,7 @@ class ThermalRealtimeRunner:
         }
 
         event = ThermalEvent(s4=s4, latency_target_met=True, fusion=fusion_dict)
-        if self.alarm_sink and s4 == 1.0:
+        if self.alarm_sink and emergency_override:
             self.alarm_sink(event)
 
         return event

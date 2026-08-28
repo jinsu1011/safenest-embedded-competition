@@ -31,7 +31,10 @@ class TestThermalInterpreter(unittest.TestCase):
         manifest_path = PROJECT_ROOT / "models/model_manifest.json"
         self.assertTrue(manifest_path.is_file())
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        model = manifest["models"]["thermal"]
+        selector = manifest["active_runtime_selectors"]["thermal"]
+        self.assertEqual(selector, "thermal_public_sdt_fp32_active")
+        self.assertEqual(self.runner.model_selector, selector)
+        model = manifest["models"][selector]
         model_path = PROJECT_ROOT / model["path"]
 
         actual_hash = hashlib.sha256(model_path.read_bytes()).hexdigest()
@@ -41,13 +44,13 @@ class TestThermalInterpreter(unittest.TestCase):
     def test_tensor_contract(self):
         self.assertEqual(self.runner.input_info["shape"].tolist(), [1, 62, 80, 1])
         self.assertEqual(self.runner.output_info["shape"].tolist(), [1, 3])
-        self.assertEqual(self.runner.input_info["dtype"], np.int8)
-        self.assertEqual(self.runner.output_info["dtype"], np.int8)
+        self.assertEqual(self.runner.input_info["dtype"], np.float32)
+        self.assertEqual(self.runner.output_info["dtype"], np.float32)
 
         input_scale, _ = self.runner.input_info["quantization"]
         output_scale, _ = self.runner.output_info["quantization"]
-        self.assertGreater(input_scale, 0)
-        self.assertGreater(output_scale, 0)
+        self.assertEqual(float(input_scale), 0.0)
+        self.assertEqual(float(output_scale), 0.0)
 
     def test_supported_shapes(self):
         for shape in [(62, 80), (62, 80, 1), (1, 62, 80, 1)]:

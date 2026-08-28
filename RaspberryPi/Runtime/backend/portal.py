@@ -217,7 +217,7 @@ def _values(state: Mapping[str, Any]) -> Mapping[str, Any]:
 def _presence(status: Mapping[str, Any], pir: Mapping[str, Any]) -> bool:
     thermal = status.get("thermal")
     ai = thermal.get("ai", {}) if isinstance(thermal, Mapping) and isinstance(thermal.get("ai"), Mapping) else {}
-    if ai.get("state") in {"HUMAN_NORMAL", "HUMAN_FALL"}:
+    if ai.get("state") in {"HUMAN_NORMAL", "HUMAN_FALL_PROXY", "HUMAN_FALL"}:
         return True
     mmwave = _sensor_state(status, "mmwave")
     presence = _values(mmwave).get("presence")

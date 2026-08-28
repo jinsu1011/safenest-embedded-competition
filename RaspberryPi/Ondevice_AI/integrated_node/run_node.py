@@ -47,16 +47,18 @@ def assert_model_deployable(
     mode: str,
 ) -> None:
     models = manifest.get("models", {})
-    if model_name not in models:
+    selectors = manifest.get("active_runtime_selectors", {})
+    selected_name = selectors.get(model_name, model_name)
+    if selected_name not in models:
         return
-    model = models[model_name]
+    model = models[selected_name]
     # `real` is the hardware-integration/fail-closed diagnostic mode. It must be
     # able to report missing or broken providers even while a model is blocked.
     # Only `production` asserts the release gate before startup.
     if mode == "production" and not model.get("deployment_allowed", False):
         reason = model.get("block_reason", "UNSPECIFIED")
         raise RuntimeError(
-            f"MODEL_RELEASE_BLOCKED: model={model_name}, reason={reason}"
+            f"MODEL_RELEASE_BLOCKED: model={selected_name}, reason={reason}"
         )
 
 

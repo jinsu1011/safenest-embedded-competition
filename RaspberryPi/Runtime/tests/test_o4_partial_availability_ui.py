@@ -50,7 +50,7 @@ def label_sensor_status(status: str | None) -> str:
 def label_ai_status(status: str | None, blocked_reason: str | None = None) -> str:
     if status == "ACTIVE":
         return AI_STATUS_LABELS["ACTIVE"]
-    if status == "BLOCKED" and blocked_reason == "INT8_QUANTIZATION_REVIEW_REQUIRED":
+    if status == "BLOCKED" and blocked_reason == "THERMAL_MODEL_RUNTIME_UNAVAILABLE":
         return "Validation pending"
     if status in AI_STATUS_LABELS:
         return AI_STATUS_LABELS[status]
@@ -107,7 +107,7 @@ class O4PresentationScenarioTests(unittest.TestCase):
         self.assertEqual(label_runtime_status(document["runtime_status"]["status"]), "Limited")
         self.assertIn("thermalSensor", DASHBOARD_HTML)
         self.assertIn("thermalAiStatus", DASHBOARD_HTML)
-        self.assertIn("Validation pending", DASHBOARD_JS)
+        self.assertIn("AI_STATUS_LABELS", DASHBOARD_JS)
         self.assertNotIn("Fall detector active", DASHBOARD_JS)
         self.assertNotIn("Sensor ERROR", DASHBOARD_HTML)
 

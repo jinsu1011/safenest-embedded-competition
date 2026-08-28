@@ -1,5 +1,5 @@
 {
-  "schema_version": "safenest.team.thermal.b6r_public_sdt_fp32_shadow.v1",
+  "schema_version": "safenest.team.thermal.b6r_public_sdt_fp32_active.v1",
   "model_id": "thermal_public_sdt_pooled_mlp_fp32_tflite_v1",
   "artifact_path": "models/thermal/public_sdt/public_sdt_pooled_mlp_fp32_tflite_v1.tflite",
   "artifact_sha256": "f88d65d76dbb21862e1f3cdff17cefb038a432047ded6ac8d5563bc8bc8c52ff",
@@ -13,6 +13,8 @@
   },
   "architecture_id": "PUBLIC_SDT_ADAPTIVE_POOL_MLP_V1",
   "parameter_count": 2691,
+  "artifact_release": "FINAL_RUNTIME_MODEL",
+  "model_lifecycle": "ACTIVE_FINAL",
   "framework": "TensorFlow Lite",
   "quantization": "NONE",
   "input": {
@@ -52,22 +54,25 @@
     "metrics_role": "DEVELOPMENT_DIAGNOSTIC_ONLY"
   },
   "deployment_boundary": {
-    "runtime_role": "SHADOW_ONLY_NONACTIVE",
-    "active_runtime_selector": false,
-    "default_activation": false,
-    "deployment_allowed": false,
+    "runtime_role": "ACTIVE_THERMAL_PUBLIC_SDT_SOFTWARE_ONLY",
+    "active_runtime_selector": true,
+    "default_activation": true,
+    "deployment_allowed": true,
     "safety_authority": false,
+    "risk_authority": "LIMITED_POSTURE_PROXY",
+    "risk_contribution": "LIMITED_NON_EMERGENCY",
+    "proxy_risk_score": 0.4,
     "real_fall_validation": false,
     "mi48_validation": false,
     "thermal90_validation": false,
     "raspberry_pi_validation": "BLOCKED_HARDWARE",
     "physical_validation": false,
-    "claim_boundary": "PUBLIC_DATA_SOFTWARE_ONLY_NON_GATING"
+    "claim_boundary": "PUBLIC_DATA_SOFTWARE_ONLY_ACTIVE_INFERENCE_LIMITED_RISK_NO_EMERGENCY"
   },
   "rollback": {
     "active_model_key": "thermal",
     "active_model_path": "models/thermal/thermal_fall_int8_v0.1.0.tflite",
     "active_model_sha256": "5b56da8d127ccef85f30b6459cc0cfe2d86490e41f3caa5bd2a7b70bbc46ae84",
-    "action": "Remove the non-active manifest entry and public_sdt files; no runtime selector rollback is required."
+    "action": "Point active_runtime_selectors.thermal and Runtime LazyModel back to models.thermal, then restore legacy deployment_allowed only for the rollback window."
   }
 }

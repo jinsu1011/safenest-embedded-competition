@@ -309,7 +309,7 @@ PRESENCE_GATE_REQUIRED = true
 1. `jinsu1011/safenest-embedded-competition`의 검토된 `main` commit을 checkout한다.
 2. Raspberry Pi에서 지원 Python(3.10+)과 `./run_safenest.sh --install`을 사용한다.
 3. `.env.example`을 참고해 필요한 env/config를 적용한다. 개발자 Mac 절대경로를 넣지 않는다. venv 기본은 `<repository>/.venv` (`SAFENEST_VENV_PATH`로 재정의).
-4. Thermal/CO2 production path는 역사적 v0.1.0을 유지한다. T-B5를 켜지 않는다. mmWave primary selector는 PR #22의 M-N9 FULL_INT8이며 옛 B live gate가 아니다. Stage 7 preflight는 그 M-N9 selector identity를 검사하며 `deployment_allowed=true`를 Pi/device validation으로 읽지 않는다. `STAGE7_PREFLIGHT_MMWAVE_SELECTOR_DRIFT = RESOLVED_IN_CODE`.
+4. Thermal production path는 `thermal_public_sdt_fp32_active`이며 기존 v0.1.0 INT8은 non-active legacy다. `HUMAN_FALL_PROXY`는 위험 점수 `0.4`로 제한 반영하고 emergency override에는 사용하지 않는다. Stage 7 preflight는 selector·artifact·risk boundary를 함께 검사한다. CO₂/mmWave의 별도 selector와 검증 경계는 manifest를 따른다.
 5. `./run_safenest.sh`로 runtime을 시작한다. 진입점은 `run_safenest.sh → RaspberryPi/Runtime/deployment/run_pi.sh → backend/run_backend.py`다.
 6. process가 살아 있는지 확인한다.
 7. 기대 포트: HTTP `:8000`, TCP `:9000`, UDP `:5005`.

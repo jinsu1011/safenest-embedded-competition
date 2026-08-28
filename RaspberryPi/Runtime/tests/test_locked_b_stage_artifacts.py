@@ -18,7 +18,7 @@ PRODUCTION_MANIFEST = ONDEVICE / "models" / "model_manifest.json"
 PROVISIONING_MANIFEST = ROOT / "hil" / "rp_x0_b_complete_provisioning_manifest.json"
 INVENTORY = B_COMPLETE / "artifact_inventory.json"
 
-PRODUCTION_MANIFEST_SHA256 = "9ce1b45c9522b2cdc6411c67b86fb9d995d555394adc63b089c47f274735aa6b"
+PRODUCTION_MANIFEST_SHA256 = "4d94a54a940666a6074d80296eaccce75d8f155c1d07faae79ec5e3acdf8eafb"
 
 CO2_ARTIFACT = B_COMPLETE / "co2" / "C_B6_REDUCED_CO2_SLOPE_CANDIDATE_001_full_integer_int8.tflite"
 THERMAL_ARTIFACT = B_COMPLETE / "thermal" / "SMALL_CNN_BASELINE_V1_P1_full_int8.tflite"
@@ -91,7 +91,7 @@ class LockedBStageArtifactTests(unittest.TestCase):
         active_co2 = manifest["models"]["co2_occupancy_c_b6"]
         self.assertEqual(active_co2["runtime_role"], "ACTIVE_C_B6")
         self.assertEqual(active_co2["model_id"], "C_B6_REDUCED_CO2_SLOPE_CANDIDATE_001")
-        self.assertEqual(active_co2["path"], str(CO2_ARTIFACT.relative_to(ONDEVICE)))
+        self.assertEqual(active_co2["path"], CO2_ARTIFACT.relative_to(ONDEVICE).as_posix())
         self.assertEqual(active_co2["input"]["feature_order"], ["CO2", "CO2_slope"])
         self.assertFalse(active_co2["input"]["humidity_included"])
         self.assertEqual(active_co2["risk_semantic"], "NONE")
@@ -116,7 +116,7 @@ class LockedBStageArtifactTests(unittest.TestCase):
         self.assertEqual(historical["path"], "models/mmwave/mmwave_resp_int8_v0.1.0.tflite")
         self.assertFalse(historical["deployment_allowed"])
         self.assertNotIn("rp_x0_b_complete", active["path"])
-        self.assertNotEqual(active["path"], str(MMWAVE_ARTIFACT.relative_to(ONDEVICE)))
+        self.assertNotEqual(active["path"], MMWAVE_ARTIFACT.relative_to(ONDEVICE).as_posix())
 
     def test_historical_v0_1_0_preserved(self) -> None:
         for sensor, path in HISTORICAL.items():
@@ -246,7 +246,9 @@ class LockedBStageArtifactTests(unittest.TestCase):
         )
         production = load_json(PRODUCTION_MANIFEST)["models"]["mmwave"]
         self.assertEqual(production["runtime_role"], "ACTIVE_B23_PROTOTYPE")
-        self.assertNotEqual(production["path"], str(MMWAVE_ARTIFACT.relative_to(ONDEVICE)))
+        self.assertNotEqual(
+            production["path"], MMWAVE_ARTIFACT.relative_to(ONDEVICE).as_posix()
+        )
         self.assertNotEqual(list(production["input"]["shape"]), [1, 300, 1])
 
         interpreter = make_interpreter(MMWAVE_ARTIFACT)
@@ -323,7 +325,7 @@ class LockedBStageArtifactTests(unittest.TestCase):
         )
         active = load_json(PRODUCTION_MANIFEST)["models"]["mmwave"]
         self.assertEqual(active["runtime_role"], "ACTIVE_B23_PROTOTYPE")
-        self.assertNotEqual(active["path"], str(MMWAVE_ARTIFACT.relative_to(ONDEVICE)))
+        self.assertNotEqual(active["path"], MMWAVE_ARTIFACT.relative_to(ONDEVICE).as_posix())
 
 
 if __name__ == "__main__":

@@ -35,6 +35,7 @@ const reasonLabels = {
   PRESENCE_FROM_THERMAL: "Thermal AI로 사람 존재를 교차 확인했습니다.",
   PRESENCE_FROM_MMWAVE: "mmWave로 사람 존재를 확인했습니다.",
   MMWAVE_THERMAL_MISMATCH: "mmWave와 Thermal의 사람 존재 판정이 일치하지 않습니다.",
+  THERMAL_FALL_PROXY_LIMITED_RISK_NO_EMERGENCY: "Thermal AI가 누운 자세 proxy를 감지해 위험도에 제한 반영했습니다. 실제 낙상 긴급 판정은 아닙니다.",
   ALL_RISK_COMPONENTS_UNAVAILABLE: "사용 가능한 위험도 입력이 없습니다.",
   ALL_SENSORS_FAULT_OR_MISSING: "모든 센서가 결측 또는 고장 상태입니다.",
 };

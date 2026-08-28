@@ -7,6 +7,7 @@ Examples (on Pi):
   python3 hil/pi_field_monitor.py
   python3 hil/pi_field_monitor.py --once
   python3 hil/pi_field_monitor.py --interval 3
+  python3 hil/pi_field_monitor.py --raw-labels
 
 Examples (from Mac):
   python3 hil/pi_field_monitor.py --base http://192.168.1.44:8000
@@ -25,6 +26,98 @@ from typing import Any
 
 
 SENSORS = ("mmwave", "thermal", "co2", "pir")
+
+# Short labels for the table. Full names live in PI_RUNBOOK.md §3-B.
+AI_STATE_SHORT = {
+    "PHYSIOLOGY_ELIGIBLE": "PHYS_OK",
+    "ABSENT": "ABSENT",
+    "QUALITY_SUPPRESSED": "Q_LOW",
+    "RR_UNAVAILABLE": "NO_RR",
+    "WINDOW_NOT_READY": "WARMUP",
+    "PRESENCE_UNAVAILABLE": "NO_OCC",
+    "PRESENCE_FALSE": "EMPTY",
+    "WINDOW_UNAVAILABLE": "NO_WIN",
+    "INPUT_UNAVAILABLE": "NO_IN",
+    "NORMAL": "NORMAL",
+    "RAPID_OR_ABNORMAL": "RAPID",
+    "APNEA": "APNEA",
+    "NOT_HUMAN": "NO_HUM",
+    "HUMAN_NORMAL": "HUMAN",
+    "HUMAN_FALL": "FALL",
+    "VACANT": "VACANT",
+    "OCCUPIED": "OCC",
+    "MOTION": "MOVE",
+    "NO_MOTION": "STILL",
+}
+
+ERR_SHORT = {
+    "WINDOW_NOT_READY": "WARMUP",
+    "PRESENCE_UNAVAILABLE": "NO_OCC",
+    "PRESENCE_FALSE": "EMPTY",
+    "R1_TIMESTAMP_GRID_INCONSISTENT": "R1_TIME",
+    "WINDOW_CONTAINS_LARGE_GAP": "GAP",
+    "SENSOR_NO_DATA": "NO_DATA",
+    "SENSOR_INVALID": "BAD",
+    "SENSOR_STALE": "STALE",
+    "SENSOR_DISCONNECTED": "DISC",
+    "QUALITY_SUPPRESSED": "Q_LOW",
+    "QUALITY_FAIL": "Q_LOW",
+    "UNAVAILABLE_INVALID_DECODE": "NO_RR",
+    "PHASE_MISSING": "NO_PH",
+    "PHASE_STALE": "OLD_PH",
+    "BOOT_BOUNDARY": "BOOT",
+    "TIMESTAMP_INVALID": "BAD_TS",
+    "PHASE_SEQUENCE_MISSING": "NO_SEQ",
+    "SOURCE_RATE_BELOW_TARGET": "SLOW",
+    "R1_SAMPLE_COUNT_MISMATCH": "R1_N",
+    "INT8_QUANTIZATION_REVIEW_REQUIRED": "INT8",
+    "CANONICAL_FRESHNESS_METADATA_MISSING": "NO_META",
+    "PRESENCE_STATE_UNAVAILABLE": "NO_OCC",
+    "THERMAL_FRAME_MISSING": "NO_FRM",
+    "INSUFFICIENT_CONTINUOUS_DURATION": "WARMUP",
+    "INPUT_WARMUP": "WARMUP",
+    "MODEL_RUNTIME_UNAVAILABLE": "NO_MDL",
+}
+
+RISK_SHORT = {
+    "RESPIRATION_NORMAL": "RR_OK",
+    "RESPIRATION_ABNORMAL": "RR_ABN",
+    "RESPIRATION_INPUT_UNAVAILABLE": "RR_NA",
+    "NOT_HUMAN": "NO_HUM",
+    "HUMAN_NORMAL": "HUMAN",
+    "HUMAN_FALL": "FALL",
+    "CO2_NORMAL": "CO2_OK",
+    "CO2_WARNING": "CO2_WN",
+    "CO2_DANGER": "CO2_DG",
+    "CO2_IMMEDIATE_DANGER": "CO2_NOW",
+    "MOTION": "MOVE",
+    "NO_MOTION": "STILL",
+    "NO_MOTION_RISING": "STILL+",
+    "LONG_NO_MOTION": "STILL++",
+    "UNAVAILABLE": "NA",
+    "RULE_FALLBACK": "RULE",
+    "NORMAL": "OK",
+    "WARNING": "WARN",
+    "DANGER": "DANGER",
+}
+
+STATUS_SHORT = {
+    "LIVE": "LIVE",
+    "NO_DATA": "NONE",
+    "STALE": "STALE",
+    "DISCONNECTED": "DISC",
+    "INVALID": "BAD",
+    "DEGRADED": "DEG",
+}
+
+
+def short_label(value: Any, mapping: dict[str, str], *, raw: bool) -> Any:
+    if value is None:
+        return None
+    text = str(value)
+    if raw:
+        return text
+    return mapping.get(text, text)
 
 
 def get_json(base: str, path: str, timeout: float) -> dict[str, Any]:
@@ -113,7 +206,47 @@ def snapshot(base: str, timeout: float) -> dict[str, Any]:
     return {"t": time.time(), "health": health, "status": status, "state": state}
 
 
-def render(curr: dict[str, Any], prev: dict[str, Any] | None, dt: float | None) -> str:
+def _tri(value: Any) -> str:
+    if value is True:
+        return "Y"
+    if value is False:
+        return "N"
+    return "?"
+
+
+def _mmwave_hint(vals: dict[str, Any], meta: dict[str, Any]) -> str:
+    bits: list[str] = []
+    bits.append(f"occ={_tri(vals.get('human_detected_raw'))}")
+    if "occupancy_latch" in meta:
+        bits.append(f"latch={_tri(meta.get('occupancy_latch'))}")
+    br = meta.get("breathing_probability")
+    if isinstance(br, (int, float)):
+        bits.append(f"br={br:.2f}")
+    rr = meta.get("rr_bpm")
+    if isinstance(rr, (int, float)):
+        bits.append(f"rr={rr:.0f}")
+    q = meta.get("quality_probability")
+    if isinstance(q, (int, float)):
+        bits.append(f"q={q:.2f}")
+    vrr = vals.get("breath_rate_raw")
+    if isinstance(vrr, (int, float)):
+        bits.append(f"vRR={vrr:.0f}")
+    r1 = meta.get("r1_sample_count")
+    if r1 is not None:
+        bits.append(f"r1={r1}")
+    src = meta.get("runtime") or ""
+    if src:
+        bits.append("B23" if "B23" in str(src) else str(src)[:6])
+    return ",".join(bits) if bits else "-"
+
+
+def render(
+    curr: dict[str, Any],
+    prev: dict[str, Any] | None,
+    dt: float | None,
+    *,
+    raw_labels: bool = False,
+) -> str:
     h = curr["health"]
     s = curr["status"]
     lcd = curr.get("state") or {}
@@ -155,13 +288,13 @@ def render(curr: dict[str, Any], prev: dict[str, Any] | None, dt: float | None) 
     # --- overview judgments ---
     lines.append("## Verdict")
     verdict_rows = [
-        ["TCP telem flowing", judge_flow(d_telem), f"conn={rx.get('connections')} telem={telem} Δ={delta(telem, prev_rx.get('telemetry_packets'))}"],
-        ["UDP thermal flowing", judge_flow(d_frames), f"frames={frames} Δ={delta(frames, prev_th.get('completed_frames'))}"],
-        ["Storage mmWave write", judge_flow(d_mm), f"written={written.get('mmwave')} Δ={delta(written.get('mmwave'), prev_written.get('mmwave'))}"],
-        ["Storage CO2 write", judge_flow(d_co2), f"written={written.get('co2')} Δ={delta(written.get('co2'), prev_written.get('co2'))}"],
-        ["Storage thermal write", judge_flow(d_thm), f"written={written.get('thermal')} Δ={delta(written.get('thermal'), prev_written.get('thermal'))}"],
-        ["DB snapshots grow", judge_flow(d_snap), f"snapshots={snap_n} events={event_n} Δsnap={delta(snap_n, dig(prev_db, 'counts', 'snapshots'))}"],
-        ["Logging worker", "YES" if log.get("running") else "NO", f"enabled={log.get('enabled')} q={log.get('queue_size')}/{log.get('queue_capacity')} err={log.get('errors')}"],
+        ["TCP flow", judge_flow(d_telem), f"conn={rx.get('connections')} telem={telem} Δ={delta(telem, prev_rx.get('telemetry_packets'))}"],
+        ["UDP flow", judge_flow(d_frames), f"frames={frames} Δ={delta(frames, prev_th.get('completed_frames'))}"],
+        ["Save mmW", judge_flow(d_mm), f"n={written.get('mmwave')} Δ={delta(written.get('mmwave'), prev_written.get('mmwave'))}"],
+        ["Save CO2", judge_flow(d_co2), f"n={written.get('co2')} Δ={delta(written.get('co2'), prev_written.get('co2'))}"],
+        ["Save thm", judge_flow(d_thm), f"n={written.get('thermal')} Δ={delta(written.get('thermal'), prev_written.get('thermal'))}"],
+        ["DB grow", judge_flow(d_snap), f"snap={snap_n} ev={event_n} Δ={delta(snap_n, dig(prev_db, 'counts', 'snapshots'))}"],
+        ["Log worker", "YES" if log.get("running") else "NO", f"on={log.get('enabled')} q={log.get('queue_size')}/{log.get('queue_capacity')} err={log.get('errors')}"],
     ]
     # AI input: any sensor not INPUT_UNAVAILABLE / BLOCKED with LIVE-ish status
     ai_ok = []
@@ -177,14 +310,14 @@ def render(curr: dict[str, Any], prev: dict[str, Any] | None, dt: float | None) 
             ai_bad.append(f"{name}:{sens}/{ai_state}")
     verdict_rows.append(
         [
-            "AI has usable input",
+            "AI input",
             "YES" if ai_ok else "NO",
             ("ok=" + ",".join(ai_ok)) if ai_ok else ("fail=" + ",".join(ai_bad)),
         ]
     )
     verdict_rows.append(
         [
-            "Risk formula",
+            "Risk",
             "YES" if risk.get("formula_id") == "SAFENEST_RISK_V1" else "NO",
             f"{risk.get('formula_id')} score={risk.get('risk_score')} level={risk.get('risk_level')} evid={risk.get('evidence_sufficient')}",
         ]
@@ -196,7 +329,7 @@ def render(curr: dict[str, Any], prev: dict[str, Any] | None, dt: float | None) 
             f"room={lcd.get('room')} rev={lcd.get('revision')}",
         ]
     )
-    lines.append(table(["check", "ok?", "detail"], verdict_rows, [22, 5, min(70, max(40, cols - 40))]))
+    lines.append(table(["check", "ok?", "detail"], verdict_rows, [10, 12, min(70, max(36, cols - 32))]))
     lines.append("")
 
     # --- link / storage ---
@@ -232,35 +365,44 @@ def render(curr: dict[str, Any], prev: dict[str, Any] | None, dt: float | None) 
         vals = dig(st, "values", default={}) or {}
         meta = dig(ai, "metadata", default={}) or {}
         # compact value hint
-        hint_bits = []
-        for k in ("presence", "presence_available", "co2_ppm", "motion", "max_c", "human_detected_raw"):
-            if k in vals and vals[k] is not None:
-                hint_bits.append(f"{k}={vals[k]}")
-        if meta.get("canonical_window_status"):
-            hint_bits.append(f"canon={meta.get('canonical_window_status')}")
-        if meta.get("spectral_status"):
-            hint_bits.append(f"spec={meta.get('spectral_status')}")
+        if name == "mmwave":
+            hint = _mmwave_hint(vals, meta)
+        else:
+            hint_bits = []
+            if vals.get("co2_ppm") is not None:
+                hint_bits.append(f"ppm={vals.get('co2_ppm')}")
+            if "motion" in vals and vals.get("motion") is not None:
+                hint_bits.append(f"mov={_tri(vals.get('motion'))}")
+            if vals.get("max_c") is not None:
+                hint_bits.append(f"maxC={vals.get('max_c')}")
+            if meta.get("canonical_window_status"):
+                hint_bits.append(str(meta.get("canonical_window_status")))
+            hint = ",".join(hint_bits) if hint_bits else "-"
+        err = ai.get("error") or rt.get("blocked_reason")
+        risk_state = rc.get("state") or dig(risk, "component_status", name)
         sens_rows.append(
             [
                 name,
-                st.get("status"),
+                short_label(st.get("status"), STATUS_SHORT, raw=raw_labels),
                 fmt_num(st.get("age_seconds") if st.get("age_seconds") is not None else st.get("age_s")),
-                ai.get("state"),
-                ai.get("error") or rt.get("blocked_reason") or "-",
-                fmt_num(ai.get("score")),
+                short_label(ai.get("state"), AI_STATE_SHORT, raw=raw_labels),
+                short_label(err, ERR_SHORT, raw=raw_labels) if err else "-",
+                fmt_num(ai.get("confidence") if name == "mmwave" and ai.get("confidence") is not None else ai.get("score")),
                 fmt_num(ai.get("latency_ms")),
-                rc.get("state") or dig(risk, "component_status", name),
+                short_label(risk_state, RISK_SHORT, raw=raw_labels),
                 fmt_num(rc.get("score") if rc.get("score") is not None else dig(risk, "component_scores", name)),
-                ",".join(hint_bits) if hint_bits else "-",
+                hint,
             ]
         )
     lines.append(
         table(
-            ["sensor", "status", "age_s", "ai_state", "ai_err", "ai_score", "ai_ms", "risk_st", "risk_sc", "values"],
+            ["sensor", "status", "age_s", "ai", "err", "score", "ms", "risk", "rsc", "values"],
             sens_rows,
-            [7, 10, 6, 16, 16, 8, 6, 12, 8, min(36, max(16, cols - 100))],
+            [7, 6, 6, 8, 8, 6, 5, 8, 6, min(72, max(56, cols - 64))],
         )
     )
+    lines.append("shorts: PHYS_OK=B23추론가능  WARMUP=창모으는중  NO_OCC=재실모름  EMPTY=빈방  Q_LOW=품질낮음")
+    lines.append("mmwave values: occ=ESP재실 latch=유지 br=숨확률 rr=B23호흡수 q=품질 vRR=벤더BPM  |  상세 PI_RUNBOOK.md")
     lines.append("")
 
     lines.append("## Risk / LCD (display)")
@@ -294,6 +436,11 @@ def main() -> int:
     parser.add_argument("--once", action="store_true", help="two samples then exit (still shows Δ)")
     parser.add_argument("--timeout", type=float, default=5.0)
     parser.add_argument("--no-clear", action="store_true")
+    parser.add_argument(
+        "--raw-labels",
+        action="store_true",
+        help="show full AI/error/risk strings instead of short labels",
+    )
     args = parser.parse_args()
 
     prev: dict[str, Any] | None = None
@@ -318,7 +465,7 @@ def main() -> int:
                 time.sleep(args.interval)
                 continue
 
-            body = render(curr, prev, dt)
+            body = render(curr, prev, dt, raw_labels=args.raw_labels)
             if not args.no_clear:
                 print("\033[2J\033[H", end="")
             print(body)

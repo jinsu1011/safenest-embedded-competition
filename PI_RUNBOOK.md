@@ -4,8 +4,9 @@
 기준 경로: `/home/sandi/safenest-team-main`  
 기준 커밋: 팀 `main` (`jinsu1011/safenest-embedded-competition`, Risk V1 / M-N9 포함본)
 
-> Pi IP가 바뀌면 아래 `PI_IP`만 바꿔 읽으면 된다.  
-> 현재 필드 IP: **`192.168.0.3`**
+> Pi IP가 바뀌면 아래 주소만 바꿔 읽으면 된다.  
+> 현재 필드 IP (2026-08-28): **`192.168.137.189`**  
+> 폐기: `192.168.0.3` (옛 EELab / 옛 펌웨어). 상세 인수인계: [`docs/reports/20260828_Pi_ESP_Field_Handoff_KO.md`](docs/reports/20260828_Pi_ESP_Field_Handoff_KO.md)
 
 ---
 
@@ -19,7 +20,7 @@ python3 hil/pi_field_monitor.py                 # 계속 보기 (기본 4초)
 python3 hil/pi_field_monitor.py --once          # 한 번만
 python3 hil/pi_field_monitor.py --interval 2    # 2초 간격 계속
 # 종료: Ctrl+C
-# 맥에서: python3 hil/pi_field_monitor.py --base http://192.168.0.3:8000
+# 맥에서: python3 hil/pi_field_monitor.py --base http://192.168.137.189:8000
 ```
 
 표 읽는 법 → **3-B**.
@@ -80,8 +81,7 @@ Do **not** claim the updated path has already run on the Pi. **M-PROT-5C live ve
 
 ### `/display` 라우트 (필드 필수)
 
-팀 `main` 원본 `backend/app.py`에는 `/display`가 없을 수 있다.  
-필드 Pi에는 LCD 정적 파일(`RaspberryPi/LCD/static`)을 `:8000`에서 서빙하도록 **로컬 패치**가 들어가 있다.
+현재 팀 `main`의 `RaspberryPi/Runtime/backend/app.py`가 LCD 정적 파일(`RaspberryPi/LCD/static`)을 `:8000/display`로 서빙한다. (2026-08-28 필드에서 HTTP 200 확인.)
 
 기동 후 반드시:
 
@@ -90,8 +90,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/display
 # 기대: 200
 ```
 
-`404`면 LCD HTML이 안 나온다. `app.py`에 `/display`, `/common.css` 라우트가 있는지 확인하고 백엔드를 재기동한다.  
-`git pull` / `git reset` 하면 이 패치가 날아갈 수 있으니, pull 후 `/display`가 **200**인지 다시 확인한다.
+`404`면 LCD HTML이 안 나온다. `app.py`에 `/display` 라우트가 있는지 확인하고 백엔드를 재기동한다.
 
 ---
 
@@ -139,12 +138,12 @@ ss -lunp | grep 5005
 
 URL:
 
-- LCD / display: `http://192.168.0.3:8000/display`
-- Admin: `http://192.168.0.3:8000/admin`
-- Dashboard: `http://192.168.0.3:8000/dashboard`
-- Health: `http://192.168.0.3:8000/health`
-- Status: `http://192.168.0.3:8000/api/status`
-- LCD state API: `http://192.168.0.3:8000/api/state`
+- LCD / display: `http://192.168.137.189:8000/display`
+- Admin: `http://192.168.137.189:8000/admin`
+- Dashboard: `http://192.168.137.189:8000/dashboard`
+- Health: `http://192.168.137.189:8000/health`
+- Status: `http://192.168.137.189:8000/api/status`
+- LCD state API: `http://192.168.137.189:8000/api/state`
 
 ### 2-B. LCD에 화면 띄우기 (Chromium 키오스크)
 
@@ -209,7 +208,7 @@ ss -lunp | grep 5005 || echo "udp free"
 
 파일: `RaspberryPi/Runtime/hil/pi_field_monitor.py`  
 실행(계속): `cd …/RaspberryPi/Runtime && python3 hil/pi_field_monitor.py`  
-실행(한 번): 같은 명령 + `--once` / 종료: `Ctrl+C` / 맥 원격: `--base http://192.168.0.3:8000`
+실행(한 번): 같은 명령 + `--once` / 종료: `Ctrl+C` / 맥 원격: `--base http://192.168.137.189:8000`
 
 아래는 **화면에 나오는 표 4개를 읽는 법**이다. 위→아래 순서로 본다.
 
@@ -473,8 +472,8 @@ ESP 켠 뒤: **Δ가 양수인지**를 먼저 보면 된다.
 ESP 펌웨어 / 설정의 Pi 주소를 **현재 Pi IP**로 맞춘다.
 
 ```text
-TCP  → 192.168.0.3:9000
-UDP  → 192.168.0.3:5005
+TCP  → 192.168.137.189:9000
+UDP  → 192.168.137.189:5005
 ```
 
 IP가 또 바뀌면 ESP 쪽도 같이 갱신한다.
@@ -573,10 +572,10 @@ bash ./run_safenest.sh --install
 | 증상 | 확인 |
 |---|---|
 | `:8000` 이미 사용 | 예전 `run_backend` / LCD `server.py` 남아 있음 → `pkill` 후 재기동 |
-| `/display` → **404** | `app.py`에 LCD 라우트 없음 / pull로 패치 소실 → 패치 후 재기동 |
+| `/display` → **404** | `app.py`의 `/display` 라우트와 `RaspberryPi/LCD/static` 존재 여부, 백엔드 재기동 |
 | Chromium은 떴는데 LCD 검정/빈 화면 | `curl`로 `/display`·`/common.css`·`/api/state`가 200인지 확인 |
 | Chromium이 안 뜸 / 즉시 종료 | `DISPLAY=:0`, `XDG_RUNTIME_DIR=/run/user/1000`, `/tmp/chromium-display.log` |
-| ESP 연결 0 | ESP 목표 IP가 옛 주소(`192.168.137.x` 등)인지 확인 |
+| ESP 연결 0 | `secrets.h` `RPI_HOST`가 현재 Pi(`192.168.137.189`)인지. 시리얼 `192.168.0.3`이면 옛 플래시 |
 | 센서 NO_DATA | ESP 전원/와이파이, `:9000` established, warm-up 3~4분 |
 | Risk UNAVAILABLE | 센서 유입 없음 → 수신부터 해결 |
 
@@ -594,5 +593,5 @@ DISPLAY=:0 XDG_RUNTIME_DIR=/run/user/1000 \
   chromium --kiosk --ozone-platform=x11 \
   --user-data-dir=/tmp/safenest-chromium-display \
   http://127.0.0.1:8000/display &
-# ESP → 192.168.0.3:9000 / :5005
+# ESP → 192.168.137.189:9000 / :5005
 ```

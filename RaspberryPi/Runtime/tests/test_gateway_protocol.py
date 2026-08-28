@@ -402,6 +402,51 @@ class TCPServerLoopbackTests(unittest.TestCase):
         self.assertEqual(server.stats.connections, 2)
         self.assertEqual(server.stats.protocol_errors, 0)
 
+    def test_new_connection_preempts_stalled_client(self) -> None:
+        received: list[object] = []
+        server = SafeNestTCPServer(
+            lambda packet, _peer: received.append(packet),
+            host="127.0.0.1",
+            port=0,
+            packet_deadline_seconds=2.0,
+        )
+        thread = threading.Thread(target=server.serve_forever)
+        thread.start()
+        deadline = time.monotonic() + 2.0
+        while (server._listener is None or server.port == 0) and time.monotonic() < deadline:
+            time.sleep(0.005)
+        self.assertIsNotNone(server._listener)
+        self.assertNotEqual(server.port, 0)
+
+        stalled = socket.create_connection(("127.0.0.1", server.port), timeout=1.0)
+        try:
+            stalled.sendall(b"SN")
+            wait_until = time.monotonic() + 1.0
+            while server.stats.connections < 1 and time.monotonic() < wait_until:
+                time.sleep(0.005)
+            self.assertGreaterEqual(server.stats.connections, 1)
+            started = time.monotonic()
+            with socket.create_connection(("127.0.0.1", server.port), timeout=1.0) as client:
+                client.sendall(
+                    wire_packet(PACKET_TELEMETRY_JSON, 91, telemetry_payload(91))
+                )
+            while len(received) < 1 and time.monotonic() < started + 1.0:
+                time.sleep(0.005)
+            elapsed = time.monotonic() - started
+        finally:
+            stalled.close()
+            server.stop()
+            thread.join(timeout=2.0)
+
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(len(received), 1)
+        self.assertIsInstance(received[0], TelemetryPayload)
+        self.assertLess(
+            elapsed,
+            1.5,
+            "stalled ESP session must not block the next accept for the packet deadline",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

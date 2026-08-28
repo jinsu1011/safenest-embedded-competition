@@ -4,7 +4,7 @@
   const canvas = document.getElementById("thermalCanvas");
   if (!canvas) return;
 
-  const WIDTH = 80, HEIGHT = 62, META_BYTES = 16, PAYLOAD_BYTES = META_BYTES + WIDTH * HEIGHT * 2, FREEZE_MS = 3000, POLL_MS = 500;
+  const WIDTH = 80, HEIGHT = 62, META_BYTES = 16, PAYLOAD_BYTES = META_BYTES + WIDTH * HEIGHT * 2, FREEZE_MS = 3000, POLL_MS = 150;
   const context = canvas.getContext("2d");
   const source = document.createElement("canvas");
   source.width = WIDTH; source.height = HEIGHT;

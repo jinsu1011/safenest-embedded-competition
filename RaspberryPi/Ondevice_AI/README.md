@@ -9,6 +9,7 @@
 > - **mmWave M-N10 protocol**: shared for later formal capture only; `CAPTURE_NOT_PERFORMED`. See `docs/reports/20260818_SafeNest_mmWave_M-N10_Protocol_Share_KO_01.md`
 > - **mmWave v0.2.0 candidate**: `SYNTHETIC_SMOKE_ONLY`
 > - **Zenodo real-data reconstruction**: A0–A6 `PASS_WITH_WARNINGS`; Phase B `READY_WITH_CONDITIONS`
+> - **Thermal B6-R Public SDT FP32**: artifact imported as `SHADOW_ONLY_NONACTIVE`; default thermal selector unchanged; Pi/real sensor `BLOCKED_HARDWARE`
 > - **Thermal 실제 낙상 성능**: NOT_VERIFIABLE (합성 NPZ 테스트 fixture만 존재)
 > - **CO₂ 실제 재실 성능**: NOT_VERIFIABLE (합성 NPZ 테스트 fixture만 존재)
 > - **Pi 5 실배포**: NOT_READY / BLOCKED_HARDWARE
@@ -24,6 +25,7 @@
 - **mmWave M-N10 프로토콜**: 나중에 쓸 측정 규칙만 공유. 캡처 안 함. `docs/reports/20260818_SafeNest_mmWave_M-N10_Protocol_Share_KO_01.md`
 - **mmWave v0.2.0 candidate**: 학습·재현·양자화 파이프라인을 확인하는 합성 smoke 자산; 실세계 성능 근거로 사용 금지
 - **Zenodo 110명 실데이터**: A0–A6 완료. TRAIN/VALIDATION/LOCKED_TEST = 77/17/16 subject split 고정, 440 recording·530 window 변환 및 무결성 감사 통과
+- **Thermal B6-R Public SDT FP32**: `models/thermal/public_sdt/public_sdt_pooled_mlp_fp32_tflite_v1.tflite`를 non-active shadow 후보로 import. `HUMAN_FALL_PROXY`는 자세 proxy이며 runtime/safety 기본값으로 사용하지 않음. 인수인계 `docs/reports/20260828_SafeNest_Thermal_B6R_Public_SDT_FP32_Team_Import_Handoff_KO_01.md`
 - **Thermal & CO₂ 오프라인 평가**: synthetic regression fixture 기반 99% 수준 (실센서/실공간 성능 주장 불가)
 - **실센서 드라이버 & Pi 5 실배포**: NOT_READY (하드웨어 통합 전)
 

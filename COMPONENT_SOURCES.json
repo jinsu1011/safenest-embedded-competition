@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "generated_at": "2026-08-19",
+  "generated_at": "2026-08-28",
   "canonical_repository": "https://github.com/jinsu1011/safenest-embedded-competition",
   "canonical_runtime_entrypoint": "./run_safenest.sh -> RaspberryPi/Runtime/deployment/run_pi.sh -> RaspberryPi/Runtime/backend/run_backend.py",
   "upstream_repositories": {
@@ -17,7 +17,7 @@
     "ondevice_ai": {
       "url": "https://github.com/sheepmeat/test",
       "default_branch": "main",
-      "head_commit": "4129753e64e0f18a3491e5b6cc0454b0d36f1610"
+      "head_commit": "ccdb2b16ddbbec82d1a4d53cef6b23314ebf366b"
     },
     "thermal_ai": {
       "url": "https://github.com/yuname121/safenest-thermal-ai",
@@ -93,6 +93,26 @@
           ],
           "notes": "Artifact remains 390f3be. Manifest selector now matches integration 66b5231. Live Runtime adapter is still mmwave_interpreter.py; not [1,240,1] wired.",
           "selector_synced_to_integration_main": true
+        },
+        {
+          "name": "thermal_b6r_public_sdt_fp32_shadow",
+          "upstream_repository": "https://github.com/sheepmeat/test",
+          "upstream_commit": "ccdb2b16ddbbec82d1a4d53cef6b23314ebf366b",
+          "classification": "UPSTREAM_AUTHORITATIVE_OVERLAY",
+          "runtime_promoted": false,
+          "source_paths": [
+            "models/thermal/public_sdt/public_sdt_pooled_mlp_fp32_tflite_v1.tflite"
+          ],
+          "integration_paths": [
+            "RaspberryPi/Ondevice_AI/models/thermal/public_sdt/public_sdt_pooled_mlp_fp32_tflite_v1.tflite"
+          ],
+          "team_authored_paths": [
+            "RaspberryPi/Ondevice_AI/models/thermal/public_sdt/public_sdt_pooled_mlp_fp32_tflite_v1.metadata.json",
+            "RaspberryPi/Ondevice_AI/models/model_manifest.json",
+            "RaspberryPi/Ondevice_AI/tests/test_thermal_public_sdt_shadow_model.py",
+            "RaspberryPi/Ondevice_AI/docs/reports/20260828_SafeNest_Thermal_B6R_Public_SDT_FP32_Team_Import_Handoff_KO_01.md"
+          ],
+          "notes": "Exact FP32 artifact imported as SHADOW_ONLY_NONACTIVE. The existing models.thermal selector, risk mapping, and runtime wiring remain unchanged. Public SDT software evidence is not Raspberry Pi, MI48, Thermal-90, real-fall, or safety validation."
         }
       ]
     },

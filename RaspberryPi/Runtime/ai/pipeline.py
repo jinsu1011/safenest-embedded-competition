@@ -121,14 +121,31 @@ class OnDeviceAIPipeline:
         }
         try:
             prediction = self.models["thermal"].predict(pixels)
+            model_meta = getattr(self.models["thermal"], "model_meta", {})
+            if not isinstance(model_meta, Mapping):
+                model_meta = {}
             return self._prediction_result(
                 "thermal",
                 prediction,
                 now,
-                score=1.0 if prediction.class_name == "HUMAN_FALL" else 0.0,
+                score=(
+                    1.0
+                    if prediction.class_name == "HUMAN_FALL"
+                    else float(model_meta.get("proxy_risk_score", 0.4))
+                    if prediction.class_name == "HUMAN_FALL_PROXY"
+                    else 0.0
+                ),
                 metadata={
                     **metadata,
                     "probabilities": list(prediction.probabilities),
+                    "model_selector": getattr(
+                        self.models["thermal"], "model_selector", "thermal"
+                    ),
+                    "safety_authority": model_meta.get("safety_authority", True),
+                    "risk_authority": model_meta.get("risk_authority"),
+                    "risk_contribution": model_meta.get("risk_contribution"),
+                    "runtime_role": model_meta.get("runtime_role"),
+                    "safety_semantic": model_meta.get("safety_semantic"),
                 },
             )
         except Exception as error:

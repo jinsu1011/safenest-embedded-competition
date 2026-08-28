@@ -6,8 +6,9 @@ can actually prove today:
 
 * CO2 is the only continuously trustworthy live signal and is the primary
   enclosed-space hazard, so it carries a full share.
-* Thermal INT8 has a committed real-field FLOAT/INT8 equivalence audit, so it
-  carries a full share.
+* The active public-SDT FP32 selector is software-only. Its posture proxy enters
+  risk fusion with a bounded score, but cannot assert a real fall or emergency
+  until Raspberry Pi and real-fall validation establish that authority.
 * mmWave M-N9 is ``DEVICE_VALIDATED: NO`` and emits an ``APNEA-proxy`` class, so
   it carries a reduced share and can raise WARNING but never DANGER by itself.
 * PIR is corroborating only, and becomes *unavailable* rather than 0.0 when
@@ -290,7 +291,28 @@ class SafeNestRiskFormulaV1:
         if decision is None:
             return _unavailable("thermal", now, _ai_block_reason(ai, "THERMAL"))
         state, confidence, timestamp, metadata = decision
+        limited_proxy = metadata.get("risk_authority") == "LIMITED_POSTURE_PROXY"
+        if metadata.get("safety_authority") is False and not limited_proxy:
+            return _unavailable(
+                "thermal",
+                now,
+                "THERMAL_MODEL_SAFETY_AUTHORITY_UNVERIFIED",
+            )
         reasons: list[str] = []
+        if state == "HUMAN_FALL_PROXY":
+            if not limited_proxy:
+                return _unavailable(
+                    "thermal",
+                    now,
+                    "THERMAL_PROXY_RISK_AUTHORITY_MISSING",
+                )
+            score = float(self._thermal["class_scores"][state])
+            reasons.append("THERMAL_FALL_PROXY_LIMITED_RISK_NO_EMERGENCY")
+            return RiskComponent(
+                "thermal", True, score, "ai", state, timestamp,
+                reasons=tuple(reasons),
+                metadata={**metadata, "confidence": confidence},
+            )
         if state == "HUMAN_FALL":
             if confidence >= float(self._thermal["fall_high_confidence_min"]):
                 score = float(self._thermal["fall_score_high_confidence"])

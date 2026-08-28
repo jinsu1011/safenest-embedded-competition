@@ -7,7 +7,7 @@
   "rationale": [
     "Weights follow current evidence maturity, not the legacy V4 split.",
     "CO2 is the only continuously trustworthy live signal and is the primary enclosed-space hazard.",
-    "Thermal INT8 has a real-field FLOAT/INT8 equivalence audit, so it is trusted equally with CO2.",
+    "The final active public-SDT FP32 thermal model contributes bounded HUMAN_FALL_PROXY risk, but cannot assert a real fall or emergency before Pi and real-fall validation.",
     "mmWave M-N9 is DEVICE_VALIDATED=NO and emits an APNEA-proxy class, so it may raise WARNING but never DANGER on its own.",
     "PIR is corroborating only and is unavailable, not zero, when presence is unconfirmed.",
     "A weighted sum alone dilutes a single severe hazard, so per-signal escalation floors are applied on top of the score.",
@@ -32,9 +32,14 @@
   "ai_acceptance": {
     "minimum_confidence": 0.4,
     "minimum_top_two_margin": 0.15,
-    "comment": "A 3-class INT8 head near uniform output is not a decision; it is refused instead of scored."
+    "comment": "A 3-class thermal head near uniform output is not a decision; it is refused instead of scored."
   },
   "thermal": {
+    "active_model_selector": "thermal_public_sdt_fp32_active",
+    "artifact_release": "FINAL_RUNTIME_MODEL",
+    "risk_authority": "LIMITED_POSTURE_PROXY",
+    "safety_authority": false,
+    "proxy_emergency_allowed": false,
     "fall_score_high_confidence": 1.0,
     "fall_score_medium_confidence": 0.7,
     "fall_score_low_confidence": 0.4,
@@ -43,12 +48,14 @@
     "emergency_confidence_min": 0.8,
     "human_states": [
       "HUMAN_NORMAL",
+      "HUMAN_FALL_PROXY",
       "HUMAN_FALL"
     ],
     "class_scores": {
       "NOT_HUMAN": 0.0,
       "NO_HUMAN": 0.0,
-      "HUMAN_NORMAL": 0.0
+      "HUMAN_NORMAL": 0.0,
+      "HUMAN_FALL_PROXY": 0.4
     }
   },
   "mmwave": {

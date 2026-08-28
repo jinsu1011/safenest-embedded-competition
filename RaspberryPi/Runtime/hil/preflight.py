@@ -100,6 +100,12 @@ FORBIDDEN_THERMAL_SELECTORS = (
     "T_B5",
     "full_int8.tflite",
 )
+THERMAL_ACTIVE_KEY = "thermal_public_sdt_fp32_active"
+THERMAL_MODEL_ID = "thermal_public_sdt_pooled_mlp_fp32_tflite_v1"
+THERMAL_RUNTIME_ROLE = "ACTIVE_THERMAL_PUBLIC_SDT_SOFTWARE_ONLY"
+THERMAL_RELATIVE_PATH = (
+    "models/thermal/public_sdt/public_sdt_pooled_mlp_fp32_tflite_v1.tflite"
+)
 
 MN9_MODEL_ID = "MMWAVE_M_N9_FULL_INT8_V1"
 MN9_RUNTIME_ROLE = "ACTIVE_M_N9"
@@ -263,15 +269,63 @@ def _artifact_selection_checks(root: Path) -> list[dict[str, object]]:
     except (OSError, ValueError) as error:
         return [_check("artifact_manifest_readable", False, f"{type(error).__name__}: {error}")]
     models = manifest.get("models") if isinstance(manifest.get("models"), dict) else {}
-    thermal = models.get("thermal") if isinstance(models.get("thermal"), dict) else {}
+    selectors = (
+        manifest.get("active_runtime_selectors")
+        if isinstance(manifest.get("active_runtime_selectors"), dict)
+        else {}
+    )
+    thermal_key = str(selectors.get("thermal") or "")
+    thermal = models.get(thermal_key) if isinstance(models.get(thermal_key), dict) else {}
+    legacy_thermal = models.get("thermal") if isinstance(models.get("thermal"), dict) else {}
     mmwave = models.get("mmwave") if isinstance(models.get("mmwave"), dict) else {}
     thermal_path = str(thermal.get("path") or "")
     forbidden = [token for token in FORBIDDEN_THERMAL_SELECTORS if token.lower() in thermal_path.lower()]
+    thermal_observed = {
+        "selector_key": thermal_key,
+        "model_id": thermal.get("model_id"),
+        "runtime_role": thermal.get("runtime_role"),
+        "active_runtime_selector": thermal.get("active_runtime_selector"),
+        "deployment_allowed": thermal.get("deployment_allowed"),
+        "artifact_release": thermal.get("artifact_release"),
+        "safety_authority": thermal.get("safety_authority"),
+        "risk_authority": thermal.get("risk_authority"),
+        "proxy_risk_score": thermal.get("proxy_risk_score"),
+        "class_2": (thermal.get("class_map") or {}).get("2"),
+        "path": thermal_path,
+        "forbidden_hits": forbidden,
+    }
     checks = [
         _check(
-            "thermal_production_path_is_historical_v0_1_0",
-            thermal_path.endswith("thermal_fall_int8_v0.1.0.tflite") and not forbidden,
-            {"path": thermal_path, "forbidden_hits": forbidden},
+            "thermal_active_selector_is_public_sdt_fp32",
+            thermal_key == THERMAL_ACTIVE_KEY
+            and thermal.get("model_id") == THERMAL_MODEL_ID
+            and thermal.get("runtime_role") == THERMAL_RUNTIME_ROLE
+            and thermal.get("active_runtime_selector") is True
+            and thermal.get("deployment_allowed") is True
+            and thermal.get("artifact_release") == "FINAL_RUNTIME_MODEL"
+            and thermal_path.endswith(THERMAL_RELATIVE_PATH)
+            and not forbidden,
+            thermal_observed,
+        ),
+        _check(
+            "thermal_proxy_risk_is_bounded_without_emergency_authority",
+            thermal.get("safety_authority") is False
+            and thermal.get("risk_authority") == "LIMITED_POSTURE_PROXY"
+            and thermal.get("proxy_risk_score") == 0.4
+            and (thermal.get("class_map") or {}).get("2") == "HUMAN_FALL_PROXY",
+            thermal_observed,
+        ),
+        _check(
+            "thermal_legacy_int8_is_nonactive",
+            legacy_thermal.get("active_runtime_selector") is False
+            and legacy_thermal.get("deployment_allowed") is False
+            and legacy_thermal.get("runtime_role") == "LEGACY_THERMAL_INT8_NONACTIVE",
+            {
+                "runtime_role": legacy_thermal.get("runtime_role"),
+                "active_runtime_selector": legacy_thermal.get("active_runtime_selector"),
+                "deployment_allowed": legacy_thermal.get("deployment_allowed"),
+                "path": legacy_thermal.get("path"),
+            },
         ),
     ]
     checks.extend(_mmwave_selector_contract_checks(mmwave if isinstance(mmwave, dict) else {}))
@@ -339,7 +393,12 @@ def _status_contract_checks(root: Path) -> list[dict[str, object]]:
     return [
         _check("runtime_status_module_present", "def runtime_status_document" in status, "runtime_status_document"),
         _check("ready_with_limitations_preserved", "READY_WITH_LIMITATIONS" in status, "READY_WITH_LIMITATIONS"),
-        _check("thermal_ai_blocked_reason_preserved", "INT8_QUANTIZATION_REVIEW_REQUIRED" in status, "INT8_QUANTIZATION_REVIEW_REQUIRED"),
+        _check(
+            "thermal_active_limited_risk_status_preserved",
+            "LIMITED_PROXY_NO_EMERGENCY" in status
+            and "THERMAL_MODEL_RUNTIME_UNAVAILABLE" in status,
+            "ACTIVE_WITH_LIMITED_PROXY_RISK",
+        ),
         _check("pir_not_applicable_preserved", 'ai_status": "NOT_APPLICABLE"' in status, "NOT_APPLICABLE"),
         _check("status_api_exposes_runtime_status", '"runtime_status": copy.deepcopy(runtime_status)' in views, "/api/status"),
         _check("lcd_state_reuses_runtime_status", '"runtime_status": copy.deepcopy(status["runtime_status"])' in views, "/api/state"),

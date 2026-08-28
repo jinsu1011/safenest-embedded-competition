@@ -56,7 +56,24 @@ class RuntimeStatusTests(unittest.TestCase):
         self.assertEqual(thermal["sensor_status"], "AVAILABLE")
         self.assertEqual(thermal["artifact_status"], "PRESENT")
         self.assertEqual(thermal["ai_status"], "BLOCKED")
-        self.assertEqual(thermal["blocked_reason"], "INT8_QUANTIZATION_REVIEW_REQUIRED")
+        self.assertEqual(thermal["blocked_reason"], "THERMAL_MODEL_RUNTIME_UNAVAILABLE")
+        self.assertEqual(thermal["safety_status"], "LIMITED_PROXY_NO_EMERGENCY")
+
+    def test_thermal_final_model_result_is_active_with_limited_risk(self) -> None:
+        result = ai_result(available=True)
+        result["state"] = "HUMAN_FALL_PROXY"
+        result["metadata"] = {
+            "model_selector": "thermal_public_sdt_fp32_active",
+            "risk_authority": "LIMITED_POSTURE_PROXY",
+        }
+        thermal = runtime_status_document(
+            state(thermal=sensor()), {"thermal": result}
+        )["sensors"]["thermal"]
+        self.assertEqual(thermal["ai_status"], "ACTIVE")
+        self.assertEqual(thermal["output_status"], "AVAILABLE")
+        self.assertEqual(thermal["model_selector"], "thermal_public_sdt_fp32_active")
+        self.assertEqual(thermal["risk_authority"], "LIMITED_POSTURE_PROXY")
+        self.assertIsNone(thermal["blocked_reason"])
 
     def test_pir_motion_and_no_motion_are_both_valid_without_ai(self) -> None:
         for motion, expected in ((True, "MOTION"), (False, "NO_MOTION")):

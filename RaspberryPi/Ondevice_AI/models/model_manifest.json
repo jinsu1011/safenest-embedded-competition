@@ -1,15 +1,24 @@
 {
   "schema_version": "1.0",
   "project": "SafeNest_V6",
-  "generated_at": "2026-07-25T18:54:00+09:00",
+  "generated_at": "2026-08-28T00:00:00+09:00",
+  "active_runtime_selectors": {
+    "thermal": "thermal_public_sdt_fp32_active"
+  },
   "models": {
     "thermal": {
       "model_id": "thermal_fall_int8",
       "version": "0.1.0",
-      "status": "candidate",
+      "status": "historical_legacy",
       "artifact_status": "CONFIRMED",
       "validation_status": "CONFIRMED_SYNTHETIC_ONLY",
-      "deployment_allowed": true,
+      "deployment_allowed": false,
+      "runtime_role": "LEGACY_THERMAL_INT8_NONACTIVE",
+      "active_runtime_selector": false,
+      "default_activation": false,
+      "safety_authority": true,
+      "HISTORICAL_NOT_ACTIVE": true,
+      "not_active_reason": "SUPERSEDED_BY_PUBLIC_SDT_FP32_ACTIVE_SELECTOR",
       "role": "thermal_posture_3class",
       "framework": "TensorFlow Lite",
       "quantization": "full_int8",
@@ -45,18 +54,23 @@
         "2": "HUMAN_FALL"
       }
     },
-    "thermal_public_sdt_fp32_shadow": {
+    "thermal_public_sdt_fp32_active": {
       "model_id": "thermal_public_sdt_pooled_mlp_fp32_tflite_v1",
       "version": "b6r_p2_fp32_v1",
-      "status": "candidate_shadow_only",
+      "status": "active_final_runtime_model_with_validation_limitations",
+      "artifact_release": "FINAL_RUNTIME_MODEL",
+      "model_lifecycle": "ACTIVE_FINAL",
       "artifact_status": "CONFIRMED",
       "validation_status": "PASS_WITH_LIMITATIONS_PUBLIC_DATA_SOFTWARE_ONLY",
-      "deployment_allowed": false,
-      "deployment_scope": "SHADOW_ONLY_NONACTIVE",
-      "runtime_role": "SHADOW_ONLY_NONACTIVE",
-      "active_runtime_selector": false,
-      "default_activation": false,
+      "deployment_allowed": true,
+      "deployment_scope": "ACTIVE_RUNTIME_SELECTOR_SOFTWARE_ONLY",
+      "runtime_role": "ACTIVE_THERMAL_PUBLIC_SDT_SOFTWARE_ONLY",
+      "active_runtime_selector": true,
+      "default_activation": true,
       "safety_authority": false,
+      "risk_authority": "LIMITED_POSTURE_PROXY",
+      "risk_contribution": "LIMITED_NON_EMERGENCY",
+      "proxy_risk_score": 0.4,
       "hardware_validation": "BLOCKED_HARDWARE",
       "DEVICE_VALIDATED": false,
       "PI_SMOKE": "NOT_PERFORMED",
@@ -95,11 +109,12 @@
         "1": "HUMAN_NORMAL",
         "2": "HUMAN_FALL_PROXY"
       },
+      "safety_semantic": "RISK_GATING_ONLY_NO_FALL_EMERGENCY_UNTIL_PI_AND_REAL_FALL_VALIDATION",
       "block_reason": "RASPBERRY_PI_AND_REAL_SENSOR_VALIDATION_NOT_PERFORMED",
       "notes": [
-        "PUBLIC_SDT_ONLY / SOFTWARE_ONLY / NON_GATING / SHADOW_ONLY.",
+        "PUBLIC_SDT_ONLY / SOFTWARE_ONLY / ACTIVE_INFERENCE_SELECTOR / LIMITED_RISK_GATING.",
         "HUMAN_FALL_PROXY is a posture proxy, not real-fall or safety validation.",
-        "The active thermal selector remains models.thermal and is unchanged."
+        "Runtime maps HUMAN_FALL_PROXY to bounded risk score 0.4 and never to a fall emergency."
       ]
     },
     "co2": {

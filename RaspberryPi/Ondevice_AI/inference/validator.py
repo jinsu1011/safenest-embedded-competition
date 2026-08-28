@@ -302,15 +302,32 @@ class GroundTruthValidator:
         check_config_abs_paths(config_data)
 
         models_manifest = manifest.get("models", {})
+        active_runtime_selectors = manifest.get("active_runtime_selectors", {})
+        if not isinstance(active_runtime_selectors, dict):
+            active_runtime_selectors = {}
         target_model_keys = ["thermal", "mmwave", "co2"]
 
         for model_key in target_model_keys:
-            m_meta = models_manifest.get(model_key)
+            selected_model_key = str(active_runtime_selectors.get(model_key, model_key))
+            m_meta = models_manifest.get(selected_model_key)
             if not m_meta:
-                self._log_error(model_key, "manifest entry", "model entry in manifest", "None")
+                self._log_error(
+                    model_key,
+                    "manifest entry",
+                    f"active model entry {selected_model_key!r} in manifest",
+                    "None",
+                )
                 continue
 
-            model_id = m_meta.get("model_id", model_key)
+            if model_key in active_runtime_selectors and m_meta.get("active_runtime_selector") is not True:
+                self._log_error(
+                    model_key,
+                    "active runtime selector flag",
+                    True,
+                    m_meta.get("active_runtime_selector"),
+                )
+
+            model_id = m_meta.get("model_id", selected_model_key)
             sensor_id = model_key
 
             # Validate paths in manifest
@@ -570,6 +587,7 @@ class GroundTruthValidator:
                 model_inventory_entry["validation_status"] = "FAILED"
                 model_inventory_entry["errors"].append(str(e))
 
+            model_inventory_entry["manifest_selector_key"] = selected_model_key
             inventory["models"][sensor_id] = model_inventory_entry
 
         is_valid = len(self.errors) == 0

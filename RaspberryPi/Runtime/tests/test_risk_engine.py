@@ -99,6 +99,37 @@ class RiskEngineTests(unittest.TestCase):
         self.assertFalse(result.is_emergency)
         self.assertNotEqual(result.risk_score, 100.0)
 
+    def test_limited_thermal_proxy_enters_score_without_emergency(self):
+        state, ai = inputs(ai={
+            "thermal": ai_result(
+                "thermal",
+                score=0.4,
+                state="HUMAN_FALL_PROXY",
+                confidence=0.95,
+                metadata={
+                    "safety_authority": False,
+                    "risk_authority": "LIMITED_POSTURE_PROXY",
+                },
+            )
+        })
+        result = self.engine.evaluate(state, ai)
+        self.assertEqual(result.components["thermal"]["score"], 0.4)
+        self.assertFalse(result.is_emergency)
+        self.assertNotEqual(result.risk_score, 100.0)
+
+    def test_thermal_proxy_without_authority_is_rejected(self):
+        state, ai = inputs(ai={
+            "thermal": ai_result(
+                "thermal",
+                score=0.4,
+                state="HUMAN_FALL_PROXY",
+                confidence=0.95,
+            )
+        })
+        result = self.engine.evaluate(state, ai)
+        self.assertEqual(result.component_status["thermal"], "UNAVAILABLE")
+        self.assertIn("THERMAL_PROXY_RISK_AUTHORITY_MISSING", result.reasons)
+
     def test_unverified_apnea_does_not_emergency_override(self):
         state, ai = inputs(ai={
             "mmwave": ai_result(

@@ -90,20 +90,41 @@ def _co2_status(sensor: Mapping[str, Any], result: Mapping[str, Any]) -> dict[st
     return status
 
 
-def _thermal_status(sensor: Mapping[str, Any], _result: Mapping[str, Any]) -> dict[str, Any]:
+def _thermal_status(sensor: Mapping[str, Any], result: Mapping[str, Any]) -> dict[str, Any]:
     status = _sensor_base(sensor)
-    # O2/O2.5/O2.6 establish that the selected T-B5 artifact exists and that
-    # raw-frame conversion can be replayed. O3/production activation remains
-    # forbidden while the INT8/domain review is unresolved.
+    # The public-SDT FP32 model is the active inference/risk selector. Its
+    # HUMAN_FALL_PROXY output contributes bounded risk but has no emergency
+    # authority until Pi and real-fall validation are complete.
     status["artifact_status"] = "PRESENT"
+    status["model_selector"] = "thermal_public_sdt_fp32_active"
+    status["safety_status"] = "LIMITED_PROXY_NO_EMERGENCY"
     if status["sensor_status"] != "AVAILABLE":
         return _blocked_for_sensor(status)
+    if bool(result.get("available")):
+        metadata = _mapping(result.get("metadata"))
+        status.update(
+            {
+                "input_contract_status": "SATISFIED_WITH_LIMITATIONS",
+                "ai_status": "ACTIVE",
+                "blocked_reason": None,
+                "output_status": "AVAILABLE",
+                "model_selector": str(
+                    metadata.get("model_selector")
+                    or "thermal_public_sdt_fp32_active"
+                ),
+                "risk_authority": metadata.get(
+                    "risk_authority", "LIMITED_POSTURE_PROXY"
+                ),
+            }
+        )
+        return status
+    error = str(result.get("error") or "")
     status.update(
         {
             "input_contract_status": "VALIDATED_WITH_LIMITATIONS",
             "ai_status": "BLOCKED",
-            "blocked_reason": "INT8_QUANTIZATION_REVIEW_REQUIRED",
-            "output_status": "NOT_REQUESTED",
+            "blocked_reason": error or "THERMAL_MODEL_RUNTIME_UNAVAILABLE",
+            "output_status": "NOT_AVAILABLE",
         }
     )
     return status

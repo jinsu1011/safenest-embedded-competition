@@ -9,8 +9,8 @@ SafeNest 공용 Thermal Interpreter Wrapper
 1. models/model_manifest.json에서 공식 모델 경로 및 텐서 스펙 로드
 2. Mac TensorFlow와 Raspberry Pi tflite-runtime 이중 호환
 3. 입력 shape 검증 및 NaN/Inf 안전 검사
-4. INT8 입력 양자화 (np.rint 반올림 & np.clip(-128, 127) 적용)
-5. INT8 출력 역양자화 (Softmax 이중 적용 방지)
+4. Manifest가 가리키는 active thermal selector의 입력 dtype/양자화 처리
+5. INT8 출력 역양자화 또는 FP32 출력 처리 (Softmax 이중 적용 방지)
 6. 추론 지연시간(latency_ms) 및 모델 버전 반환
 """
 
@@ -47,11 +47,15 @@ class ThermalPrediction:
     model_version: str
 
 
+DEFAULT_THERMAL_SELECTOR = "thermal_public_sdt_fp32_active"
+
+
 class ThermalInterpreter:
     def __init__(
         self,
         project_root: str | Path | None = None,
         manifest_path: str = "models/model_manifest.json",
+        model_key: str | None = None,
     ) -> None:
         if project_root is None:
             self.project_root = Path(__file__).resolve().parent.parent
@@ -63,7 +67,17 @@ class ThermalInterpreter:
             raise FileNotFoundError(f"Manifest file not found: {manifest_file}")
 
         manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
-        self.model_meta = manifest["models"]["thermal"]
+        models = manifest.get("models", {})
+        selectors = manifest.get("active_runtime_selectors", {})
+        selector = model_key or selectors.get("thermal") or DEFAULT_THERMAL_SELECTOR
+        if selector not in models and model_key is None and "thermal" in models and not selectors:
+            # Keep old standalone snapshots loadable when they predate the
+            # explicit selector map. Current manifests must resolve exactly.
+            selector = "thermal"
+        if selector not in models:
+            raise KeyError(f"thermal model selector missing from manifest: {selector}")
+        self.model_selector = selector
+        self.model_meta = models[selector]
         self.class_map = {
             int(key): value
             for key, value in self.model_meta["class_map"].items()

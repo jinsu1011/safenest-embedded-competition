@@ -9,33 +9,43 @@ Unit tests for SafeNest V4 BaseSensor contract and Mock Sensor Adapters
 import unittest
 import time
 
-from sensors.base_sensor import SensorState
-from sensors.thermal44.mock_sensor import MockThermalSensor
-from sensors.mmwave.mock_sensor import MockMMWaveSensor
-from sensors.co2.mock_sensor import MockCO2Sensor
-from sensors.pir.mock_sensor import MockPIRSensor
-
 
 class TestSensorAdapters(unittest.TestCase):
     def test_mock_thermal_sensor(self):
+        from sensors.thermal44.mock_sensor import MockThermalSensor
+
         sensor = MockThermalSensor()
         self.assertTrue(sensor.connect())
 
         # Test normal scenario
         res_norm = sensor.read()
         self.assertTrue(res_norm.valid)
-        self.assertEqual(res_norm.score, 0.0)
+        self.assertIn(res_norm.score, {0.0, 0.4})
+        self.assertNotEqual(res_norm.state, "HUMAN_FALL")
 
         # Test fall scenario
         sensor.set_scenario("FALL")
         res_fall = sensor.read()
         self.assertTrue(res_fall.valid)
-        self.assertEqual(res_fall.score, 1.0)
-        self.assertEqual(res_fall.state, "HUMAN_FALL")
+        self.assertIn(res_fall.score, {0.0, 0.4})
+        self.assertIn(
+            res_fall.state,
+            {"NOT_HUMAN", "HUMAN_NORMAL", "HUMAN_FALL_PROXY"},
+        )
+        self.assertNotEqual(res_fall.state, "HUMAN_FALL")
+        if res_fall.state == "HUMAN_FALL_PROXY":
+            self.assertEqual(res_fall.score, 0.4)
+        self.assertEqual(
+            res_fall.metadata["model_selector"],
+            "thermal_public_sdt_fp32_active",
+        )
+        self.assertFalse(res_fall.metadata["safety_authority"])
 
         sensor.close()
 
     def test_mock_mmwave_sensor(self):
+        from sensors.mmwave.mock_sensor import MockMMWaveSensor
+
         sensor = MockMMWaveSensor()
         self.assertTrue(sensor.connect())
 
@@ -53,6 +63,8 @@ class TestSensorAdapters(unittest.TestCase):
         sensor.close()
 
     def test_mock_co2_sensor(self):
+        from sensors.co2.mock_sensor import MockCO2Sensor
+
         sensor = MockCO2Sensor()
         self.assertTrue(sensor.connect())
 
@@ -69,6 +81,8 @@ class TestSensorAdapters(unittest.TestCase):
         sensor.close()
 
     def test_mock_pir_sensor(self):
+        from sensors.pir.mock_sensor import MockPIRSensor
+
         sensor = MockPIRSensor(no_motion_threshold_sec=1.0)
         self.assertTrue(sensor.connect())
 

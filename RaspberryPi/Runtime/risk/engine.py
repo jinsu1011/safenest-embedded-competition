@@ -10,14 +10,9 @@ from pathlib import Path
 import time
 from typing import Any, Mapping
 
+from paths import RISK_CONFIG
 
-CONFIG_PATH = (
-    Path(__file__).resolve().parent.parent
-    / "sources"
-    / "ondevice_ai"
-    / "risk"
-    / "risk_config.json"
-)
+CONFIG_PATH = RISK_CONFIG
 SENSOR_ORDER = ("mmwave", "co2", "pir", "thermal")
 
 
@@ -239,6 +234,24 @@ class SafeNestRiskEngine:
         if parsed is None:
             return _unavailable("thermal", now, "THERMAL_AI_UNAVAILABLE")
         score, state, timestamp, confidence, metadata = parsed
+        if (
+            state == "HUMAN_FALL_PROXY"
+            and metadata.get("risk_authority") != "LIMITED_POSTURE_PROXY"
+        ):
+            return _unavailable(
+                "thermal",
+                now,
+                "THERMAL_PROXY_RISK_AUTHORITY_MISSING",
+            )
+        if (
+            metadata.get("safety_authority") is False
+            and metadata.get("risk_authority") != "LIMITED_POSTURE_PROXY"
+        ):
+            return _unavailable(
+                "thermal",
+                now,
+                "THERMAL_MODEL_SAFETY_AUTHORITY_UNVERIFIED",
+            )
         return RiskComponent(
             "thermal", True, score, "ai", state, timestamp,
             metadata={**metadata, "confidence": confidence},

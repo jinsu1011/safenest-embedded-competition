@@ -26,7 +26,11 @@ class LazyModel:
     # The manifest key is separate because the CO2 selector was promoted to the
     # C-B6 reduced-feature contract while models.co2 is retained as history.
     _ADAPTERS = {
-        "thermal": ("thermal_interpreter.py", "ThermalInterpreter", "thermal"),
+        "thermal": (
+            "thermal_interpreter.py",
+            "ThermalInterpreter",
+            "thermal_public_sdt_fp32_active",
+        ),
         # Legacy M-N9 adapter only. Default inference is B23 in pipeline.py.
         "mmwave": ("mmwave_m_n9_interpreter.py", "MN9Interpreter", "mmwave_m_n9"),
         "co2": ("co2_c_b6_interpreter.py", "CB6Interpreter", "co2_occupancy_c_b6"),
@@ -44,6 +48,19 @@ class LazyModel:
     @property
     def load_error(self) -> str | None:
         return self._load_error
+
+    @property
+    def model_selector(self) -> str:
+        """Expose the frozen selector without forcing an early model load."""
+        return self._ADAPTERS[self.sensor_id][2]
+
+    @property
+    def model_meta(self) -> dict:
+        """Expose loaded manifest policy to the pipeline after prediction."""
+        if self._instance is None:
+            return {}
+        metadata = getattr(self._instance, "model_meta", {})
+        return metadata if isinstance(metadata, dict) else {}
 
     def predict(self, *args: object) -> object:
         instance = self._load()
@@ -75,7 +92,7 @@ class LazyModel:
 
     def _load_frozen_adapter(self) -> object:
         self._assert_deployment_allowed()
-        filename, class_name, _ = self._ADAPTERS[self.sensor_id]
+        filename, class_name, selector = self._ADAPTERS[self.sensor_id]
         adapter_path = VENDOR_ROOT / "inference" / filename
         module_name = f"_safenest_frozen_{self.sensor_id}_interpreter"
         module = sys.modules.get(module_name)
@@ -91,12 +108,21 @@ class LazyModel:
                 sys.modules.pop(module_name, None)
                 raise
         adapter_class = getattr(module, class_name)
-        return adapter_class(project_root=VENDOR_ROOT)
+        kwargs = {"project_root": VENDOR_ROOT}
+        if self.sensor_id == "thermal":
+            kwargs["model_key"] = selector
+        return adapter_class(**kwargs)
 
     def _assert_deployment_allowed(self) -> None:
         manifest_path = VENDOR_ROOT / "models" / "model_manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         selector = self._ADAPTERS[self.sensor_id][2]
+        active_selectors = manifest.get("active_runtime_selectors", {})
+        if self.sensor_id == "thermal" and active_selectors.get("thermal") != selector:
+            raise ModelRuntimeUnavailable(
+                "MODEL_SELECTOR_DRIFT: sensor=thermal, "
+                f"runtime={selector}, manifest={active_selectors.get('thermal')}"
+            )
         metadata = manifest.get("models", {}).get(selector)
         if not isinstance(metadata, dict):
             raise ModelRuntimeUnavailable(

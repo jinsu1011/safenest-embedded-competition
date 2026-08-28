@@ -34,10 +34,12 @@ def snapshot(**overrides):
 
 
 class FakeModel:
-    def __init__(self, prediction=None, error=None):
+    def __init__(self, prediction=None, error=None, *, model_meta=None, model_selector="thermal"):
         self.prediction = prediction
         self.error = error
         self.calls = []
+        self.model_meta = dict(model_meta or {})
+        self.model_selector = model_selector
 
     def predict(self, *args):
         self.calls.append(args)
@@ -95,6 +97,28 @@ class AIPipelineTests(unittest.TestCase):
         self.assertEqual(len(output["thermal"]["metadata"]["heatmap_preview"]["values"]), 320)
         self.assertTrue(output["pir"]["available"])
         self.assertEqual(output["pir"]["source"], "rule")
+
+    def test_active_proxy_model_contributes_bounded_risk_without_fall_state(self):
+        thermal = FakeModel(
+            prediction("HUMAN_FALL_PROXY", [0.01, 0.04, 0.95], 0.95),
+            model_selector="thermal_public_sdt_fp32_active",
+            model_meta={
+                "safety_authority": False,
+                "risk_authority": "LIMITED_POSTURE_PROXY",
+                "risk_contribution": "LIMITED_NON_EMERGENCY",
+                "proxy_risk_score": 0.4,
+            },
+        )
+        pipeline = OnDeviceAIPipeline(self.manager, {"thermal": thermal})
+        raw = (1000).to_bytes(2, "big") * (80 * 62)
+        frame = ThermalFrame(PacketHeader(2, 1, 9936), 80, 62, 1, 10, 1000, 1000, raw)
+
+        result = pipeline.evaluate(snapshot(), frame)["ai"]["thermal"]
+
+        self.assertEqual(result["state"], "HUMAN_FALL_PROXY")
+        self.assertEqual(result["score"], 0.4)
+        self.assertEqual(result["metadata"]["risk_authority"], "LIMITED_POSTURE_PROXY")
+        self.assertFalse(result["metadata"]["safety_authority"])
 
     def test_stale_sensor_does_not_call_model(self):
         thermal = FakeModel(prediction("HUMAN_NORMAL", [0.0, 1.0, 0.0]))
@@ -235,6 +259,25 @@ class AIPipelineTests(unittest.TestCase):
         self.assertEqual(
             LazyModel._ADAPTERS["mmwave"],
             ("mmwave_m_n9_interpreter.py", "MN9Interpreter", "mmwave_m_n9"),
+        )
+
+    def test_thermal_runtime_selector_is_public_sdt_fp32(self):
+        root = (__import__("paths", fromlist=["ONDEVICE_AI_ROOT"]).ONDEVICE_AI_ROOT)
+        manifest = json.loads((root / "models" / "model_manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(
+            manifest["active_runtime_selectors"]["thermal"],
+            "thermal_public_sdt_fp32_active",
+        )
+        active = manifest["models"]["thermal_public_sdt_fp32_active"]
+        self.assertEqual(active["artifact_release"], "FINAL_RUNTIME_MODEL")
+        self.assertTrue(active["deployment_allowed"])
+        self.assertEqual(
+            LazyModel._ADAPTERS["thermal"],
+            (
+                "thermal_interpreter.py",
+                "ThermalInterpreter",
+                "thermal_public_sdt_fp32_active",
+            ),
         )
 
     def test_frozen_model_hashes_match_manifest(self):

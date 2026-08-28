@@ -30,7 +30,7 @@ if project_root not in sys.path:
 
 from inference.model_registry import ModelRegistry
 from adapters.mmwave_stream_adapter import MMWaveStreamAdapter
-from risk.risk_rules import RiskRulesEvaluator
+from risk.risk_rules import RiskRulesEvaluator, RuleResult
 from risk.risk_engine import RiskEngineV4
 
 class MMWaveClutterCalibrator:
@@ -222,6 +222,7 @@ class SafeNestRiskEngine:
         thermal_pred_obj = None
         thermal_ai_status = "NOT_RUN"
         thermal_fallback_reason = None
+        thermal_risk_score = None
 
         if self.thermal_runner is not None and q_gate["thermal"] == 1.0:
             try:
@@ -229,14 +230,56 @@ class SafeNestRiskEngine:
                 thermal_class = thermal_pred_obj.class_index
                 thermal_conf = thermal_pred_obj.confidence
                 thermal_lat = thermal_pred_obj.latency_ms
-                thermal_ai_status = "OK"
+                model_meta = getattr(self.thermal_runner, "model_meta", {})
+                safety_authority = (
+                    model_meta.get("safety_authority", True)
+                    if isinstance(model_meta, dict)
+                    else True
+                )
+                risk_authority = (
+                    model_meta.get("risk_authority")
+                    if isinstance(model_meta, dict)
+                    else None
+                )
+                if safety_authority is False and risk_authority != "LIMITED_POSTURE_PROXY":
+                    q_gate["thermal"] = 0.0
+                    thermal_class = None
+                    thermal_ai_status = "NON_GATING"
+                    thermal_fallback_reason = "THERMAL_MODEL_SAFETY_AUTHORITY_UNVERIFIED"
+                else:
+                    thermal_risk_score = (
+                        float(model_meta.get("proxy_risk_score", 0.4))
+                        if thermal_pred_obj.class_name == "HUMAN_FALL_PROXY"
+                        else 1.0
+                        if thermal_pred_obj.class_name == "HUMAN_FALL"
+                        else 0.0
+                    )
+                    thermal_ai_status = (
+                        "LIMITED_RISK" if safety_authority is False else "OK"
+                    )
             except Exception as e:
                 print(f"⚠️ [RiskEngine] Thermal invoke exception: {e}")
                 q_gate["thermal"] = 0.0
                 thermal_ai_status = "DEGRADED"
                 thermal_fallback_reason = "THERMAL_MODEL_INVOKE_ERROR"
 
-        posture_eval = self.rules_evaluator.evaluate_posture(thermal_class, thermal_conf, valid=(q_gate["thermal"] == 1.0))
+        if (
+            thermal_pred_obj is not None
+            and thermal_pred_obj.class_name == "HUMAN_FALL_PROXY"
+            and thermal_risk_score is not None
+        ):
+            posture_eval = RuleResult(
+                score=thermal_risk_score,
+                reasons=["THERMAL_FALL_PROXY_LIMITED_RISK_NO_EMERGENCY"],
+                status="CAUTION",
+                emergency_override=False,
+            )
+        else:
+            posture_eval = self.rules_evaluator.evaluate_posture(
+                thermal_class,
+                thermal_conf,
+                valid=(q_gate["thermal"] == 1.0),
+            )
         if thermal_fallback_reason and thermal_fallback_reason not in posture_eval.reasons:
             posture_eval.reasons.append(thermal_fallback_reason)
 
@@ -407,9 +450,7 @@ class SafeNestRiskEngine:
 
         v4_fusion = self.v4_engine.evaluate_packet(
             packet,
-            1.0 if thermal_class == 2 and thermal_conf >= 0.8 else (
-                0.0 if q_gate["thermal"] == 1.0 else None
-            ),
+            thermal_risk_score if q_gate["thermal"] == 1.0 else None,
             s1=resp_eval.score if q_gate["mmwave"] == 1.0 else None,
             s2=env_eval.score if q_gate["co2"] == 1.0 else None,
             s3=motion_eval.score if q_gate["pir"] == 1.0 else None,
@@ -436,7 +477,7 @@ class SafeNestRiskEngine:
             "mmwave": resp_eval.score if q_gate["mmwave"] == 1.0 else None,
             "co2": env_eval.score if q_gate["co2"] == 1.0 else None,
             "pir": motion_eval.score if q_gate["pir"] == 1.0 else None,
-            "thermal": 1.0 if thermal_class == 2 and thermal_conf >= 0.8 else (0.0 if q_gate["thermal"] == 1.0 else None),
+            "thermal": thermal_risk_score if q_gate["thermal"] == 1.0 else None,
         }
         for k in ["mmwave", "co2", "pir", "thermal"]:
             if comp_scores[k] is None:
@@ -493,6 +534,14 @@ class SafeNestRiskEngine:
                     "class_name": thermal_pred_obj.class_name if thermal_pred_obj else None,
                     "confidence": float(thermal_conf) if thermal_pred_obj else None,
                     "probabilities": thermal_pred_obj.probabilities if thermal_pred_obj else None,
+                    "safety_authority": (
+                        self.thermal_runner.model_meta.get("safety_authority")
+                        if self.thermal_runner else None
+                    ),
+                    "risk_authority": (
+                        self.thermal_runner.model_meta.get("risk_authority")
+                        if self.thermal_runner else None
+                    ),
                 },
                 "co2": {
                     "source": self.co2_runner.model_meta["model_id"] if self.co2_runner else "none",

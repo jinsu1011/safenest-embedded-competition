@@ -101,14 +101,21 @@ class Thermal44Sensor(BaseSensor):
                 )
 
             pred: ThermalPrediction = self.interpreter.predict(frame_62x80)
-            score = 1.0 if pred.class_index == 2 else 0.0
+            model_meta = self.interpreter.model_meta
+            score = (
+                1.0
+                if pred.class_name == "HUMAN_FALL"
+                else float(model_meta.get("proxy_risk_score", 0.4))
+                if pred.class_name == "HUMAN_FALL_PROXY"
+                else 0.0
+            )
             self.current_state = SensorState.NORMAL
 
             return InferenceResult(
                 sensor_id=self.sensor_id,
                 timestamp=now,
                 score=score,
-                state="HUMAN_FALL" if score == 1.0 else pred.class_name,
+                state=pred.class_name,
                 confidence=pred.confidence,
                 valid=True,
                 latency_ms=(time.perf_counter() - t0) * 1000.0,
@@ -116,7 +123,11 @@ class Thermal44Sensor(BaseSensor):
                     "model_id": pred.model_id,
                     "class_index": pred.class_index,
                     "probabilities": pred.probabilities,
-                    "infer_latency_ms": pred.latency_ms
+                    "infer_latency_ms": pred.latency_ms,
+                    "model_selector": self.interpreter.model_selector,
+                    "safety_authority": model_meta.get("safety_authority", True),
+                    "risk_authority": model_meta.get("risk_authority"),
+                    "risk_contribution": model_meta.get("risk_contribution"),
                 }
             )
         except Exception as exc:

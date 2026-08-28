@@ -7,7 +7,7 @@
     "main": {
       "url": "https://github.com/jinsu1011/safenest-embedded-competition",
       "default_branch": "main",
-      "head_commit": "6fc04d6e9e09aa0baac96592eb374f6d3de6af07"
+      "head_commit": "339eb4f5a13ff68940e127836375bec6f11dff3d"
     },
     "integration": {
       "url": "https://github.com/yuname121/integration",
@@ -95,11 +95,11 @@
           "selector_synced_to_integration_main": true
         },
         {
-          "name": "thermal_b6r_public_sdt_fp32_shadow",
+          "name": "thermal_b6r_public_sdt_fp32_active_runtime",
           "upstream_repository": "https://github.com/sheepmeat/test",
           "upstream_commit": "ccdb2b16ddbbec82d1a4d53cef6b23314ebf366b",
           "classification": "UPSTREAM_AUTHORITATIVE_OVERLAY",
-          "runtime_promoted": false,
+          "runtime_promoted": true,
           "source_paths": [
             "models/thermal/public_sdt/public_sdt_pooled_mlp_fp32_tflite_v1.tflite"
           ],
@@ -109,10 +109,15 @@
           "team_authored_paths": [
             "RaspberryPi/Ondevice_AI/models/thermal/public_sdt/public_sdt_pooled_mlp_fp32_tflite_v1.metadata.json",
             "RaspberryPi/Ondevice_AI/models/model_manifest.json",
+            "RaspberryPi/Ondevice_AI/inference/thermal_interpreter.py",
             "RaspberryPi/Ondevice_AI/tests/test_thermal_public_sdt_shadow_model.py",
-            "RaspberryPi/Ondevice_AI/docs/reports/20260828_SafeNest_Thermal_B6R_Public_SDT_FP32_Team_Import_Handoff_KO_01.md"
+            "RaspberryPi/Runtime/ai/runtime.py",
+            "RaspberryPi/Runtime/ai/pipeline.py",
+            "RaspberryPi/Runtime/risk/formula_v1.py",
+            "RaspberryPi/Runtime/risk/risk_formula_v1.json",
+            "RaspberryPi/Ondevice_AI/docs/reports/20260828_SafeNest_Thermal_B6R_Public_SDT_FP32_Active_Runtime_Handoff_KO_01.md"
           ],
-          "notes": "Exact FP32 artifact imported as SHADOW_ONLY_NONACTIVE. The existing models.thermal selector, risk mapping, and runtime wiring remain unchanged. Public SDT software evidence is not Raspberry Pi, MI48, Thermal-90, real-fall, or safety validation."
+          "notes": "Exact FP32 artifact is the FINAL_RUNTIME_MODEL and active thermal selector. HUMAN_FALL_PROXY contributes bounded risk score 0.4 but cannot trigger a real-fall emergency. Public SDT software evidence is not Raspberry Pi, MI48, Thermal-90, or real-fall validation."
         }
       ]
     },
@@ -249,7 +254,8 @@
     "runtime_models_source": "RaspberryPi/Ondevice_AI/models/model_manifest.json",
     "mmwave_v0_1_0": "deployment_allowed=false, block_reason=CLASS_COLLAPSE_ON_REPOSITORY_NPZ (unchanged)",
     "mmwave_v0_2_0_candidate": "candidate, SYNTHETIC_SMOKE_ONLY, hardware validation BLOCKED_HARDWARE (not promoted to runtime default)",
-    "thermal_v0_1_0": "candidate, CONFIRMED_SYNTHETIC_ONLY",
+    "thermal_v0_1_0": "preserved legacy, deployment_allowed=false, active_runtime_selector=false",
+    "thermal_public_sdt_fp32": "FINAL_RUNTIME_MODEL, active selector, bounded HUMAN_FALL_PROXY risk score 0.4, no emergency authority, Pi/real-fall validation not performed",
     "co2_v0_1_0": "candidate, CONFIRMED_SYNTHETIC_ONLY",
     "co2_c_b6_candidate": "binary unavailable upstream; not promoted",
     "mmwave_m_n9_full_int8": "artifact imported from sheepmeat/test 390f3be; SHA 3b008af4be0facc4037c2afd3fe39292fb794208eb4370dbe6916b2d15aa38a4; models.mmwave selector is ACTIVE_M_N9 to match integration 66b5231; DEVICE_VALIDATED=NO; PI_SMOKE=NOT_PERFORMED; PRESENCE_GATE_REQUIRED=YES; LazyModel still loads inference/mmwave_interpreter.py so runtime_wired=false"

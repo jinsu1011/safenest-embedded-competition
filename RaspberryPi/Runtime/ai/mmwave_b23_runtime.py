@@ -34,10 +34,12 @@ from ai.mmwave_prototype.mmwave_m_prot_2_b23_runtime import (
     CANDIDATE_ID,
     PANEL_ID,
     PRIMARY_REPRESENTATION,
+    SAMPLE_RATE_HZ,
     SCALER_CONTENT_SHA256,
     SOURCE_ARTIFACT_SHA256,
 )
 from ai.mmwave_prototype.mmwave_m_prot_3_integration_runtime import (
+    DEFAULT_MAX_GAP_S,
     MProt3FailClosed,
     MProt3IntegrationRuntime,
 )
@@ -49,6 +51,11 @@ from paths import ONDEVICE_AI_ROOT
 SOURCE = "pytorch"
 MODEL_ID = CANDIDATE_ID
 MODEL_VERSION = "m_prot_b23_pytorch_float32_v1"
+# Frozen R1 requires a regular integer-Hz grid. Live MR60 millis() is ~9.8 Hz
+# and jittered, so Sample.t handed to the composer is admitted-sample index
+# at 10 Hz. Physical ts_monotonic_ms stays freshness + gap/boot only.
+R1_INDEX_DT_S = 1.0 / float(SAMPLE_RATE_HZ)
+R1_TIMEBASE = "SAMPLE_INDEX_10HZ_AFTER_PHYSICAL_FRESHNESS"
 
 
 def _finite(value: object) -> bool:
@@ -80,6 +87,10 @@ class B23TeamRuntime:
         self._phase_seq_delta: int | None = None
         self._missing_phase_event_count = 0
         self._republish_skip_count = 0
+        self._r1_index_n = 0
+        self._last_physical_t: float | None = None
+        # Last explicit ESP occupancy bool. null does not clear this.
+        self._latched_presence: bool | None = None
 
     @property
     def wire_observed(self) -> bool:
@@ -98,6 +109,7 @@ class B23TeamRuntime:
     def observe_packet(self, packet: TelemetryPayload) -> None:
         with self._lock:
             self._wire_observed = True
+            self._latch_occupancy(packet.human_detected_raw)
             self._admit(
                 phase=packet.breath_phase,
                 ts_monotonic_ms=packet.ts_monotonic_ms,
@@ -129,7 +141,10 @@ class B23TeamRuntime:
                     self._last_ingest_error,
                     extras,
                 )
-            presence_available, presence_true = presence_from_sensor(sensor)
+            presence_available, presence_true = self._presence_for_infer(sensor)
+            extras["occupancy_latch"] = self._latched_presence
+            extras["occupancy_null_coerced_to_false"] = False
+            extras["r1_timebase"] = R1_TIMEBASE
             receipt = self._runtime.try_infer(
                 presence_available=presence_available and presence_true,
                 lineage_class="FIXTURE_NON_CAMPAIGN",
@@ -147,6 +162,10 @@ class B23TeamRuntime:
         if not isinstance(values, Mapping):
             values = {}
         boot = sensor.get("boot_id")
+        raw = values.get("human_detected_raw")
+        if not isinstance(raw, bool):
+            raw = values.get("presence")
+        self._latch_occupancy(raw)
         self._admit(
             phase=values.get("breath_phase"),
             ts_monotonic_ms=values.get("ts_monotonic_ms"),
@@ -161,6 +180,22 @@ class B23TeamRuntime:
         """Drop any previously ready causal window. Runtime stays alive."""
 
         self._runtime.reset()
+        self._r1_index_n = 0
+        self._last_physical_t = None
+
+    def _latch_occupancy(self, raw: object) -> None:
+        """Keep last explicit bool. null/omitted does not become false."""
+
+        if isinstance(raw, bool):
+            self._latched_presence = raw
+
+    def _presence_for_infer(self, sensor: Mapping[str, object]) -> tuple[bool, bool]:
+        snapshot_available, snapshot_true = presence_from_sensor(sensor)
+        if snapshot_available:
+            self._latched_presence = snapshot_true
+        if self._latched_presence is None:
+            return False, False
+        return True, bool(self._latched_presence)
 
     def _admit(
         self,
@@ -189,6 +224,7 @@ class B23TeamRuntime:
             self._phase_seq_prev = None
             self._phase_seq_curr = None
             self._phase_seq_delta = None
+            self._latched_presence = None
             self._last_ingest_error = "BOOT_BOUNDARY"
         if boot_id is not None:
             self._last_boot_id = boot_id
@@ -203,8 +239,8 @@ class B23TeamRuntime:
                 self._invalidate_source()
             self._last_ingest_error = "BOOT_BOUNDARY" if boot_changed else "PHASE_STALE"
             return
-        t = physical_timestamp_s(ts_monotonic_ms)
-        if t is None:
+        t_physical = physical_timestamp_s(ts_monotonic_ms)
+        if t_physical is None:
             if not boot_changed:
                 self._invalidate_source()
             self._last_ingest_error = "BOOT_BOUNDARY" if boot_changed else "TIMESTAMP_INVALID"
@@ -224,11 +260,22 @@ class B23TeamRuntime:
             self._note_seq(nested_seq)
             return
 
+        if (
+            not boot_changed
+            and self._last_physical_t is not None
+        ):
+            physical_dt = float(t_physical) - float(self._last_physical_t)
+            if physical_dt <= 0.0 or physical_dt > float(DEFAULT_MAX_GAP_S):
+                # Do not bridge a physical stall onto the 10 Hz index grid.
+                self._invalidate_source()
+                self._last_nested_seq = None
+
         if self._last_nested_seq is not None:
             delta = int(nested_seq) - int(self._last_nested_seq)
             if delta > 1:
                 self._missing_phase_event_count += delta - 1
 
+        t_index = float(self._r1_index_n) * R1_INDEX_DT_S
         bundle = StreamBundle(
             device_identity=device_id or "safenest-mmwave",
             interface_identity="safenest.telemetry.v1",
@@ -236,7 +283,7 @@ class B23TeamRuntime:
             observation_kind="near_raw_phase",
             samples=[
                 Sample(
-                    t=t,
+                    t=t_index,
                     phase=float(phase),
                     seq=int(nested_seq),
                     health_ok=True,
@@ -253,10 +300,13 @@ class B23TeamRuntime:
             self._runtime.ingest_bundle(bundle)
             self._last_ingest_error = None
             self._last_nested_seq = nested_seq
+            self._last_physical_t = float(t_physical)
+            self._r1_index_n += 1
             self._note_seq(nested_seq)
         except MProt3FailClosed as exc:
             self._last_ingest_error = exc.code
             self._last_nested_seq = None
+            self._last_physical_t = None
 
     def _note_seq(self, nested_seq: int) -> None:
         prev = self._phase_seq_curr
@@ -282,6 +332,9 @@ class B23TeamRuntime:
             "live_phase_seq_jump_monitor": "PREPARED_FOR_M_PROT_5C",
             "physical_timestamp_semantic": "ts_monotonic_ms_is_physical_observation_timestamp",
             "phase_age_usage": "FRESHNESS_ONLY",
+            "r1_timebase": R1_TIMEBASE,
+            "occupancy_latch": self._latched_presence,
+            "occupancy_null_coerced_to_false": False,
             "b23_source_sequence": "NESTED_MMWAVE_SEQ",
             "outer_sequence_role": "TRANSPORT_PUBLICATION_ONLY",
             "vendor_rr_model_input": False,

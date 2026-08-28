@@ -84,7 +84,11 @@ class ConnectionProcessor:
 
 
 class SafeNestTCPServer:
-    """Accept one ESP32 stream at a time and continue after disconnects."""
+    """Accept one ESP32 stream at a time and continue after disconnects.
+
+    A new inbound connection immediately preempts the current one so a stalled
+    ESP TCP session cannot block reconnects for the packet deadline.
+    """
 
     def __init__(
         self,
@@ -106,6 +110,9 @@ class SafeNestTCPServer:
             stats=self.stats,
         )
         self._listener: socket.socket | None = None
+        self._active_lock = threading.Lock()
+        self._active_connection: socket.socket | None = None
+        self._worker: threading.Thread | None = None
 
     def serve_forever(self) -> None:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
@@ -113,21 +120,25 @@ class SafeNestTCPServer:
             listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             listener.bind((self.host, self.port))
             self.port = int(listener.getsockname()[1])
-            listener.listen(2)
+            # Reconnect storms from a live ESP must not fill a tiny backlog while
+            # the previous socket is still being torn down.
+            listener.listen(16)
             listener.settimeout(0.5)
-            while not self.stop_event.is_set():
-                try:
-                    connection, peer = listener.accept()
-                except socket.timeout:
-                    continue
-                except OSError:
-                    if self.stop_event.is_set():
-                        break
-                    raise
-                with connection:
+            try:
+                while not self.stop_event.is_set():
+                    try:
+                        connection, peer = listener.accept()
+                    except socket.timeout:
+                        continue
+                    except OSError:
+                        if self.stop_event.is_set():
+                            break
+                        raise
                     connection.settimeout(0.25)
-                    self.processor.process(connection, peer, self.stop_event)
-            self._listener = None
+                    self._replace_connection(connection, peer)
+            finally:
+                self._replace_connection(None, None)
+                self._listener = None
 
     def stop(self) -> None:
         self.stop_event.set()
@@ -137,4 +148,59 @@ class SafeNestTCPServer:
                 listener.close()
             except OSError:
                 pass
+        self._replace_connection(None, None)
 
+    def _replace_connection(
+        self,
+        connection: socket.socket | None,
+        peer: tuple[str, int] | None,
+    ) -> None:
+        with self._active_lock:
+            old_connection = self._active_connection
+            old_worker = self._worker
+            self._active_connection = connection
+            self._worker = None
+        self._close_socket(old_connection)
+        if old_worker is not None and old_worker is not threading.current_thread():
+            old_worker.join(timeout=1.0)
+        if connection is None or peer is None:
+            return
+        worker = threading.Thread(
+            target=self._run_connection,
+            args=(connection, peer),
+            name="safenest-tcp-client",
+            daemon=True,
+        )
+        with self._active_lock:
+            if self._active_connection is connection:
+                self._worker = worker
+                worker.start()
+            else:
+                self._close_socket(connection)
+
+    def _run_connection(
+        self,
+        connection: socket.socket,
+        peer: tuple[str, int],
+    ) -> None:
+        try:
+            self.processor.process(connection, peer, self.stop_event)
+        finally:
+            self._close_socket(connection)
+            with self._active_lock:
+                if self._active_connection is connection:
+                    self._active_connection = None
+                    self._worker = None
+
+    @staticmethod
+    def _close_socket(connection: socket.socket | None) -> None:
+        if connection is None:
+            return
+        try:
+            connection.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+        try:
+            connection.close()
+        except OSError:
+            pass

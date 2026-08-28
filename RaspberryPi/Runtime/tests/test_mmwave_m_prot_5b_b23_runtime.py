@@ -291,6 +291,42 @@ class B23PipelinePathTests(unittest.TestCase):
         self.assertNotEqual(result["state"], "APNEA-proxy")
         self._assert_not_mn9(result)
 
+    def test_presence_true_pulse_latches_across_nulls(self) -> None:
+        """Live ESP occupancy is a 1-sample True pulse; null must not drop the latch."""
+        self._feed(telemetry(0, presence=True), 0)
+        n = ready_count(10.0)
+        for i in range(1, n):
+            self._feed(telemetry(i, presence=None), i)
+        result = self._evaluate()
+        self._assert_not_mn9(result)
+        self.assertNotEqual(result["state"], "PRESENCE_UNAVAILABLE")
+        self.assertIs(result["metadata"].get("occupancy_latch"), True)
+        self.assertFalse(result["metadata"].get("occupancy_null_coerced_to_false"))
+        if result["available"]:
+            self.assertEqual(result["source"], "pytorch")
+            self.assertEqual(result["metadata"]["r1_sample_count"], TRACE_SAMPLES)
+            self.assertEqual(result["metadata"]["assembled_dim"], 621)
+
+    def test_irregular_physical_dt_still_reaches_r1_grid(self) -> None:
+        """Seeed millis() ~9.8 Hz must not fail frozen R1 after index-grid mapping."""
+        n = 300
+        for i in range(n):
+            pkt = telemetry(
+                i,
+                ts_monotonic_ms=float(i) * 102.0,
+                presence=True if i == 0 else None,
+            )
+            self._feed(pkt, i)
+        result = self._evaluate()
+        self._assert_not_mn9(result)
+        self.assertNotEqual(result.get("error"), "R1_TIMESTAMP_GRID_INCONSISTENT")
+        self.assertNotEqual(result["state"], "PRESENCE_UNAVAILABLE")
+        self.assertEqual(result["metadata"].get("r1_timebase"), "SAMPLE_INDEX_10HZ_AFTER_PHYSICAL_FRESHNESS")
+        if result["metadata"].get("window_ready") and result.get("available"):
+            self.assertEqual(result["metadata"]["r1_sample_count"], 300)
+            self.assertEqual(result["metadata"]["assembled_dim"], 621)
+            self.assertEqual(result["source"], "pytorch")
+
     def test_below_10hz_r1_rejects_without_mn9(self) -> None:
         n = ready_count(8.0)
         for i in range(n):

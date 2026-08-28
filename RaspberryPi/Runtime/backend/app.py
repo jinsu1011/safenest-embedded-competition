@@ -66,7 +66,7 @@ def create_app(
     store: RuntimeStore | None = None,
     start_runtime: bool = True,
     room: str = "밀폐공간 A-01",
-    websocket_interval_seconds: float = 0.25,
+    websocket_interval_seconds: float = 1.0,
     emergency_service: EmergencyActionService | None = None,
     sms_provider: SMSProvider | None = None,
     buzzer: BuzzerProtocol | None = None,

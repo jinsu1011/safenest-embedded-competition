@@ -4,7 +4,7 @@
   const canvas = document.getElementById("thermalCanvas");
   if (!canvas) return;
 
-  const WIDTH = 80, HEIGHT = 62, META_BYTES = 16, PAYLOAD_BYTES = META_BYTES + WIDTH * HEIGHT * 2, FREEZE_MS = 3000;
+  const WIDTH = 80, HEIGHT = 62, META_BYTES = 16, PAYLOAD_BYTES = META_BYTES + WIDTH * HEIGHT * 2, FREEZE_MS = 3000, POLL_MS = 500;
   const context = canvas.getContext("2d");
   const source = document.createElement("canvas");
   source.width = WIDTH; source.height = HEIGHT;
@@ -69,7 +69,7 @@
     } catch(error) { unavailable(`열화상 데이터 오류 · ${error.message}`); }
     finally { fetching=false; }
   }
-  window.addEventListener("resize",resize); resize(); update(); setInterval(update,150);
+  window.addEventListener("resize",resize); resize(); update(); setInterval(update,POLL_MS);
   setInterval(()=>{if(lastFrameAt&&performance.now()-lastFrameAt>FREEZE_MS)unavailable("열화상 수신 중단");},500);
 })();
 

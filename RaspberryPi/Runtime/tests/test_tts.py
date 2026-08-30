@@ -97,12 +97,77 @@ class RiskAwareTTSTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.tts.close()
 
-    def test_normal_warning_duplicate_and_warning_cooldown(self) -> None:
-        self.assertFalse(self.tts.handle_publication(publication("NORMAL")))
+    def test_warning_requires_three_consecutive_decisions(self) -> None:
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertEqual(self.backend.started, [])
+
         self.assertTrue(self.tts.handle_publication(publication("WARNING")))
         self.assertTrue(self.backend.wait_for_count(1))
-        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
         self.assertEqual([item[0] for item in self.backend.started], ["WARNING"])
+
+    def test_non_warning_resets_warning_streak(self) -> None:
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertFalse(self.tts.handle_publication(publication("NORMAL")))
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertEqual(self.backend.started, [])
+
+        self.assertTrue(self.tts.handle_publication(publication("WARNING")))
+        self.assertTrue(self.backend.wait_for_count(1))
+
+    def test_warning_reason_changes_keep_streak_and_latest_reason_is_spoken(self) -> None:
+        self.assertFalse(self.tts.handle_publication(
+            publication("WARNING", reasons=("CO2_HIGH",))
+        ))
+        self.assertFalse(self.tts.handle_publication(
+            publication("WARNING", reasons=("LONG_NO_MOTION",))
+        ))
+        self.assertTrue(self.tts.handle_publication(
+            publication("WARNING", reasons=("ABNORMAL_RESPIRATION",))
+        ))
+        self.assertTrue(self.backend.wait_for_count(1))
+        self.assertIn("호흡 이상", self.backend.started[0][1])
+
+    def test_continuous_warning_uses_sixty_second_reminder_cooldown(self) -> None:
+        for _ in range(2):
+            self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertTrue(self.tts.handle_publication(publication("WARNING")))
+        self.assertTrue(self.backend.wait_for_count(1))
+
+        self.clock.now = 59.0
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.clock.now = 60.0
+        self.assertTrue(self.tts.handle_publication(publication("WARNING")))
+        self.assertTrue(self.backend.wait_for_count(2))
+
+    def test_warning_clear_requires_new_episode_confirmation(self) -> None:
+        for _ in range(2):
+            self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertTrue(self.tts.handle_publication(publication("WARNING")))
+        self.assertTrue(self.backend.wait_for_count(1))
+
+        self.assertFalse(self.tts.handle_publication(publication("NORMAL")))
+        self.clock.now = 60.0
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertEqual(len(self.backend.started), 1)
+        self.assertTrue(self.tts.handle_publication(publication("WARNING")))
+        self.assertTrue(self.backend.wait_for_count(2))
+
+    def test_reconfirmed_warning_waits_for_cooldown_without_recounting(self) -> None:
+        for _ in range(2):
+            self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertTrue(self.tts.handle_publication(publication("WARNING")))
+        self.assertTrue(self.backend.wait_for_count(1))
+
+        self.assertFalse(self.tts.handle_publication(publication("NORMAL")))
+        for now in (15.0, 30.0):
+            self.clock.now = now
+            self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.clock.now = 45.0
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
 
         self.clock.now = 60.0
         self.assertTrue(self.tts.handle_publication(publication("WARNING")))
@@ -113,6 +178,8 @@ class RiskAwareTTSTests(unittest.TestCase):
         backend = FakeSpeechBackend(block_warning=True)
         self.tts = AsyncRiskTTS(backend, clock=self.clock)
         self.tts.start()
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
         self.assertTrue(self.tts.handle_publication(publication("WARNING")))
         self.assertTrue(backend.warning_started.wait(1.0))
 
@@ -121,16 +188,36 @@ class RiskAwareTTSTests(unittest.TestCase):
         self.assertEqual([item[0] for item in backend.started], ["WARNING", "DANGER"])
         self.assertEqual(backend.interrupt_calls, 1)
 
-    def test_danger_duplicate_reminder_and_normal_clear(self) -> None:
+    def test_danger_is_immediate(self) -> None:
         self.assertTrue(self.tts.handle_publication(publication("DANGER")))
         self.assertTrue(self.backend.wait_for_count(1))
+
+    def test_repeated_danger_uses_thirty_second_cooldown(self) -> None:
+        self.assertTrue(self.tts.handle_publication(publication("DANGER")))
+        self.assertTrue(self.backend.wait_for_count(1))
+        self.clock.now = 1.0
         self.assertFalse(self.tts.handle_publication(publication("DANGER")))
         self.clock.now = 30.0
         self.assertTrue(self.tts.handle_publication(publication("DANGER")))
         self.assertTrue(self.backend.wait_for_count(2))
 
-        self.assertFalse(self.tts.handle_publication(publication("NORMAL")))
-        self.assertEqual(self.tts.status()["effective_level"], "NORMAL")
+    def test_danger_interrupts_unconfirmed_warning_sequence(self) -> None:
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertTrue(self.tts.handle_publication(publication("DANGER")))
+        self.assertTrue(self.backend.wait_for_count(1))
+        self.assertEqual(self.backend.started[0][0], "DANGER")
+
+    def test_danger_resets_warning_confirmation(self) -> None:
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertTrue(self.tts.handle_publication(publication("DANGER")))
+        self.assertTrue(self.backend.wait_for_count(1))
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertFalse(self.tts.handle_publication(publication("WARNING")))
+        self.assertTrue(self.tts.handle_publication(publication("WARNING")))
+        self.assertTrue(self.backend.wait_for_count(2))
+        self.assertEqual([item[0] for item in self.backend.started], ["DANGER", "WARNING"])
 
     def test_indeterminate_is_silent_and_latched_emergency_remains_danger(self) -> None:
         self.assertFalse(self.tts.handle_publication(publication("INDETERMINATE")))
@@ -140,7 +227,6 @@ class RiskAwareTTSTests(unittest.TestCase):
         self.assertEqual(effective_risk_level(latched), "DANGER")
         self.assertTrue(self.tts.handle_publication(latched))
         self.assertTrue(self.backend.wait_for_count(1))
-        self.assertFalse(self.tts.handle_publication(latched))
         self.assertNotIn("안전", self.backend.started[0][1])
 
     def test_existing_reason_taxonomy_selects_specific_messages(self) -> None:

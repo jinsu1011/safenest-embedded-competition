@@ -25,7 +25,7 @@
 
 ## P3 — 「SafeNest: 카메라 없이, 증거의 유효성까지 판단하는 엣지 안전 노드」
 - 개발 목표 ①~④ (중간계획서 기준, **초기 개발 목표**로 명시)
-- 개념도: 4채널 증거 → 유효성/신선도 → 규칙+엣지AI → 위험도 → 경보/표시/기록
+- 개념도: 4채널 증거 → 유효성/신선도 → 규칙+엣지AI → 위험도(정상 R<30 / 주의 30–65 / 위험 R≥65 / 판단 보류) → 경보/표시/기록
 - **소스코드**: `https://github.com/jinsu1011/safenest-embedded-competition` (실제 URL)
 - **시연동영상**: `[최종 시연동영상 URL 입력 필요]` — 하이퍼링크 생성 금지
 - 심사: 독창성 / 공식 필수(링크)
@@ -75,13 +75,17 @@
 - 심사: 기술성
 
 ## P10 — 「NORMAL과 UNKNOWN은 다르다」 ★최강 페이지
-- R = 100 × (0.35·mmWave + 0.35·CO₂ + 0.15·PIR + 0.15·Thermal), NORMAL<30 / CAUTION 30–60 / DANGER≥60
-- 유효 센서만으로 **가중치 재정규화**
-- STALE·INVALID·MISSING은 마지막 정상값으로 대체되지 않음
-- **전 센서 무효 → `risk_score=None`, `risk_level=None`, `system_health=FAILED`** (정상으로 표시하지 않음)
-- 긴급 오버라이드: thermal=1.0 또는 mmwave=1.0 → 100/DANGER
-- 코드 스니펫: `fallback.py` FAILED 분기 4줄
-- 배지: `SW 검증` (본 세션 22 tests 통과)
+- 정본: `RaspberryPi/Runtime/risk/formula_v1.py` + `risk_formula_v1.json` (`SAFENEST_RISK_V1`)
+- 상세 정책: `docs/09_SAFETY_CRITERIA_V1.md`
+- R = 100 × (0.25·mmWave + 0.30·CO₂ + 0.15·PIR + 0.30·Thermal)
+- 정상 R<30 / 주의(WARNING) 30–65 / 위험 R≥65. 구 V4 CAUTION·R≥60 사용 금지
+- 채널 플로어: CO₂ ≥1,500 ppm 주의(별표2 기계환기 예외) 또는 밀실 기준값 \(B\)+700. ≥5,000 ppm 즉시 위험. occupancy는 점수 제외
+- 열화상 `HUMAN_FALL_PROXY`는 점수 0.4·비상 없음. mmWave 신경망은 관측 전용, 하드웨어 확인 apnea만 즉시 위험
+- 유효 센서만으로 가중치 재정규화. 유효 가중치 <0.5 이면 정상을 INDETERMINATE로 내림
+- 전 센서 무효 → `risk_score=None`, `risk_level=None`, `system_health=FAILED`
+- 계산 예시(엔진 실행): CO₂ 1,500 ppm + 평온 인체 → R=9.75 정상, 플로어로 주의
+- occupancy 로컬라이징은 본 식에서 제외
+- 배지: `SW 검증` (`tests/test_risk_formula_v1.py`)
 - 심사: 기술성 + 독창성
 
 ## P11 — 「실제로 어디까지 돌아가는가」

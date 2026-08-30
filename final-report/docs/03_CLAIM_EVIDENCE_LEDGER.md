@@ -5,9 +5,9 @@
 | # | 주장 (보고서 표현) | 근거 파일 | 등급 | 허용 표현 | 금지 과장 | 상태 |
 |---|---|---|---|---|---|---|
 | 1 | 유효하지 않은 측정값은 0이 아니라 `null`로 보내고 `valid` 플래그를 함께 전달한다 | `devices/esp32_node/firmware/esp32_sensor_node.ino` `formatNullableFloat()` L546-553, L576-583 | E2 (실행 13 tests) | "구현 완료 · SW 검증" | "결측을 완벽히 처리" | ✅ |
-| 2 | 모든 증거가 무효·결측이면 위험도를 **산출하지 않는다**(`risk_score=None`) | `ondevice_ai/risk/fallback.py` L196-201 | E2 (실행 22 tests) | "미산출/UNKNOWN 반환" | "항상 안전을 보장" | ✅ |
-| 3 | TTL 초과 입력은 STALE로 분리되어 현재 증거로 재사용되지 않는다 | `fallback.py` L157-163; `.ino` STALE 상수; `server.py` `snapshot()` | E2 (실행) | "SW 검증" | "실시간 보장" | ✅ |
-| 4 | 유효 센서 가중치만으로 재정규화하여 위험도를 계산한다 | `fallback.py` L214-219 | E2 (실행) | "SW 검증" | — | ✅ |
+| 2 | 모든 증거가 무효·결측이면 위험도를 **산출하지 않는다**(`risk_score=None`) | `RaspberryPi/Runtime/risk/formula_v1.py` fuse(); 구 스냅샷 `fallback.py` L196-201 | E2 | "미산출/UNKNOWN 반환" | "항상 안전을 보장" | ✅ |
+| 3 | TTL 초과 입력은 STALE로 분리되어 현재 증거로 재사용되지 않는다 | `formula_v1.py` LIVE 게이트; `.ino` STALE 상수 | E2 (실행) | "SW 검증" | "실시간 보장" | ✅ |
+| 4 | 유효 센서 가중치만으로 재정규화하여 위험도를 계산하고, 심한 채널은 플로어로 희석을 막는다 | `formula_v1.py` fuse(); `risk_formula_v1.json` `escalation_floors` | E2 | "SW 검증" | — | ✅ |
 | 5 | 열화상 프레임에 CRC-16/CCITT-FALSE와 헤더 min/max 재계산 대조를 적용해 손상 프레임을 버린다 | `.ino` L303-320, L366-367; `server.py` L175-206 | E1 + E2 (실행) | "구현 완료 · SW 검증" | "무결성 100%" | ✅ |
 | 6 | 30초간 프레임이 없으면 GPIO RESET으로 카메라를 자동 재초기화한다 | `.ino` `recoverThermalIfStale()` L418-434 | E1 | "구현 완료" | "복구 성공률 N%" | ✅ (실측 로그 없음) |
 | 7 | 브레드보드 배선 신호 무결성을 고려해 SPI 8 MHz→1 MHz, I2C 400→100 kHz로 조정했고 1 MHz에서 프레임당 약 81 ms | `.ino` L50-53 주석, `Wire.setClock(100000)` L696; 유승하 문제#3 | E3 | "실기기 기반 조정" | "파형 측정으로 입증" | ✅ |
@@ -26,7 +26,7 @@
 | 20 | ESP32 빌드 RAM 9.9%(32,356/327,680), Flash 20.5%(268,765/1,310,720) | `FINAL_REPORT_KO.md`, `INTEGRATION_PROGRESS.md` | E2 | "실측 빌드 리소스" | — | ✅ |
 | 21 | 3D 하우징 4종 STL + 설계사양 2종을 설계·전달 (센서 137×80×60 mm, LCD 240×140 mm, 슬롯 3.5 mm, 편측 유격 0.25 mm) | `hardware/3d_models/*`, 강유나 최종본 Ⅱ-6 | E1 | "설계 완료" | "하우징 제작 완료" | ✅ 출력물 사진 없음 |
 | 22 | 본 세션에서 하드웨어 없이 실행 가능한 테스트 57건 통과, 2건 실패(패키지 내 데이터 파일 부재) | `work/test_runs/EXECUTED_TESTS.md` | E2 | "본 문서 작성 시점 실행 결과" | "1,483 tests 통과" | ✅ |
-| 23 | CO₂ 임계값은 내부 실험값이며 기관 출처가 없다 | 유승하 Ⅱ-5; `risk_engine.py` L146 | — | "내부 실험 임계값 · 공식 기준 확인 필요" | "안전기준 준수" | ✅ |
+| 23 | CO₂ 절대 주의 천장은 **1,500 ppm**(별표2 비고: 자연환기 불가+기계환기)이며 주의 구간이다. 별표2 **기본 1,000 ppm은 절대 트립이 아니다**. 5,000 ppm 비상은 OSHA/NIOSH/ACGIH 8h TWA와 같은 값이다 | `docs/09_SAFETY_CRITERIA_V1.md`; `risk_formula_v1.json`; 별표2; 제618조; OSHA Chemical Data 183 | E2 | "팀 프로토타입 조기경보. 출처는 09" | "안전기준 준수" | ✅ |
 | 24 | HUMAN_FALL은 눕기(LYING) 정적 자세 프록시다 | `phase7_10_scenario_report.md` 시나리오 D; 김태균 L47 | E3 | "정적 자세 기반 위험 후보" | "낙상 감지" | ✅ |
 
 ## 등록 거부 (증거 없음 → 보고서 사용 금지)

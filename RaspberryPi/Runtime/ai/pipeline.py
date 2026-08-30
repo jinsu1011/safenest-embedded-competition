@@ -7,7 +7,7 @@ from typing import Mapping
 
 from ai.result import AIResult
 from ai.runtime import LazyModel
-from ai.co2_canonical_runtime import CO2SlopeWindowBuilder
+from ai.co2_canonical_runtime import CO2BaselineLock, CO2SlopeWindowBuilder
 from ai.mmwave_b23_runtime import B23TeamRuntime
 from gateway.protocol import TelemetryPayload, ThermalFrame
 from state.manager import SensorStateManager
@@ -31,6 +31,7 @@ class OnDeviceAIPipeline:
         self._mmwave_b23 = B23TeamRuntime()
         self._mmwave_wire_observed = False
         self._co2_window = CO2SlopeWindowBuilder()
+        self._co2_baseline = CO2BaselineLock.from_risk_config()
         self._co2_wire_observed = False
 
     def observe_telemetry(self, packet: TelemetryPayload) -> None:
@@ -72,6 +73,7 @@ class OnDeviceAIPipeline:
         """
 
         self._co2_window.observe(sensor)
+        self._co2_baseline.observe(sensor)
         self._co2_wire_observed = True
 
     def evaluate(
@@ -167,8 +169,10 @@ class OnDeviceAIPipeline:
         if not self._co2_wire_observed:
             # Snapshot-driven callers (offline replay, unit tests) have no wire feed.
             self._co2_window.observe(sensor)
+            self._co2_baseline.observe(sensor)
         slope = self._co2_window.latest()
         diagnostics = dict(slope.metadata)
+        diagnostics.update(self._co2_baseline.latest().as_metadata())
         if not slope.ready or slope.ppm is None or slope.slope_ppm_per_min is None:
             return self._unavailable(
                 "co2",

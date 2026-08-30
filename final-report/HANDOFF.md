@@ -1,6 +1,20 @@
 # SafeNest 개발완료보고서 — 작업 인계 메모
 
-최종 갱신 : 2026-08-24 새벽 (맥북에서 작업 중단 시점)
+최종 갱신 : 2026-08-30 (CO₂ 밀실 기준값 로컬라이징 가동)
+
+---
+
+## 0. 2026-08-30 변경
+
+현재 Pi 런타임 `SAFENEST_RISK_V1` 을 보고서 정본 안전기준으로 올렸다.
+
+- 정책 문서: `docs/09_SAFETY_CRITERIA_V1.md` (팀장에게 넘겨 P10 에이전트 입력으로 쓰는 브리핑. 법령·논문 URL·복붙 문장·금지 표현 포함)
+- 슬라이드 원본: `generator/build.js` P3·P4·P6·P10·P14
+- 엔진: `RaspberryPi/Runtime/risk/formula_v1.py` + `risk_formula_v1.json` (1.2.0, 절대 주의 1,500 ppm, 밀실 기준값 \(B\) + 상대 \(\Delta 700\))
+
+구 V4 식(0.35/0.35, CAUTION, R≥60, 1,500 ppm=위험)은 보고서에 쓰지 않는다.
+
+**맥에서 `generator/rebuild.sh` 로 PPTX·PDF를 다시 뽑아야 제출본이 갱신된다.** Pi에서는 Keynote export가 안 된다.
 
 ---
 

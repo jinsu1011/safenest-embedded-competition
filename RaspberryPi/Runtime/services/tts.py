@@ -22,6 +22,7 @@ from typing import Any, Callable, Mapping, Protocol
 
 LOGGER = logging.getLogger(__name__)
 _PRIORITY = {"WARNING": 1, "DANGER": 2}
+_DEFAULT_WARNING_CONFIRMATIONS = 3
 _DEFAULT_PIPER_MODEL = (
     Path(__file__).resolve().parents[1]
     / "data"
@@ -303,6 +304,8 @@ class AsyncRiskTTS:
         self._current: _SpeechRequest | None = None
         self._effective_level: str | None = None
         self._last_accepted_at: dict[str, float] = {}
+        self._warning_streak_count = 0
+        self._warning_confirmed = False
         self._closed = False
 
     def start(self) -> None:
@@ -328,6 +331,10 @@ class AsyncRiskTTS:
             self._effective_level = level
             transition = previous != level
 
+            if level != "WARNING":
+                self._warning_streak_count = 0
+                self._warning_confirmed = False
+
             if level not in _PRIORITY:
                 if self._pending is not None:
                     self._pending.cancel_event.set()
@@ -335,6 +342,18 @@ class AsyncRiskTTS:
                 return False
 
             now = self._clock()
+            if level == "WARNING":
+                if not self._warning_confirmed:
+                    self._warning_streak_count += 1
+                    if self._warning_streak_count < _DEFAULT_WARNING_CONFIRMATIONS:
+                        LOGGER.debug(
+                            "TTS warning confirmation pending: count=%s required=%s",
+                            self._warning_streak_count,
+                            _DEFAULT_WARNING_CONFIRMATIONS,
+                        )
+                        return False
+                    self._warning_confirmed = True
+
             cooldown = (
                 self.danger_cooldown_seconds
                 if level == "DANGER"

@@ -196,6 +196,32 @@ class AIPipelineTests(unittest.TestCase):
         # Occupancy is not a hazard weight.
         self.assertEqual(ready["score"], 0.0)
         self.assertTrue(ready["metadata"]["risk_contribution_deferred"])
+        self.assertEqual(ready["metadata"]["co2_baseline_status"], "CO2_BASELINE_LOCKED")
+
+    def test_co2_room_baseline_locks_after_three_minutes(self):
+        pipeline = OnDeviceAIPipeline(self.manager, {"co2": FakeModel(prediction("VACANT", [0.9, 0.1]))})
+
+        def measurement(event_id: int, clock_ms: float, ppm: float):
+            return sensor(
+                values={
+                    "ppm": ppm,
+                    "latest_measurement_ppm": ppm,
+                    "measurement_event_valid": True,
+                    "measurement_event_id": event_id,
+                    "measurement_monotonic_ms": clock_ms,
+                },
+                sequence=event_id,
+            )
+
+        warming = pipeline.evaluate(snapshot(co2=measurement(1, 0.0, 400.0)))["ai"]["co2"]
+        self.assertEqual(warming["metadata"]["co2_baseline_status"], "CO2_BASELINE_UNLOCKED_WARMUP")
+        self.assertFalse(warming["metadata"]["co2_relative_warning"])
+        pipeline.evaluate(snapshot(co2=measurement(2, 60_000.0, 400.0)))
+        pipeline.evaluate(snapshot(co2=measurement(3, 120_000.0, 400.0)))
+        locked = pipeline.evaluate(snapshot(co2=measurement(4, 180_000.0, 400.0)))["ai"]["co2"]
+        self.assertEqual(locked["metadata"]["co2_baseline_status"], "CO2_BASELINE_LOCKED")
+        self.assertEqual(locked["metadata"]["co2_baseline_ppm"], 400.0)
+        self.assertEqual(locked["metadata"]["co2_delta_plus_ppm"], 0.0)
 
     def test_co2_restarts_history_after_a_forbidden_gap(self):
         co2 = FakeModel(prediction("OCCUPIED", [0.1, 0.9]))

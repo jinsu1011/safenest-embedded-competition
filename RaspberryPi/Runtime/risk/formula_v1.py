@@ -492,6 +492,7 @@ class SafeNestRiskFormulaV1:
 
         score = _piecewise(self._co2_curve, ppm)
         reasons: list[str] = []
+        baseline = _baseline_metadata(ai)
         if ppm >= float(self._co2["immediate_danger_ppm"]):
             reasons.append("CO2_IMMEDIATE_DANGER")
             floors.append("co2_immediate_danger")
@@ -504,7 +505,17 @@ class SafeNestRiskFormulaV1:
             state = "CO2_DANGER"
         elif ppm >= float(self._co2["warning_ppm"]):
             reasons.append("HIGH_CO2_WARNING")
+            floors.append("co2_warning")
             state = "CO2_WARNING"
+        elif baseline.get("co2_relative_warning") is True:
+            reasons.append("CO2_RELATIVE_RISE")
+            floors.append("co2_relative_warning")
+            state = "CO2_RELATIVE_WARNING"
+        elif baseline.get("co2_baseline_status") == "CO2_BASELINE_LOCKED":
+            state = "CO2_NORMAL"
+        elif baseline.get("co2_baseline_status"):
+            reasons.append("CO2_BASELINE_UNLOCKED")
+            state = "CO2_LOCALIZING"
         else:
             state = "CO2_NORMAL"
 
@@ -531,6 +542,7 @@ class SafeNestRiskFormulaV1:
                 "slope_ppm_per_min": slope,
                 "slope_source": slope_source,
                 "slope_unit": "ppm/min",
+                **baseline,
                 **occupancy,
             },
         )
@@ -698,6 +710,28 @@ def _values(sensor: Any) -> Mapping[str, Any]:
 
 def _error(ai: Any) -> str | None:
     return str(ai.get("error")) if isinstance(ai, Mapping) and ai.get("error") else None
+
+
+def _baseline_metadata(ai: Any) -> dict[str, Any]:
+    """Room-air localization fields. Occupancy is a separate, non-hazard signal."""
+
+    if not isinstance(ai, Mapping):
+        return {}
+    metadata = ai.get("metadata")
+    metadata = metadata if isinstance(metadata, Mapping) else {}
+    status = metadata.get("co2_baseline_status")
+    if not status:
+        return {}
+    baseline_ppm = metadata.get("co2_baseline_ppm")
+    delta = metadata.get("co2_delta_plus_ppm")
+    return {
+        "co2_baseline_status": str(status),
+        "co2_baseline_ppm": float(baseline_ppm) if _finite_number(baseline_ppm) else None,
+        "co2_delta_plus_ppm": float(delta) if _finite_number(delta) else None,
+        "co2_relative_warning": metadata.get("co2_relative_warning") is True,
+        "co2_baseline_reason": metadata.get("co2_baseline_reason"),
+        "co2_baseline_plus_only": True,
+    }
 
 
 def _occupancy_metadata(ai: Any) -> dict[str, Any]:

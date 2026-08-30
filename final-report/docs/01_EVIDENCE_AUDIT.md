@@ -29,8 +29,9 @@ Snapshot = `05_Source_Snapshot/safenest-embedded-competition` @ commit `3f22fb1�
 | SPI 1 MHz / I2C 100 kHz (signal integrity) | `.ino` `THERMAL_SPI_HZ=1000000`; `Wire.setClock(100000)` L696 | implemented, from 8 MHz/400 kHz | **E3** | 유승하 report 문제3 | 실기기 검증 | 계측 파형 없음 |
 | No `delay()`; millis() scheduling + FreeRTOS network task; 1-slot `xQueueOverwrite` | `.ino` header comment L15-18 | implemented | **E1** | source | 구현 완료 | — |
 | Buzzer GPIO18 880 Hz on `emergency` | `server.py` `BuzzerController` L410, args L699-701 | implemented | **E2** | executed (mocked) | SW 검증 | 실기기 부저 증거 |
-| **Risk engine** R=100·(0.35·mmWave+0.35·CO₂+0.15·PIR+0.15·Thermal) | `ondevice_ai/risk/risk_engine.py` L8-20 | implemented | **E2** | **executed: 22 passed** | SW 검증 | — |
-| Thresholds NORMAL<30 / CAUTION 30–60 / DANGER ≥60 | same | implemented | **E2** | executed | SW 검증 | 임계값의 대외 근거 없음 |
+| **Risk engine (current Pi)** R=100·(0.25·mmWave+0.30·CO₂+0.15·PIR+0.30·Thermal), floors | `RaspberryPi/Runtime/risk/formula_v1.py`, `risk_formula_v1.json` | implemented | **E2** | `test_risk_formula_v1.py` | SW 검증. 보고서 P10 정본 | 구 V4 스냅샷 식과 다름 |
+| Thresholds NORMAL<30 / WARNING 30–65 / DANGER ≥65 | same | implemented | **E2** | executed | 주의=WARNING. CAUTION 명칭 폐기 | 30/65는 팀 프로토타입 |
+| CO₂ warning floor ≥1500 ppm or baseline+700, immediate danger ≥5000 ppm | `risk_formula_v1.json` `co2` + `CO2BaselineLock`; `docs/09_SAFETY_CRITERIA_V1.md` | implemented | **E2** | `test_indoor_air_quality_anchor_raises_warning_even_when_r_is_low`; `test_relative_rise_warns_below_the_absolute_ceiling`; `test_co2_baseline_lock.py` | 1,500 ppm(별표2 비고)=주의. \(B\)+700=상대 주의. occupancy는 점수 제외 | 인증 기준 아님 |
 | **Fail-closed: all sensors invalid → risk_score=None, risk_level=None** | `ondevice_ai/risk/fallback.py` L196-201 | implemented | **E2** | executed | SW 검증 (**핵심 차별성**) | — |
 | Weight renormalisation over valid sensors only | `fallback.py` L214-219 | implemented | **E2** | executed | SW 검증 | — |
 | STALE excluded (not reused as current) | `fallback.py` L157-163 `_STALE_TIMESTAMP` | implemented | **E2** | executed | SW 검증 | — |

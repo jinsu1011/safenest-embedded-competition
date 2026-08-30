@@ -92,9 +92,11 @@ final-report/
   - `THERMAL_STREAM_FRAMES = false` — 열화상 전 프레임 전송 **비활성**, 최고온도만 1초 telemetry에 실음
   - staleness: mmWave 5s / CO₂ 15s / Thermal 30s, `delay()` 미사용 + FreeRTOS 태스크 + 1-slot 큐
 - Pi 수신·표시 `integration/pi_lcd/server.py` — **Python 표준 http.server**, TCP 9000, HTTP 8080, 상태 6종, 부저 BCM GPIO18 880Hz
-- 위험도 `ondevice_ai/risk/{risk_engine,fallback}.py` — R = 100×(0.35·mmWave+0.35·CO₂+0.15·PIR+0.15·Thermal), NORMAL<30/CAUTION 30–60/DANGER≥60
-  - **전 센서 무효 → `risk_score=None`, `risk_level=None`, `system_health=FAILED`** ← 최강 차별점
-  - 유효 센서만 가중치 재정규화, STALE 입력은 마지막 정상값으로 재사용 안 함
+- 위험도 `RaspberryPi/Runtime/risk/formula_v1.py` — R = 100×(0.25·mmWave+0.30·CO₂+0.15·PIR+0.30·Thermal), 정상<30/주의 30–65/위험≥65
+  - 정책 정본 `final-report/docs/09_SAFETY_CRITERIA_V1.md`
+  - **전 센서 무효 → `risk_score=None`, `risk_level=None`, `system_health=FAILED`**
+  - 유효 센서만 가중치 재정규화. CO₂ ≥1,500 ppm 또는 밀실 기준값 \(B\)+700 주의. ≥5,000 ppm 즉시 위험. occupancy는 점수 제외
+  - 열화상 프록시는 비상 없음. mmWave 신경망 관측 전용, 하드웨어 확인 apnea만 즉시 위험
 - 웹 `integration/web/` — **Express 5** (bcryptjs·jsonwebtoken·qrcode), QR 공간코드 3종
 - 외함 `hardware/3d_models/` — STL 4종. **출력·조립 완료** (체결·발열 확인은 미검증)
 
@@ -112,7 +114,7 @@ final-report/
 - ESP32 빌드: RAM 32,356/327,680 = **9.9%**, Flash 268,765/1,310,720 = **20.5%**
 - **직접 실행한 테스트: 57 passed / 2 failed** (실패 2건 = 패키지 내 manifest 파일 부재)
   - 저장소 내 `def test_` 총 1,483개(99파일) — **이건 함수 개수다. "1,483 통과"로 쓰면 안 됨**
-- **P10 계산 예시** (정본 `fallback.py` 직접 실행으로 검증): Thermal STALE → 유효 가중치 0.85 재정규화(0.412/0.412/0.176) → **R = 58.82 → CAUTION**, `system_health = DEGRADED`
+- **P10 계산 예시** (`formula_v1.py` 실행): CO₂ 1,500 ppm + 평온 인체 → **R = 9.75 정상, 플로어 `co2_warning` → 주의**, 비상 아님
 
 ### AI 모델 3종 상태 (`ondevice_ai/models/model_manifest.json`)
 | 모델 | 상태 |
@@ -123,7 +125,7 @@ final-report/
 | `mmwave_resp_int8_v0.2.0` 후보 | acc 1.0이지만 **합성 468샘플 한정**, `real_sensor_performance: NOT_VERIFIABLE` |
 
 ### 임계값 외부 근거 (조사 완료)
-- **CO₂ 1,500 ppm** = 실내공기질 관리법 시행규칙 **별표2** 기계환기 시설 유지기준과 동일한 값
+- **CO₂ 1,500 ppm** = 실내공기질 관리법 시행규칙 **별표2** 기계환기 시설 유지기준과 동일한 값. **주의 구간**이지 즉시 위험이 아님
 - 법정 적정공기 = 산업안전보건기준에 관한 규칙 **제618조** (CO₂ 1.5 % 미만 = 15,000 ppm, 산소 18~23.5 %)
 - **위험도 30/60 과 CO₂ 2,000 ppm 은 팀 내부 실험 기준값** — 공인 기준 아님. P10에 명시되어 있다
 

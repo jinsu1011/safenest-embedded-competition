@@ -178,7 +178,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
              {text:'\n유효성·신선도 재검사  →  INT8 TFLite 추론  →  Risk Engine 가중 융합',options:{fontSize:11.5,color:INK}}],
     {x:D0,y:dy,w:DW,h:0.74,fontFace:F,align:'center',valign:'middle',lineSpacing:17});
   dy+=0.76; down(s,D0,dy,DW); dy+=0.24;
-  const lv=[['NORMAL','R < 30',GREEN],['CAUTION','30 ≤ R < 60',AMBER],['DANGER','R ≥ 60',RED],['판단 보류','risk = None',GREY]];
+  const lv=[['정상','R < 30',GREEN],['주의','30 ≤ R < 65',AMBER],['위험','R ≥ 65',RED],['판단 보류','증거 부족',GREY]];
   lv.forEach((v,i)=>{
     const x=D0+i*1.79;
     s.addShape(pptx.ShapeType.roundRect,{x,y:dy,w:1.70,h:0.50,fill:{color:v[2]},line:{color:v[2]},rectRadius:0.06});
@@ -232,7 +232,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
    ['MCU 펌웨어','Arduino / PlatformIO (C++)','ESP32 Dev Module','devices/esp32_node/firmware/'],
    ['수신·표시 서버','Python 3 표준 라이브러리 (http.server, socket, struct)','Raspberry Pi 5','integration/pi_lcd/server.py'],
    ['온디바이스 AI','TensorFlow Lite INT8 추론 / 학습·검증 TensorFlow 2.19.1','Raspberry Pi 5','ondevice_ai/inference/, models/'],
-   ['위험도 엔진','Python + NumPy','Raspberry Pi 5','ondevice_ai/risk/risk_engine.py'],
+   ['위험도 엔진','Python, 규칙+플로어 융합','Raspberry Pi 5','RaspberryPi/Runtime/risk/formula_v1.py'],
    ['웹 관제','Node.js Express 5 (bcryptjs · jsonwebtoken · qrcode)','Raspberry Pi 5','integration/web/'],
    ['센서 계약','Python 추상 인터페이스','전 영역 공통','shared/contracts/base_sensor.py'],
    ['외함','3D CAD → STL 4종','FDM 출력','hardware/3d_models/']];
@@ -275,7 +275,7 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
    ['shared/contracts/base_sensor.py','모든 영역이 의존하는 센서 계약','인터페이스 정의'],
    ['integration/pi_lcd/server.py','TCP 9000 수신, HTTP 8080 API, 상태 6종, 부저','패킷 → 상태·화면·경보'],
    ['ondevice_ai/inference/','TFLite Interpreter, 모델 레지스트리, 검증기','프레임·윈도우 → InferenceResult'],
-   ['ondevice_ai/risk/{risk_engine,fallback}.py','가중 융합 위험도, fail-closed 판정','센서 결과 → risk_score / level / health'],
+   ['RaspberryPi/Runtime/risk/\nformula_v1.py','가중 융합 + 채널별 안전기준 플로어','센서·AI → risk_score / WARNING·DANGER'],
    ['ondevice_ai/integrated_node/run_node.py','통합 실행 노드, 외부 provider 주입','센서 provider → 위험도 출력'],
    ['integration/web/','Express 5 관제 웹, QR 생성, 시뮬레이터','상태 → 관리자·방문자 화면'],
    ['hardware/3d_models/','외함 CAD STL 4종 + 설계사양 2종','설계 → FDM 출력']];
@@ -400,46 +400,42 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 
 /* ============ P10 ============ */
 {
-  const {s,y} = page(10,'3.5  위험도 산출 알고리즘');
-  s.addShape(pptx.ShapeType.roundRect,{x:0.55,y:y+0.02,w:12.23,h:0.56,fill:{color:LBLUE},line:{color:BLUE,width:1},rectRadius:0.06});
-  s.addText('R = 100 × ( 0.35 · mmWave + 0.35 · CO₂ + 0.15 · PIR + 0.15 · Thermal )      NORMAL R < 30   ·   CAUTION 30 ≤ R < 60   ·   DANGER R ≥ 60',
-    {x:0.55,y:y+0.02,w:12.23,h:0.56,fontFace:F,fontSize:12.5,bold:true,color:NAVY,align:'center',valign:'middle'});
-  sub(s,0.55,y+0.68,'센서 상태에 따른 산출 방식');
-  badge(s,11.46,y+0.68,'SW 검증','sw');
-  const cases=[
-    ['모든 센서 유효','HEALTHY','4채널 가중 융합으로 위험도를 산출한다.',GREEN],
-    ['일부 무효 또는 STALE','DEGRADED','유효한 센서의 가중치만 재정규화하여 산출한다.\n무효 입력을 마지막 정상값으로 대체하지 않는다.',AMBER],
-    ['전부 무효 또는 결측','FAILED','risk_score = None, risk_level = None.\n위험도를 산출하지 않으며 정상으로 표시하지 않는다.',RED]];
-  cases.forEach((c,i)=>{
-    const x=0.55+i*4.13;
-    box(s,x,y+1.02,3.86,1.32,'FFFFFF',c[3]);
-    s.addShape(pptx.ShapeType.rect,{x,y:y+1.02,w:3.86,h:0.34,fill:{color:c[3]}});
-    s.addText(c[1],{x,y:y+1.02,w:3.86,h:0.34,fontFace:F,fontSize:12.5,bold:true,color:'FFFFFF',align:'center',valign:'middle'});
-    s.addText(c[0],{x:x+0.12,y:y+1.42,w:3.62,h:0.26,fontFace:F,fontSize:12,bold:true,color:NAVY,align:'center'});
-    s.addText(c[2],{x:x+0.12,y:y+1.70,w:3.62,h:0.60,fontFace:F,fontSize:11,color:INK,align:'center',lineSpacing:16});
-  });
-  sub(s,0.55,y+2.46,'계산 예시 : 열화상이 STALE 로 떨어진 경우');
-  box(s,0.55,y+2.82,7.35,1.52,SOFT,LINE);
+  const {s,y} = page(10,'3.5  위험도 산출과 안전기준');
+  s.addShape(pptx.ShapeType.roundRect,{x:0.55,y:y+0.00,w:12.23,h:0.46,fill:{color:LBLUE},line:{color:BLUE,width:1},rectRadius:0.06});
+  s.addText('R = 100 × ( 0.25 · mmWave + 0.30 · CO₂ + 0.15 · PIR + 0.30 · Thermal )     정상 R < 30  ·  주의 30 ≤ R < 65  ·  위험 R ≥ 65',
+    {x:0.55,y:y+0.00,w:12.23,h:0.46,fontFace:F,fontSize:12,bold:true,color:NAVY,align:'center',valign:'middle'});
+  badge(s,11.46,y+0.52,'SW 검증','sw');
+  sub(s,0.55,y+0.50,'채널별 안전기준. 플로어가 가중합보다 등급을 올릴 수 있다');
+  const pol=[[hdr('채널'),hdr('주의 플로어'),hdr('즉시 위험'),hdr('점수에 넣는 방식')],
+    ['CO₂','≥ 1,500 ppm 또는 기준값+700 ppm\n상승 ≥ 15 ppm/min','≥ 5,000 ppm 비상\n2,500 ppm 은 주의 유지','ppm 곡선. occupancy 모델은 제외'],
+    ['열화상','HUMAN_FALL_PROXY 점수 0.4\n비상 없음','HUMAN_FALL 신뢰도 ≥ 0.8\n현재 모델은 프록시만 출력','눕기 자세 프록시. 낙상 사건 검증 전'],
+    ['mmWave','미검증 APNEA 2회 연속\n호흡 10–24 rpm 이탈 지속','하드웨어 확인 apnea 만','신경망은 관측 전용. 스펙트럼 호흡수 우선'],
+    ['PIR','재실 확인 후 180 s 무움직임','해당 없음','재실 미확인이면 비가용 (0점으로 채우지 않음)']];
+  s.addTable(pol.map((r,ri)=>r.map((c,ci)=>typeof c==='string'?{text:c,options:{bold:ci===0,color:ci===0?NAVY:INK,align:ci===0?'center':'left'}}:c)),
+    {x:0.55,y:y+0.82,w:12.23,colW:[1.45,3.55,3.55,3.68],rowH:0.40,...TB,fontSize:10.5});
+  sub(s,0.55,y+2.90,'계산 예시 : CO₂ 1,500 ppm, 사람 상태는 평온');
+  box(s,0.55,y+3.24,7.35,1.36,SOFT,LINE);
   s.addText([
     {text:'입력   ',options:{bold:true,color:NAVY}},
-    {text:'mmWave 0.00 (valid) · CO₂ 1.00 (valid, 1,500 ppm 초과) · PIR 1.00 (valid, 무움직임) · Thermal STALE\n',options:{color:INK}},
-    {text:'재정규화   ',options:{bold:true,color:NAVY}},
-    {text:'유효 가중치 합 0.35 + 0.35 + 0.15 = 0.85  →  0.412 / 0.412 / 0.176\n',options:{color:INK}},
-    {text:'산출   ',options:{bold:true,color:NAVY}},
-    {text:'R = 100 × (0.00×0.412 + 1.00×0.412 + 1.00×0.176) = ',options:{color:INK}},
-    {text:'58.82  →  CAUTION',options:{bold:true,color:AMBER}},
-    {text:'\nsystem_health = DEGRADED, stale_sensors = [thermal]',options:{fontFace:M,fontSize:10,color:GREY}}
-  ],{x:0.75,y:y+2.92,w:6.95,h:1.34,fontFace:F,fontSize:11.5,lineSpacing:19,valign:'top'});
-  box(s,8.10,y+2.82,4.68,1.52,'FFFFFF',RED);
-  s.addText('fail-closed 구현 (ondevice_ai/risk/fallback.py)',{x:8.30,y:y+2.90,w:4.3,h:0.24,fontFace:F,fontSize:11,bold:true,color:RED});
-  s.addText('if system_health == "FAILED":\n    risk_score = None   # 0점으로 대체하지 않는다\n    risk_level = None   # 등급 자체를 내지 않는다\n    reasons.insert(0,\n        "ALL_SENSORS_FAULT_OR_MISSING")',
-    {x:8.30,y:y+3.14,w:4.3,h:1.14,fontFace:M,fontSize:10,color:INK,lineSpacing:16});
+    {text:'호흡 16 rpm · CO₂ 1,500 ppm (성분 0.325) · 움직임 있음 · 열화상 HUMAN_NORMAL\n',options:{color:INK}},
+    {text:'가중합   ',options:{bold:true,color:NAVY}},
+    {text:'R = 100 × (0.25×0 + 0.30×0.325 + 0.15×0 + 0.30×0) = ',options:{color:INK}},
+    {text:'9.75  →  점수 등급 정상\n',options:{bold:true,color:GREEN}},
+    {text:'플로어   ',options:{bold:true,color:NAVY}},
+    {text:'co2_warning  →  ',options:{color:INK}},
+    {text:'주의',options:{bold:true,color:AMBER}},
+    {text:'   · 비상 아님 · mmWave 신경망 관측 전용이라 health = DEGRADED',options:{color:GREY}}
+  ],{x:0.75,y:y+3.32,w:6.95,h:1.20,fontFace:F,fontSize:11,lineSpacing:17,valign:'top'});
+  box(s,8.10,y+3.24,4.68,1.36,'FFFFFF',RED);
+  s.addText('fail-closed (formula_v1.py)',{x:8.30,y:y+3.32,w:4.3,h:0.22,fontFace:F,fontSize:11,bold:true,color:RED});
+  s.addText('전 채널 무효 → score·level = None\n유효 가중치 < 0.5 이고 정상이면\nINDETERMINATE (정상으로 채우지 않음)\n점수가 낮아도 플로어가 주의를 올린다',
+    {x:8.30,y:y+3.56,w:4.3,h:0.96,fontFace:F,fontSize:11,color:INK,lineSpacing:16});
   s.addText([
     {text:'임계값의 근거   ',options:{bold:true,color:NAVY}},
-    {text:'CO₂ 1,500 ppm 은 실내공기질 관리법 시행규칙 별표2가 정한 기계환기 시설의 유지기준과 같은 값이다. 산업안전보건기준에 관한 규칙 제618조의 적정공기 기준(CO₂ 1.5 %, 곧 15,000 ppm 미만)보다 훨씬 낮은 조기경보 지점에 해당한다.  ',options:{color:INK}},
-    {text:'위험도 30 / 60 및 CO₂ 2,000 ppm 은 팀 내부 실험 기준값이며 대외 공인 기준이 아니다.',options:{bold:true,color:RED}}
-  ],{x:0.55,y:y+4.48,w:12.23,h:0.68,fontFace:F,fontSize:11.5,lineSpacing:18,valign:'top'});
-  note(s,'계산 예시는 정본 fallback.py 를 그대로 실행해 얻은 값이다. 검증 : risk_engine · fallback · risk_health_separation · risk_rules 테스트 22건 실행 전부 통과.');
+    {text:'1,500 ppm 은 별표2 비고(자연환기 불가+기계환기)이며 기본 유지기준은 1,000 ppm 이다. 5,000 ppm 은 OSHA/NIOSH 8h TWA와 같은 값이며 순간 비상으로 쓴다. 제618조 적정공기는 15,000 ppm.  ',options:{color:INK}},
+    {text:'인증 준수 주장은 하지 않는다. 출처는 docs/09_SAFETY_CRITERIA_V1.md.',options:{bold:true,color:RED}}
+  ],{x:0.55,y:y+4.70,w:12.23,h:0.52,fontFace:F,fontSize:11,lineSpacing:16,valign:'top'});
+  note(s,'계산 예시는 RaspberryPi/Runtime/risk/formula_v1.py 실행 값. 검증 : tests/test_risk_formula_v1.py. occupancy 로컬라이징은 본 식에서 제외한다.');
 }
 
 /* ============ P11 ============ */
@@ -543,9 +539,9 @@ function hdr(t){ return { text:t, options:{ bold:true, color:'FFFFFF', fill:{col
 {
   const {s,y} = page(14,'5.1  기술적 차별성');
   const big=[
-    ['fail-closed 판단 보류','증거가 무효이거나 결측이면 마지막 정상값을 재사용하지 않는다. 네 채널이 모두 무효이면 위험도를 산출하지 않고 risk_score 와 risk_level 을 None 으로 두며 system_health 를 FAILED 로 기록한다. 침묵을 안전의 증거로 삼지 않는다.','ondevice_ai/risk/fallback.py','SW 검증','sw'],
+    ['fail-closed 판단 보류','증거가 무효이거나 결측이면 마지막 정상값을 재사용하지 않는다. 네 채널이 모두 무효이면 위험도를 산출하지 않고 risk_score 와 risk_level 을 None 으로 두며 system_health 를 FAILED 로 기록한다. 침묵을 안전의 증거로 삼지 않는다.','RaspberryPi/Runtime/risk/formula_v1.py','SW 검증','sw'],
     ['유효성·신선도의 1급 상태 관리','값과 함께 valid 플래그를 전송하며, 유효하지 않은 수치는 0으로 대체하지 않고 null 로 보낸다. ESP32 와 Raspberry Pi 가 신선도를 각각 독립적으로 판정하고, STALE 입력은 판단에서 제외한다.','formatNullableFloat() · SensorStore','SW 검증','sw'],
-    ['카메라 없는 이종 센서 증거 융합','영상 센서를 쓰지 않는다. mmWave 의 미세 움직임, 열화상의 저해상도 열 분포, CO₂ 의 환경 추세, PIR 의 움직임 이벤트가 서로 다른 실패 모드를 상쇄한다. 열화상은 80×62 해상도로 개인 식별용 영상이 아니다.','ondevice_ai/risk/risk_engine.py','SW 검증','sw']];
+    ['카메라 없는 이종 센서 증거 융합','영상 센서를 쓰지 않는다. mmWave 의 미세 움직임, 열화상의 저해상도 열 분포, CO₂ 의 환경 추세, PIR 의 움직임 이벤트가 서로 다른 실패 모드를 상쇄한다. 열화상은 80×62 해상도로 개인 식별용 영상이 아니다.','RaspberryPi/Runtime/risk/formula_v1.py','SW 검증','sw']];
   big.forEach((r,i)=>{
     const yy=y+0.06+i*1.22;
     s.addShape(pptx.ShapeType.roundRect,{x:0.55,y:yy,w:0.56,h:1.12,fill:{color:BLUE},line:{color:BLUE},rectRadius:0.06});

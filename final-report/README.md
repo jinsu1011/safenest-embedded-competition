@@ -45,6 +45,7 @@ final-report/
     ├── 06_SOURCES.md                   출처·데이터셋·라이선스
     ├── 07_MISSING_EVIDENCE_PRIORITY.md 결손 증거 우선순위
     ├── 08_PAGE_PLAN.md                 표지+20p 페이지 설계
+    ├── 09_SAFETY_CRITERIA_V1.md        ★ 팀장·에이전트용 안전기준 브리핑 (P10 정본, 출처 포함)
     └── 11_FINAL_SUBMISSION_CHECKLIST.md 제출 체크리스트
 ```
 

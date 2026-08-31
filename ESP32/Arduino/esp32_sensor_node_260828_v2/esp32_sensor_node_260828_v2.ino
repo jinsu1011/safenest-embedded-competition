@@ -24,6 +24,7 @@
 #include <WiFiUdp.h>
 #include <Wire.h>
 #include <SPI.h>
+#include <errno.h>
 #include <SensirionI2cScd4x.h>
 #include "Seeed_Arduino_mmWave.h"
 #include "secrets.h"
@@ -73,8 +74,53 @@ constexpr uint32_t CO2_STALE_MS = 15000;
 // inference rather than asserting an empty room.
 constexpr uint32_t PRESENCE_MAX_AGE_MS = 5000;
 constexpr char NODE_FIRMWARE_VERSION[] =
-    "safenest-esp32-sensor-node/1.4.0-tcp-priority.1";
-constexpr char DIAGNOSTIC_BUILD_ID[] = "tcp-priority-20260831-01";
+    "safenest-esp32-sensor-node/1.6.0-udp-backpressure.1";
+constexpr char DIAGNOSTIC_BUILD_ID[] = "udp-backpressure-20260831-03";
+
+// -----------------------------------------------------------------------------
+// Link diagnostics.
+//
+// A "disconnect" on this link is really a missed receive deadline on the Pi.
+// Both receivers close the socket themselves when one packet does not arrive
+// in time, and neither waits as long as this node is willing to stall:
+//
+//   RaspberryPi/LCD/server.py             connection.settimeout(2.0). Its
+//                                         header recv is wrapped in
+//                                         `except socket.timeout: continue`,
+//                                         but the payload recv is not, so one
+//                                         2 s gap between the 16-byte header
+//                                         and the JSON body raises
+//                                         socket.timeout -- an OSError, which
+//                                         its handler treats as fatal.
+//   RaspberryPi/Runtime/gateway/          5 s total deadline per field.
+//     receiver.py
+//
+// writeAll() below tolerates a 5000 ms stall, longer than either deadline, so
+// this node can call a write successful long after the Pi has hung up. Every
+// counter here answers one question: did a telemetry packet reach the wire
+// inside the Pi's tolerance, and if not, which stage consumed the time --
+// queue wait, TX-mutex wait, or the socket write itself.
+// ----------------------------------------------------------------------------
+constexpr uint32_t PI_PACKET_DEADLINE_MS = 2000;
+// Warn below the Pi deadline so the log shows the approach, not only the crash.
+constexpr uint32_t TELEMETRY_GAP_WARN_MS = 1500;
+constexpr uint32_t TCP_WRITE_WARN_MS = 150;
+constexpr uint32_t TCP_MUTEX_WARN_MS = 100;
+// beginTcpCritical() waited with portMAX_DELAY, which makes a stalled UDP
+// datagram indistinguishable from an idle link: the TCP task simply never
+// returns and nothing is logged. A bounded wait turns that invisible hang into
+// a counted, timestamped event.
+constexpr uint32_t TCP_MUTEX_MAX_WAIT_MS = 3000;
+constexpr uint32_t UDP_DATAGRAM_WARN_MS = 40;
+// udpStarted was only cleared when Wi-Fi dropped, so once sendto() entered a
+// failing state the task retried the same socket forever: udp_sent froze at 61
+// for the rest of the run while udp_failed kept climbing. Rebuilding the socket
+// after a run of failures gives the transmitter a way back without a reboot.
+constexpr uint32_t UDP_MAX_CONSECUTIVE_FAILURES = 10;
+// The per-2-second [link] firehose was 38 fields on one line, five times more
+// often than [health]. Same cadence as [health] keeps it readable; 's' still
+// prints one on demand and 'l' silences the periodic copy.
+constexpr uint32_t DIAG_LOG_PERIOD_MS = 10000;
 
 enum class Co2State : uint8_t {
   RETRY_WAIT,
@@ -109,9 +155,19 @@ constexpr size_t THERMAL_HEADER_WORDS = THERMAL_WIDTH;
 constexpr size_t THERMAL_CAPTURE_WORDS =
     THERMAL_HEADER_WORDS + THERMAL_PIXEL_COUNT;
 
-// Set divisor 4: for a 25 FPS sensor this requests about 6.25 FPS.
+// Set divisor 12: for a 25 FPS sensor this requests about 2.08 FPS.
 // Lowering this value raises bandwidth and ESP32 CPU/SPI load.
-constexpr uint8_t THERMAL_FRAME_RATE_DIVIDER = 4;
+//
+// Divisor 4 (6.25 FPS) is what the Wi-Fi TX path could not sustain: one frame
+// is 9 datagrams, so 6.25 FPS put ~57 datagrams/s and ~64 KB/s on the radio in
+// 160 ms bursts. Under that load udp_sent froze mid-run while udp_failed kept
+// climbing, free heap fell ~40 KB, and TCP connect stopped completing its
+// handshake -- every attempt burned the full 1500 ms timeout -- until a reboot.
+// The same run with the thermal camera unpowered held tcp_connection_failures
+// at 0 with connect_ms=12. 12 keeps the frame format identical at one third the
+// bandwidth; raise it back only with the [link] udp_kbps and tcp drop counters
+// in view.
+constexpr uint8_t THERMAL_FRAME_RATE_DIVIDER = 12;
 
 // -----------------------------------------------------------------------------
 // SafeNest TCP protocol v1 for scalar telemetry.
@@ -167,10 +223,30 @@ struct ThermalTxFrame {
   uint16_t pixels[THERMAL_PIXEL_COUNT];
 };
 
+// Per-write forensics. A bare bool made a 2 ms success and a 4.9 s stall that
+// eventually succeeded look identical, yet only the second one outlives the
+// Pi's receive timeout and gets the socket closed underneath us.
+struct TcpWriteReport {
+  size_t bytesWritten;
+  uint32_t elapsedMs;
+  uint32_t longestStallMs;
+  uint16_t zeroWrites;
+  uint16_t partialWrites;
+  int lastErrno;
+  bool connectedAtEnd;
+};
+
 enum class ThermalSendResult {
   Sent,
   Preempted,
   Failed,
+  // The Serial kill switch dropped the frame. Kept distinct from Preempted so
+  // a deliberate A/B test never inflates the contention counter.
+  Suppressed,
+  // The TCP session is down, so the transmitter yielded the radio to let it
+  // reconnect. Distinct from Suppressed because nobody asked for it, and from
+  // Preempted because no TCP write was actually waiting on the mutex.
+  Deferred,
 };
 
 SensirionI2cScd4x scd4x;
@@ -260,7 +336,64 @@ volatile uint32_t tcpSendFailures = 0;
 volatile uint32_t thermalUdpFramesSent = 0;
 volatile uint32_t thermalFramesPreempted = 0;
 volatile uint32_t thermalUdpSendFailures = 0;
+
+// Link diagnostics written by the network tasks on core 0, under the same
+// single-writer, aligned-32-bit rule as the counters above.
+volatile uint32_t tcpSessions = 0;
+volatile uint32_t tcpDrops = 0;
+volatile uint32_t tcpShortSessions = 0;
+volatile uint32_t tcpPeerClosed = 0;
+volatile uint32_t tcpWriteStalls = 0;
+volatile uint32_t tcpPartialWrites = 0;
+volatile uint32_t tcpMutexTimeouts = 0;
+volatile uint32_t tcpMutexWaitMaxMs = 0;
+volatile uint32_t tcpMutexWaitSlow = 0;
+volatile uint32_t tcpWriteMaxMs = 0;
+volatile uint32_t tcpSlowWrites = 0;
+volatile uint32_t telemetryGapMaxMs = 0;
+volatile uint32_t telemetryGapOverWarn = 0;
+volatile uint32_t telemetryGapOverDeadline = 0;
+volatile uint32_t telemetryPacketsSent = 0;
+volatile uint32_t lastTelemetrySentMs = 0;
+volatile uint32_t udpDatagramsSent = 0;
+volatile uint32_t udpBytesSent = 0;
+volatile uint32_t udpDatagramMaxMs = 0;
+volatile uint32_t udpSlowDatagrams = 0;
+volatile uint32_t udpFrameMaxMs = 0;
+volatile uint32_t thermalFramesSuppressed = 0;
+volatile uint32_t thermalFramesDeferred = 0;
+volatile uint32_t udpSocketRestarts = 0;
+volatile int32_t tcpLastErrno = 0;
+volatile int32_t udpLastErrno = 0;
+
+// Set by the TCP task around a live session and read by the thermal task.
+// Single writer, aligned 32-bit access, same rule as the counters above.
+//
+// This is the back-pressure signal. TCP telemetry is the contract with the Pi;
+// thermal is best-effort. While the session is down the transmit path is either
+// saturated or the link is bad, and a continuous thermal stream is precisely
+// what keeps a SYN from completing -- so the thermal task stands down until the
+// session is back rather than competing with the reconnect it is blocking.
+volatile bool tcpLinkHealthy = false;
+
+// Runtime A/B switches driven from the Serial console. Toggling the thermal
+// transmitter without reflashing is the shortest path to proving whether the
+// UDP stream is what breaks the TCP stream.
+volatile bool thermalUdpEnabled = true;
+volatile bool thermalCaptureEnabled = true;
+
 // Written and read only by loop() on core 1, so volatile is not warranted.
+uint32_t thermalCaptureAttempts = 0;
+uint32_t thermalReadyByPin = 0;
+uint32_t thermalReadyByI2c = 0;
+uint32_t thermalCaptureMaxMs = 0;
+uint32_t loopIterations = 0;
+uint32_t lastLinkLogMs = 0;
+// [link] is a 38-field diagnostic line. Useful during a bisect, unreadable as a
+// permanent fixture, so the periodic copy can be silenced ('l') without losing
+// the on-demand one ('s').
+bool linkDiagnosticsEnabled = true;
+bool linkDiagnosticsOnce = false;
 uint32_t co2DataReadyQueryFailures = 0;
 uint32_t co2ReadFailures = 0;
 uint32_t thermalStatusQueryFailures = 0;
@@ -436,7 +569,14 @@ uint16_t thermalFrameCrc(const uint16_t *pixels, size_t count) {
 }
 
 bool thermalDataReady(uint32_t now) {
-  if (digitalRead(PIN_THERMAL_READY) == HIGH) return true;
+  // Counted per source: a READY line left floating, or driven permanently
+  // high, reports ready on every one of the ~40k loop iterations per second
+  // and would flood the UDP path with garbage frames. Comparing ready_pin
+  // against the ~6 accepted frames per second is what makes that visible.
+  if (digitalRead(PIN_THERMAL_READY) == HIGH) {
+    ++thermalReadyByPin;
+    return true;
+  }
 
   // I2C polling is a fallback and also makes a disconnected READY wire visible.
   if (static_cast<uint32_t>(now - lastThermalStatusPollMs) < 25) return false;
@@ -446,11 +586,17 @@ bool thermalDataReady(uint32_t now) {
     ++thermalStatusQueryFailures;
     return false;
   }
-  return (status & STATUS_DATA_READY) != 0;
+  if ((status & STATUS_DATA_READY) == 0) return false;
+  ++thermalReadyByI2c;
+  return true;
 }
 
 void captureThermalIfReady(uint32_t now) {
-  if (!thermalStarted || !thermalDataReady(now)) return;
+  if (!thermalStarted || !thermalCaptureEnabled) return;
+  if (!thermalDataReady(now)) return;
+
+  ++thermalCaptureAttempts;
+  const uint32_t captureStartedMs = millis();
 
   thermalSpi.beginTransaction(
       SPISettings(THERMAL_SPI_HZ, MSBFIRST, SPI_MODE0));
@@ -468,6 +614,13 @@ void captureThermalIfReady(uint32_t now) {
   delayMicroseconds(100);
   digitalWrite(PIN_THERMAL_CS, HIGH);
   thermalSpi.endTransaction();
+
+  // 10080 single-byte SPI transfers block loop() outright. If this grows past
+  // the telemetry period it starves publishTelemetrySnapshot() on core 1, which
+  // the Pi sees as a late packet just as surely as a stalled socket write.
+  const uint32_t captureMs =
+      static_cast<uint32_t>(millis() - captureStartedMs);
+  if (captureMs > thermalCaptureMaxMs) thermalCaptureMaxMs = captureMs;
 
   ThermalTxFrame &frame = thermalProducerFrame;
   frame.uptimeMs = millis();
@@ -691,38 +844,71 @@ void makePacketHeader(uint8_t *header, uint8_t type, uint32_t sequence,
 }
 
 // Runs only in the network task, so a slow peer can never stall sensor capture.
-bool writeAll(WiFiClient &client, const uint8_t *data, size_t length) {
+bool writeAll(WiFiClient &client, const uint8_t *data, size_t length,
+              TcpWriteReport &report) {
   constexpr size_t CHUNK_BYTES = 512;
   constexpr uint32_t TIMEOUT_MS = 5000;
 
+  report = TcpWriteReport{};
   size_t sent = 0;
-  uint32_t lastProgress = millis();
+  const uint32_t startedMs = millis();
+  uint32_t lastProgress = startedMs;
 
   while (sent < length) {
-    if (!client.connected()) return false;
+    if (!client.connected()) {
+      report.bytesWritten = sent;
+      report.elapsedMs = static_cast<uint32_t>(millis() - startedMs);
+      report.connectedAtEnd = false;
+      return false;
+    }
 
     const size_t remaining = length - sent;
     const size_t chunk =
         remaining > CHUNK_BYTES ? CHUNK_BYTES : remaining;
+    errno = 0;
     const size_t written = client.write(data + sent, chunk);
 
     if (written > 0) {
+      if (written < chunk) ++report.partialWrites;
       sent += written;
       lastProgress = millis();
     } else {
-      if (static_cast<uint32_t>(millis() - lastProgress) > TIMEOUT_MS) {
+      // A zero-length write means lwIP had no TX buffer for this segment. That
+      // buffer pool is shared with the thermal UDP stream, so counting these
+      // separates "the socket died" from "the radio was busy sending frames".
+      ++report.zeroWrites;
+      report.lastErrno = errno;
+      const uint32_t stallMs = static_cast<uint32_t>(millis() - lastProgress);
+      if (stallMs > report.longestStallMs) report.longestStallMs = stallMs;
+      if (stallMs > TIMEOUT_MS) {
+        report.bytesWritten = sent;
+        report.elapsedMs = static_cast<uint32_t>(millis() - startedMs);
+        report.connectedAtEnd = client.connected();
         return false;
       }
       vTaskDelay(pdMS_TO_TICKS(2));
     }
   }
 
+  report.bytesWritten = sent;
+  report.elapsedMs = static_cast<uint32_t>(millis() - startedMs);
+  report.connectedAtEnd = true;
   return true;
 }
 
-bool beginTcpCritical() {
+// The mutex wait is the ESP32-side price of the thermal stream: precisely the
+// time this task spends unable to touch the socket because a UDP datagram is
+// in flight. Reporting it turns "the connection dropped" into a number.
+bool beginTcpCritical(uint32_t &waitMs) {
+  const uint32_t startedMs = millis();
   xEventGroupSetBits(networkEvents, TCP_CRITICAL_BIT);
-  if (xSemaphoreTake(networkTxMutex, portMAX_DELAY) == pdTRUE) return true;
+  const bool acquired =
+      xSemaphoreTake(networkTxMutex, pdMS_TO_TICKS(TCP_MUTEX_MAX_WAIT_MS)) ==
+      pdTRUE;
+  waitMs = static_cast<uint32_t>(millis() - startedMs);
+  if (waitMs > tcpMutexWaitMaxMs) tcpMutexWaitMaxMs = waitMs;
+  if (waitMs >= TCP_MUTEX_WARN_MS) tcpMutexWaitSlow = tcpMutexWaitSlow + 1;
+  if (acquired) return true;
   xEventGroupClearBits(networkEvents, TCP_CRITICAL_BIT);
   return false;
 }
@@ -744,8 +930,9 @@ void formatNullableFloat(char *output, size_t outputSize, bool valid,
 }
 
 bool sendTelemetry(WiFiClient &client, const TelemetrySnapshot &snapshot,
-                   size_t &payloadLength) {
+                   size_t &payloadLength, TcpWriteReport &report) {
   payloadLength = 0;
+  report = TcpWriteReport{};
   char respiration[20], heart[20], co2[6];
   formatNullableFloat(respiration, sizeof(respiration),
                       snapshot.respirationValid, snapshot.respirationRate);
@@ -787,7 +974,7 @@ bool sendTelemetry(WiFiClient &client, const TelemetrySnapshot &snapshot,
                    static_cast<uint32_t>(length));
   memcpy(packet + PACKET_HEADER_SIZE, json, payloadLength);
 
-  return writeAll(client, packet, PACKET_HEADER_SIZE + payloadLength);
+  return writeAll(client, packet, PACKET_HEADER_SIZE + payloadLength, report);
 }
 
 uint8_t thermalPayloadByte(const ThermalTxFrame &frame, const uint8_t *meta,
@@ -810,9 +997,35 @@ uint32_t thermalFrameCrc32(const ThermalTxFrame &frame, const uint8_t *meta) {
   return ~crc;
 }
 
+// Rate-limited: Serial.printf() blocks for roughly 90 us per character at
+// 115200 baud, so an unthrottled warning would itself become the stall it is
+// trying to report.
+void logSlowDatagram(uint32_t frameSequence, uint16_t chunkIndex,
+                     uint32_t durationMs) {
+  static uint32_t lastLogMs = 0;
+  const uint32_t now = millis();
+  if (lastLogMs != 0 && static_cast<uint32_t>(now - lastLogMs) < 1000) return;
+  lastLogMs = now;
+  Serial.printf(
+      "[udp-slow] frame=%lu chunk=%u sendto_ms=%lu errno=%ld -- the TCP task "
+      "cannot send for this long\n",
+      static_cast<unsigned long>(frameSequence),
+      static_cast<unsigned>(chunkIndex),
+      static_cast<unsigned long>(durationMs),
+      static_cast<long>(udpLastErrno));
+}
+
 ThermalSendResult sendThermalUdp(WiFiUDP &udp,
                                  const ThermalTxFrame &frame) {
   constexpr TickType_t MUTEX_TIMEOUT = pdMS_TO_TICKS(1000);
+  // Runtime kill switch. Dropping the frame here rather than upstream leaves
+  // capture, CRC checking and queueing byte-for-byte identical, so toggling it
+  // isolates the network transmit path and nothing else.
+  if (!thermalUdpEnabled) return ThermalSendResult::Suppressed;
+  // Back-pressure, checked before the CRC32 pass so a deferred frame costs
+  // nothing: 9936 bytes of table-free CRC is not free at 2 fps, and there is no
+  // point spending it on a frame that will not be sent.
+  if (!tcpLinkHealthy) return ThermalSendResult::Deferred;
   uint8_t meta[THERMAL_META_SIZE];
   putU16(meta + 0, static_cast<uint16_t>(THERMAL_WIDTH));
   putU16(meta + 2, static_cast<uint16_t>(THERMAL_HEIGHT));
@@ -857,11 +1070,30 @@ ThermalSendResult sendThermalUdp(WiFiUDP &udp,
       return ThermalSendResult::Preempted;
     }
 
+    // Timed inside the mutex, because this is exactly the window during which
+    // the TCP task is locked out. Under Wi-Fi TX-buffer exhaustion sendto()
+    // blocks rather than failing, so the duration matters more than the return
+    // value: a datagram that takes 400 ms still reports sent=true while having
+    // pushed the telemetry packet 400 ms closer to the Pi's deadline.
+    errno = 0;
+    const uint32_t datagramStartedMs = millis();
     const bool sent =
         udp.beginPacket(RPI_HOST, THERMAL_UDP_PORT) &&
         udp.write(thermalUdpDatagram, THERMAL_UDP_HEADER_SIZE + length) ==
             THERMAL_UDP_HEADER_SIZE + length &&
         udp.endPacket() == 1;
+    const uint32_t datagramMs =
+        static_cast<uint32_t>(millis() - datagramStartedMs);
+    if (!sent) udpLastErrno = errno;
+    if (datagramMs > udpDatagramMaxMs) udpDatagramMaxMs = datagramMs;
+    if (sent) {
+      udpDatagramsSent = udpDatagramsSent + 1;
+      udpBytesSent = udpBytesSent + THERMAL_UDP_HEADER_SIZE + length;
+    }
+    if (datagramMs >= UDP_DATAGRAM_WARN_MS) {
+      udpSlowDatagrams = udpSlowDatagrams + 1;
+      logSlowDatagram(frame.frameSequence, chunkIndex, datagramMs);
+    }
     // Capture a TCP request that arrived while this datagram held the mutex.
     // After give, the higher-priority TCP task may run and clear the bit before
     // this task resumes, so sampling only at the next chunk would miss it.
@@ -876,6 +1108,53 @@ ThermalSendResult sendThermalUdp(WiFiUDP &udp,
   return ThermalSendResult::Sent;
 }
 
+// Every socket teardown funnels through here, so a reconnect is never silent.
+// The counters are sampled at the instant of the drop, which is what makes them
+// attributable: a gap_max_ms at or above PI_PACKET_DEADLINE_MS means this node
+// missed the Pi's receive deadline, and the Pi closed first.
+void logTcpDrop(const char *reason, uint32_t sessionStartedMs,
+                uint32_t sessionPackets, int pendingRxBytes) {
+  const uint32_t now = millis();
+  const uint32_t sessionMs =
+      sessionStartedMs == 0 ? 0
+                            : static_cast<uint32_t>(now - sessionStartedMs);
+  tcpDrops = tcpDrops + 1;
+  if (sessionMs < 10000) tcpShortSessions = tcpShortSessions + 1;
+  Serial.printf(
+      "[tcp-drop] reason=%s session_ms=%lu session_packets=%lu "
+      "since_last_send_ms=%ld gap_max_ms=%lu gap_late=%lu write_max_ms=%lu "
+      "write_stalls=%lu partial_writes=%lu mutex_max_ms=%lu mutex_to=%lu "
+      "tcp_errno=%ld rx_pending=%d udp_on=%d udp_dg=%lu udp_slow=%lu "
+      "udp_dg_max_ms=%lu udp_frame_max_ms=%lu udp_errno=%ld rssi=%d "
+      "heap=%lu min_heap=%lu drops=%lu short_sessions=%lu\n",
+      reason,
+      static_cast<unsigned long>(sessionMs),
+      static_cast<unsigned long>(sessionPackets),
+      lastTelemetrySentMs == 0
+          ? -1L
+          : static_cast<long>(now - lastTelemetrySentMs),
+      static_cast<unsigned long>(telemetryGapMaxMs),
+      static_cast<unsigned long>(telemetryGapOverDeadline),
+      static_cast<unsigned long>(tcpWriteMaxMs),
+      static_cast<unsigned long>(tcpWriteStalls),
+      static_cast<unsigned long>(tcpPartialWrites),
+      static_cast<unsigned long>(tcpMutexWaitMaxMs),
+      static_cast<unsigned long>(tcpMutexTimeouts),
+      static_cast<long>(tcpLastErrno),
+      pendingRxBytes,
+      thermalUdpEnabled ? 1 : 0,
+      static_cast<unsigned long>(udpDatagramsSent),
+      static_cast<unsigned long>(udpSlowDatagrams),
+      static_cast<unsigned long>(udpDatagramMaxMs),
+      static_cast<unsigned long>(udpFrameMaxMs),
+      static_cast<long>(udpLastErrno),
+      static_cast<int>(WiFi.RSSI()),
+      static_cast<unsigned long>(ESP.getFreeHeap()),
+      static_cast<unsigned long>(ESP.getMinFreeHeap()),
+      static_cast<unsigned long>(tcpDrops),
+      static_cast<unsigned long>(tcpShortSessions));
+}
+
 void telemetryTcpTask(void *parameter) {
   (void)parameter;
   WiFiClient client;
@@ -883,10 +1162,23 @@ void telemetryTcpTask(void *parameter) {
   uint32_t lastDequeuedSequence = 0;
   uint32_t lastNetworkLogMs = 0;
   uint32_t lastConnectDurationMs = 0;
+  uint32_t lastQueueWaitMs = 0;
+  uint32_t lastMutexWaitMs = 0;
+  uint32_t sessionStartedMs = 0;
+  uint32_t sessionPackets = 0;
+  bool sessionOpen = false;
 
   for (;;) {
+    uint32_t mutexWaitMs = 0;
+
     if (WiFi.status() != WL_CONNECTED) {
-      if (client.connected() && beginTcpCritical()) {
+      tcpLinkHealthy = false;
+      if (sessionOpen) {
+        logTcpDrop("wifi_down", sessionStartedMs, sessionPackets,
+                   client.available());
+        sessionOpen = false;
+      }
+      if (client.connected() && beginTcpCritical(mutexWaitMs)) {
         client.stop();
         endTcpCritical();
       }
@@ -895,22 +1187,62 @@ void telemetryTcpTask(void *parameter) {
     }
 
     if (!client.connected()) {
+      // Stand the thermal transmitter down for the whole reconnect, not just
+      // for the connect() call: the radio has to be quiet for the handshake to
+      // complete, and TCP_CRITICAL_BIT only covers the moments this task holds
+      // the mutex.
+      tcpLinkHealthy = false;
+      // Arriving here with sessionOpen still set means the peer closed or reset
+      // the socket while this node believed the link was healthy. That is the
+      // signature of a Pi-side receive timeout rather than a local send error,
+      // so it is counted separately from write_failed.
+      if (sessionOpen) {
+        tcpPeerClosed = tcpPeerClosed + 1;
+        logTcpDrop("peer_closed", sessionStartedMs, sessionPackets,
+                   client.available());
+        sessionOpen = false;
+      }
       Serial.printf("[network] connecting to %s:%u\n", RPI_HOST, RPI_PORT);
       bool connected = false;
-      if (beginTcpCritical()) {
+      if (beginTcpCritical(mutexWaitMs)) {
         const uint32_t connectStartedMs = millis();
+        errno = 0;
         connected = client.connect(RPI_HOST, RPI_PORT, 1500);
         lastConnectDurationMs = millis() - connectStartedMs;
-        if (!connected) client.stop();
+        if (!connected) {
+          tcpLastErrno = errno;
+          client.stop();
+        }
         endTcpCritical();
+      } else {
+        tcpMutexTimeouts = tcpMutexTimeouts + 1;
       }
       if (!connected) {
         tcpConnectionFailures = tcpConnectionFailures + 1;
+        Serial.printf(
+            "[tcp-connect-fail] mutex_wait_ms=%lu connect_ms=%lu errno=%ld "
+            "failures=%lu\n",
+            static_cast<unsigned long>(mutexWaitMs),
+            static_cast<unsigned long>(lastConnectDurationMs),
+            static_cast<long>(tcpLastErrno),
+            static_cast<unsigned long>(tcpConnectionFailures));
         vTaskDelay(pdMS_TO_TICKS(1000));
         continue;
       }
       client.setNoDelay(true);
-      Serial.println("[network] Raspberry Pi connected");
+      sessionStartedMs = millis();
+      sessionPackets = 0;
+      sessionOpen = true;
+      tcpLinkHealthy = true;
+      tcpSessions = tcpSessions + 1;
+      Serial.printf(
+          "[tcp-open] session=%lu connect_ms=%lu mutex_wait_ms=%lu rssi=%d "
+          "heap=%lu\n",
+          static_cast<unsigned long>(tcpSessions),
+          static_cast<unsigned long>(lastConnectDurationMs),
+          static_cast<unsigned long>(mutexWaitMs),
+          static_cast<int>(WiFi.RSSI()),
+          static_cast<unsigned long>(ESP.getFreeHeap()));
     }
 
     // Scalar telemetry has priority and is small.
@@ -918,31 +1250,140 @@ void telemetryTcpTask(void *parameter) {
       telemetryQueueOverwrites = telemetryQueueOverwrites +
                                  telemetry.sequence - lastDequeuedSequence - 1;
       lastDequeuedSequence = telemetry.sequence;
+      // The producer stamps uptimeMs from the same millis() clock on core 1,
+      // so this difference is how long the snapshot waited for the network
+      // task. It separates "loop() published late" from "the socket was slow".
+      lastQueueWaitMs =
+          static_cast<uint32_t>(millis() - telemetry.uptimeMs);
+
       size_t jsonPayloadLength = 0;
       bool sent = false;
+      // Distinguishes "the packet never reached the socket" from "the socket
+      // is gone". A mutex timeout is the first: it leaves the connection fully
+      // intact, so none of the teardown below may run for it. Only the write
+      // path calls client.stop(), and only that ends the session.
+      bool socketClosedByFailure = false;
       uint32_t writeDurationMs = 0;
-      if (beginTcpCritical()) {
+      TcpWriteReport report{};
+      if (beginTcpCritical(mutexWaitMs)) {
         const uint32_t writeStartedMs = millis();
-        sent = sendTelemetry(client, telemetry, jsonPayloadLength);
+        sent = sendTelemetry(client, telemetry, jsonPayloadLength, report);
         writeDurationMs = millis() - writeStartedMs;
-        if (!sent) client.stop();
+        if (!sent) {
+          tcpLastErrno = report.lastErrno;
+          client.stop();
+          socketClosedByFailure = true;
+        }
         endTcpCritical();
+        if (writeDurationMs > tcpWriteMaxMs) tcpWriteMaxMs = writeDurationMs;
+        if (writeDurationMs >= TCP_WRITE_WARN_MS) {
+          tcpSlowWrites = tcpSlowWrites + 1;
+        }
+        if (report.zeroWrites > 0) tcpWriteStalls = tcpWriteStalls + 1;
+        if (report.partialWrites > 0) tcpPartialWrites = tcpPartialWrites + 1;
+      } else {
+        tcpMutexTimeouts = tcpMutexTimeouts + 1;
+        Serial.printf(
+            "[tcp-blocked] seq=%lu mutex_wait_ms=%lu timeouts=%lu -- the "
+            "thermal UDP task held the TX mutex past the limit, so this "
+            "telemetry packet never reached the socket\n",
+            static_cast<unsigned long>(telemetry.sequence),
+            static_cast<unsigned long>(mutexWaitMs),
+            static_cast<unsigned long>(tcpMutexTimeouts));
+      }
+      lastMutexWaitMs = mutexWaitMs;
+
+      if (!sent) {
+        // Counted either way: this snapshot did not reach the Pi. Which of the
+        // two causes it was is already on the console -- [tcp-send-fail] here,
+        // or [tcp-blocked] above.
+        tcpSendFailures = tcpSendFailures + 1;
       }
 
-      if (!sent) tcpSendFailures = tcpSendFailures + 1;
+      if (socketClosedByFailure) {
+        // client.stop() ran above, so the socket is gone. Drop the signal here
+        // rather than waiting for the next loop to notice, so the thermal task
+        // is quiet before the reconnect starts. The reconnect path is also the
+        // only place that sets tcpLinkHealthy back to true, which is why this
+        // must never fire while the connection is still usable.
+        tcpLinkHealthy = false;
+        Serial.printf(
+            "[tcp-send-fail] seq=%lu wrote=%u/%u elapsed_ms=%lu stall_ms=%lu "
+            "zero_writes=%u partial=%u errno=%ld connected=%d failures=%lu\n",
+            static_cast<unsigned long>(telemetry.sequence),
+            static_cast<unsigned>(report.bytesWritten),
+            static_cast<unsigned>(PACKET_HEADER_SIZE + jsonPayloadLength),
+            static_cast<unsigned long>(report.elapsedMs),
+            static_cast<unsigned long>(report.longestStallMs),
+            static_cast<unsigned>(report.zeroWrites),
+            static_cast<unsigned>(report.partialWrites),
+            static_cast<long>(report.lastErrno),
+            report.connectedAtEnd ? 1 : 0,
+            static_cast<unsigned long>(tcpSendFailures));
+        if (sessionOpen) {
+          logTcpDrop("write_failed", sessionStartedMs, sessionPackets, 0);
+          sessionOpen = false;
+        }
+      }
+
+      if (sent) {
+        // On-wire cadence as the Pi experiences it. The receiver closes the
+        // socket when a packet does not complete inside its own timeout, so
+        // this gap -- not the send-failure count -- is the quantity that
+        // predicts a disconnect. It is measured after the write completes,
+        // which is the moment the last byte was handed to lwIP.
+        const uint32_t completedMs = millis();
+        if (lastTelemetrySentMs != 0) {
+          const uint32_t gapMs =
+              static_cast<uint32_t>(completedMs - lastTelemetrySentMs);
+          if (gapMs > telemetryGapMaxMs) telemetryGapMaxMs = gapMs;
+          if (gapMs >= PI_PACKET_DEADLINE_MS) {
+            telemetryGapOverDeadline = telemetryGapOverDeadline + 1;
+          }
+          if (gapMs >= TELEMETRY_GAP_WARN_MS) {
+            telemetryGapOverWarn = telemetryGapOverWarn + 1;
+            Serial.printf(
+                "[tcp-gap] seq=%lu gap_ms=%lu pi_deadline_ms=%lu "
+                "queue_wait_ms=%lu mutex_wait_ms=%lu write_ms=%lu "
+                "stall_ms=%lu zero_writes=%u overwrites=%lu udp_on=%d "
+                "udp_dg_max_ms=%lu rssi=%d%s\n",
+                static_cast<unsigned long>(telemetry.sequence),
+                static_cast<unsigned long>(gapMs),
+                static_cast<unsigned long>(PI_PACKET_DEADLINE_MS),
+                static_cast<unsigned long>(lastQueueWaitMs),
+                static_cast<unsigned long>(mutexWaitMs),
+                static_cast<unsigned long>(writeDurationMs),
+                static_cast<unsigned long>(report.longestStallMs),
+                static_cast<unsigned>(report.zeroWrites),
+                static_cast<unsigned long>(telemetryQueueOverwrites),
+                thermalUdpEnabled ? 1 : 0,
+                static_cast<unsigned long>(udpDatagramMaxMs),
+                static_cast<int>(WiFi.RSSI()),
+                gapMs >= PI_PACKET_DEADLINE_MS ? "  <<< EXCEEDS_PI_DEADLINE"
+                                               : "");
+          }
+        }
+        lastTelemetrySentMs = completedMs;
+        telemetryPacketsSent = telemetryPacketsSent + 1;
+        ++sessionPackets;
+      }
 
       const uint32_t now = millis();
       if (lastNetworkLogMs == 0 ||
           static_cast<uint32_t>(now - lastNetworkLogMs) >=
               HEALTH_LOG_PERIOD_MS) {
         Serial.printf(
-            "[network] tcp connect_ms=%lu write_ms=%lu seq=%lu "
-            "json_bytes=%u tcp_send_failures=%lu thermal_preemptions=%lu "
+            "[network] tcp connect_ms=%lu write_ms=%lu queue_wait_ms=%lu "
+            "mutex_wait_ms=%lu seq=%lu json_bytes=%u gap_max_ms=%lu "
+            "tcp_send_failures=%lu thermal_preemptions=%lu "
             "thermal_udp_failures=%lu\n",
             static_cast<unsigned long>(lastConnectDurationMs),
             static_cast<unsigned long>(writeDurationMs),
+            static_cast<unsigned long>(lastQueueWaitMs),
+            static_cast<unsigned long>(lastMutexWaitMs),
             static_cast<unsigned long>(telemetry.sequence),
             static_cast<unsigned>(jsonPayloadLength),
+            static_cast<unsigned long>(telemetryGapMaxMs),
             static_cast<unsigned long>(tcpSendFailures),
             static_cast<unsigned long>(thermalFramesPreempted),
             static_cast<unsigned long>(thermalUdpSendFailures));
@@ -963,6 +1404,7 @@ void thermalUdpTask(void *parameter) {
   WiFiUDP udp;
   bool udpStarted = false;
   uint32_t lastDequeuedSequence = 0;
+  uint32_t consecutiveFailures = 0;
   for (;;) {
     if (WiFi.status() != WL_CONNECTED) {
       if (udpStarted) {
@@ -984,15 +1426,58 @@ void thermalUdpTask(void *parameter) {
                                thermalNetworkFrame.frameSequence -
                                lastDequeuedSequence - 1;
       lastDequeuedSequence = thermalNetworkFrame.frameSequence;
-      switch (sendThermalUdp(udp, thermalNetworkFrame)) {
+      // Wall time for the whole 9-datagram frame. Compared against the 480 ms
+      // budget of a 2.08 fps stream (THERMAL_FRAME_RATE_DIVIDER = 12), this
+      // says whether the transmitter is keeping up or saturating the radio.
+      const uint32_t frameStartedMs = millis();
+      const ThermalSendResult result =
+          sendThermalUdp(udp, thermalNetworkFrame);
+      const uint32_t frameMs =
+          static_cast<uint32_t>(millis() - frameStartedMs);
+      if (frameMs > udpFrameMaxMs) udpFrameMaxMs = frameMs;
+      switch (result) {
         case ThermalSendResult::Sent:
           thermalUdpFramesSent = thermalUdpFramesSent + 1;
+          consecutiveFailures = 0;
           break;
         case ThermalSendResult::Preempted:
           thermalFramesPreempted = thermalFramesPreempted + 1;
           break;
         case ThermalSendResult::Failed:
           thermalUdpSendFailures = thermalUdpSendFailures + 1;
+          ++consecutiveFailures;
+          if (thermalUdpSendFailures <= 3 ||
+              thermalUdpSendFailures % 25 == 0) {
+            Serial.printf(
+                "[udp-fail] frame=%lu frame_ms=%lu errno=%ld failures=%lu "
+                "consecutive=%lu\n",
+                static_cast<unsigned long>(
+                    thermalNetworkFrame.frameSequence),
+                static_cast<unsigned long>(frameMs),
+                static_cast<long>(udpLastErrno),
+                static_cast<unsigned long>(thermalUdpSendFailures),
+                static_cast<unsigned long>(consecutiveFailures));
+          }
+          // A run this long is a stuck socket, not congestion: sendto() has
+          // returned an error every time since the last success. Rebuild it.
+          if (consecutiveFailures >= UDP_MAX_CONSECUTIVE_FAILURES) {
+            udp.stop();
+            udpStarted = false;
+            consecutiveFailures = 0;
+            udpSocketRestarts = udpSocketRestarts + 1;
+            Serial.printf(
+                "[udp-restart] socket rebuilt after %lu consecutive failures "
+                "errno=%ld restarts=%lu\n",
+                static_cast<unsigned long>(UDP_MAX_CONSECUTIVE_FAILURES),
+                static_cast<long>(udpLastErrno),
+                static_cast<unsigned long>(udpSocketRestarts));
+          }
+          break;
+        case ThermalSendResult::Suppressed:
+          thermalFramesSuppressed = thermalFramesSuppressed + 1;
+          break;
+        case ThermalSendResult::Deferred:
+          thermalFramesDeferred = thermalFramesDeferred + 1;
           break;
       }
     }
@@ -1000,26 +1485,68 @@ void thermalUdpTask(void *parameter) {
   }
 }
 
+// Grouped subsystem lines rather than one 30-field, ~470-character line. Every
+// field the single-line form carried is still here, under the subsystem that
+// owns it, plus the three that were missing when it mattered most: the node's
+// own IP, the RSSI, and the minimum free heap.
 void logHealth(uint32_t now) {
   if (!scheduleDue(now, lastHealthLogMs, HEALTH_LOG_PERIOD_MS)) return;
+
+  const bool wifiUp = WiFi.status() == WL_CONNECTED;
+  const IPAddress ip = WiFi.localIP();
+
+  Serial.printf("[health] ===== up=%lus =====\n",
+                static_cast<unsigned long>(now / 1000));
+
+  // localIP() answers what the old line could not: whether this node is even on
+  // the subnet RPI_HOST lives on. Without it a wrong-subnet run reads exactly
+  // like a dead Pi -- repeated "connecting to", no other evidence either way.
   Serial.printf(
-      "[health] wifi=%s rpi=%s resp=%.1f heart=%.1f co2=%u pir=%d "
-      "co2_state=%s co2_started=%d co2_probe=%d co2_start=%d "
-      "co2_init=%lu co2_retry=%lu co2_consecutive=%lu "
-      "co2_next_retry_ms=%lu co2_dr_fail=%lu co2_rd_fail=%lu "
-      "co2_age_ms=%ld "
-      "mmw_uart=%u mmw_ok=%lu mmw_miss=%lu mmw_age_ms=%ld "
-      "telemetry_queue_overwrites=%lu thermal_queue_overwrites=%lu "
-      "tcp_connection_failures=%lu tcp_send_failures=%lu "
-      "thermal_frames=%lu crc_errors=%lu range_errors=%lu "
-      "thermal_status_failures=%lu thermal_preemptions=%lu "
-      "udp_sent=%lu udp_failed=%lu "
-      "free_heap=%lu\n",
-      WiFi.status() == WL_CONNECTED ? "up" : "down", RPI_HOST,
+      "[health] link    wifi=%s ip=%u.%u.%u.%u rssi=%d rpi=%s:%u tcp=%s\n",
+      wifiUp ? "up" : "down", static_cast<unsigned>(ip[0]),
+      static_cast<unsigned>(ip[1]), static_cast<unsigned>(ip[2]),
+      static_cast<unsigned>(ip[3]),
+      wifiUp ? static_cast<int>(WiFi.RSSI()) : 0, RPI_HOST,
+      static_cast<unsigned>(RPI_PORT), tcpLinkHealthy ? "up" : "down");
+
+  Serial.printf(
+      "[health] tcp     conn_fail=%lu send_fail=%lu queue_ovw=%lu\n",
+      static_cast<unsigned long>(tcpConnectionFailures),
+      static_cast<unsigned long>(tcpSendFailures),
+      static_cast<unsigned long>(telemetryQueueOverwrites));
+
+  Serial.printf(
+      "[health] thermal frames=%lu udp_sent=%lu udp_fail=%lu preempt=%lu "
+      "defer=%lu restarts=%lu crc_err=%lu rng_err=%lu status_fail=%lu "
+      "queue_ovw=%lu\n",
+      static_cast<unsigned long>(thermalSequence),
+      static_cast<unsigned long>(thermalUdpFramesSent),
+      static_cast<unsigned long>(thermalUdpSendFailures),
+      static_cast<unsigned long>(thermalFramesPreempted),
+      static_cast<unsigned long>(thermalFramesDeferred),
+      static_cast<unsigned long>(udpSocketRestarts),
+      static_cast<unsigned long>(thermalCrcErrors),
+      static_cast<unsigned long>(thermalRangeErrors),
+      static_cast<unsigned long>(thermalStatusQueryFailures),
+      static_cast<unsigned long>(thermalQueueOverwrites));
+
+  Serial.printf(
+      "[health] sensors resp=%.1f heart=%.1f co2=%u pir=%d co2_age_ms=%ld "
+      "mmw_ok=%lu mmw_age_ms=%ld mmw_uart=%u mmw_miss=%lu\n",
       respirationRate, heartRate, static_cast<unsigned>(co2Ppm),
       pirMotion ? 1 : 0,
-      co2StateName(co2State),
-      co2Started ? 1 : 0, co2AddressPresent ? 1 : 0,
+      lastCo2Ms == 0 ? -1L : static_cast<long>(now - lastCo2Ms),
+      static_cast<unsigned long>(mmWaveUpdateSuccesses),
+      lastMmWaveUpdateMs == 0
+          ? -1L
+          : static_cast<long>(now - lastMmWaveUpdateMs),
+      static_cast<unsigned>(mmWaveSerial.available()),
+      static_cast<unsigned long>(mmWaveUpdateMisses));
+
+  Serial.printf(
+      "[health] co2     state=%s started=%d probe=%d start_err=%d init=%lu "
+      "retry=%lu consec=%lu next_retry_ms=%lu dr_fail=%lu rd_fail=%lu\n",
+      co2StateName(co2State), co2Started ? 1 : 0, co2AddressPresent ? 1 : 0,
       static_cast<int>(co2LastStartError),
       static_cast<unsigned long>(co2InitAttempts),
       static_cast<unsigned long>(co2RetryCount),
@@ -1030,26 +1557,197 @@ void logHealth(uint32_t now) {
               ? co2NextActionMs - now
               : 0),
       static_cast<unsigned long>(co2DataReadyQueryFailures),
-      static_cast<unsigned long>(co2ReadFailures),
-      lastCo2Ms == 0 ? -1L : static_cast<long>(now - lastCo2Ms),
-      static_cast<unsigned>(mmWaveSerial.available()),
-      static_cast<unsigned long>(mmWaveUpdateSuccesses),
-      static_cast<unsigned long>(mmWaveUpdateMisses),
-      lastMmWaveUpdateMs == 0
-          ? -1L
-          : static_cast<long>(now - lastMmWaveUpdateMs),
-      static_cast<unsigned long>(telemetryQueueOverwrites),
-      static_cast<unsigned long>(thermalQueueOverwrites),
-      static_cast<unsigned long>(tcpConnectionFailures),
-      static_cast<unsigned long>(tcpSendFailures),
-      static_cast<unsigned long>(thermalSequence),
+      static_cast<unsigned long>(co2ReadFailures));
+
+  // min_heap is the one that matters here: the transmit-path collapse showed up
+  // as a ~40 KB dip that the instantaneous value had already recovered from by
+  // the time the next line printed.
+  Serial.printf("[health] sys     heap=%lu min_heap=%lu\n",
+                static_cast<unsigned long>(ESP.getFreeHeap()),
+                static_cast<unsigned long>(ESP.getMinFreeHeap()));
+}
+
+// Absolute counters answer "did it ever happen"; rates answer "is it happening
+// now". Only the second question separates a healthy 2 fps thermal stream from
+// a READY line stuck high that captures and transmits thousands of times per
+// second.
+void logLinkDiagnostics(uint32_t now) {
+  static uint32_t lastSampleMs = 0;
+  static uint32_t lastLoops = 0;
+  static uint32_t lastAttempts = 0;
+  static uint32_t lastFrames = 0;
+  static uint32_t lastDatagrams = 0;
+  static uint32_t lastBytes = 0;
+
+  // scheduleDue() runs unconditionally so the window baselines below stay
+  // anchored to a real interval even while the periodic copy is silenced.
+  const bool due = scheduleDue(now, lastLinkLogMs, DIAG_LOG_PERIOD_MS);
+  if (!linkDiagnosticsOnce && !(due && linkDiagnosticsEnabled)) return;
+  linkDiagnosticsOnce = false;
+
+  const uint32_t windowMs =
+      lastSampleMs == 0 ? DIAG_LOG_PERIOD_MS
+                        : static_cast<uint32_t>(now - lastSampleMs);
+  const uint32_t divisor = windowMs == 0 ? 1 : windowMs;
+  const uint32_t datagrams = udpDatagramsSent;
+  const uint32_t bytes = udpBytesSent;
+
+  Serial.printf(
+      "[link] up_s=%lu loop_hz=%lu ready_pin=%lu ready_i2c=%lu cap_hz=%lu "
+      "frame_hz=%lu cap_max_ms=%lu crc_err=%lu rng_err=%lu udp_on=%d "
+      "cap_on=%d udp_hz=%lu udp_kbps=%lu udp_dg_max_ms=%lu "
+      "udp_frame_max_ms=%lu udp_slow=%lu udp_fail=%lu preempt=%lu "
+      "suppress=%lu defer=%lu udp_restarts=%lu "
+      "tcp_sess=%lu drops=%lu peer_closed=%lu sent=%lu "
+      "gap_max_ms=%lu gap_warn=%lu gap_late=%lu write_max_ms=%lu slow_w=%lu "
+      "stalls=%lu partial=%lu mutex_max_ms=%lu mutex_to=%lu tcp_errno=%ld "
+      "udp_errno=%ld rssi=%d heap=%lu min_heap=%lu\n",
+      static_cast<unsigned long>(now / 1000),
+      static_cast<unsigned long>((loopIterations - lastLoops) * 1000UL /
+                                 divisor),
+      static_cast<unsigned long>(thermalReadyByPin),
+      static_cast<unsigned long>(thermalReadyByI2c),
+      static_cast<unsigned long>(
+          (thermalCaptureAttempts - lastAttempts) * 1000UL / divisor),
+      static_cast<unsigned long>((thermalSequence - lastFrames) * 1000UL /
+                                 divisor),
+      static_cast<unsigned long>(thermalCaptureMaxMs),
       static_cast<unsigned long>(thermalCrcErrors),
       static_cast<unsigned long>(thermalRangeErrors),
-      static_cast<unsigned long>(thermalStatusQueryFailures),
-      static_cast<unsigned long>(thermalFramesPreempted),
-      static_cast<unsigned long>(thermalUdpFramesSent),
+      thermalUdpEnabled ? 1 : 0,
+      thermalCaptureEnabled ? 1 : 0,
+      static_cast<unsigned long>((datagrams - lastDatagrams) * 1000UL /
+                                 divisor),
+      static_cast<unsigned long>((bytes - lastBytes) * 8UL / divisor),
+      static_cast<unsigned long>(udpDatagramMaxMs),
+      static_cast<unsigned long>(udpFrameMaxMs),
+      static_cast<unsigned long>(udpSlowDatagrams),
       static_cast<unsigned long>(thermalUdpSendFailures),
-      static_cast<unsigned long>(ESP.getFreeHeap()));
+      static_cast<unsigned long>(thermalFramesPreempted),
+      static_cast<unsigned long>(thermalFramesSuppressed),
+      static_cast<unsigned long>(thermalFramesDeferred),
+      static_cast<unsigned long>(udpSocketRestarts),
+      static_cast<unsigned long>(tcpSessions),
+      static_cast<unsigned long>(tcpDrops),
+      static_cast<unsigned long>(tcpPeerClosed),
+      static_cast<unsigned long>(telemetryPacketsSent),
+      static_cast<unsigned long>(telemetryGapMaxMs),
+      static_cast<unsigned long>(telemetryGapOverWarn),
+      static_cast<unsigned long>(telemetryGapOverDeadline),
+      static_cast<unsigned long>(tcpWriteMaxMs),
+      static_cast<unsigned long>(tcpSlowWrites),
+      static_cast<unsigned long>(tcpWriteStalls),
+      static_cast<unsigned long>(tcpPartialWrites),
+      static_cast<unsigned long>(tcpMutexWaitMaxMs),
+      static_cast<unsigned long>(tcpMutexTimeouts),
+      static_cast<long>(tcpLastErrno),
+      static_cast<long>(udpLastErrno),
+      static_cast<int>(WiFi.RSSI()),
+      static_cast<unsigned long>(ESP.getFreeHeap()),
+      static_cast<unsigned long>(ESP.getMinFreeHeap()));
+
+  lastSampleMs = now;
+  lastLoops = loopIterations;
+  lastAttempts = thermalCaptureAttempts;
+  lastFrames = thermalSequence;
+  lastDatagrams = datagrams;
+  lastBytes = bytes;
+}
+
+// Only the peak gauges and diagnostic tallies are cleared. Wire-visible state
+// -- telemetrySequence, thermalSequence -- is left alone, because the Pi
+// rejects a sequence that moves backwards inside one connection.
+void resetDiagnosticCounters() {
+  tcpSessions = 0;
+  tcpDrops = 0;
+  tcpShortSessions = 0;
+  tcpPeerClosed = 0;
+  tcpWriteStalls = 0;
+  tcpPartialWrites = 0;
+  tcpMutexTimeouts = 0;
+  tcpMutexWaitMaxMs = 0;
+  tcpMutexWaitSlow = 0;
+  tcpWriteMaxMs = 0;
+  tcpSlowWrites = 0;
+  telemetryGapMaxMs = 0;
+  telemetryGapOverWarn = 0;
+  telemetryGapOverDeadline = 0;
+  telemetryPacketsSent = 0;
+  udpDatagramsSent = 0;
+  udpBytesSent = 0;
+  udpDatagramMaxMs = 0;
+  udpSlowDatagrams = 0;
+  udpFrameMaxMs = 0;
+  thermalFramesSuppressed = 0;
+  thermalFramesDeferred = 0;
+  udpSocketRestarts = 0;
+  tcpLastErrno = 0;
+  udpLastErrno = 0;
+  thermalCaptureAttempts = 0;
+  thermalReadyByPin = 0;
+  thermalReadyByI2c = 0;
+  thermalCaptureMaxMs = 0;
+}
+
+void printDiagnosticHelp() {
+  Serial.println(
+      "[help] serial commands: u = toggle thermal UDP transmit, "
+      "c = toggle thermal capture, s = print [link] now, "
+      "l = toggle periodic [link], r = reset diagnostic counters, "
+      "h = this help");
+  Serial.printf(
+      "[help] pi receive deadlines: LCD server settimeout=%lu ms, runtime "
+      "gateway=5000 ms; this node warns at gap_ms>=%lu\n",
+      static_cast<unsigned long>(PI_PACKET_DEADLINE_MS),
+      static_cast<unsigned long>(TELEMETRY_GAP_WARN_MS));
+  Serial.println(
+      "[help] to prove causation: watch [link] with udp_on=1, press 'u', "
+      "watch it again. If gap_max_ms and drops stop growing, the thermal UDP "
+      "stream is what closes the TCP connection.");
+}
+
+// Non-blocking, so the delay-free runtime contract of loop() still holds.
+void handleSerialCommand() {
+  while (Serial.available() > 0) {
+    switch (Serial.read()) {
+      case 'u':
+      case 'U':
+        thermalUdpEnabled = !thermalUdpEnabled;
+        Serial.printf("[cmd] thermal UDP transmit %s\n",
+                      thermalUdpEnabled ? "ENABLED" : "DISABLED");
+        break;
+      case 'c':
+      case 'C':
+        thermalCaptureEnabled = !thermalCaptureEnabled;
+        Serial.printf("[cmd] thermal capture %s\n",
+                      thermalCaptureEnabled ? "ENABLED" : "DISABLED");
+        break;
+      case 'r':
+      case 'R':
+        resetDiagnosticCounters();
+        Serial.println("[cmd] diagnostic counters cleared");
+        break;
+      case 's':
+      case 'S':
+        // One-shot, independent of the periodic gate, so 's' still works while
+        // the periodic copy is silenced.
+        linkDiagnosticsOnce = true;
+        break;
+      case 'l':
+      case 'L':
+        linkDiagnosticsEnabled = !linkDiagnosticsEnabled;
+        Serial.printf("[cmd] periodic [link] logging %s\n",
+                      linkDiagnosticsEnabled ? "ENABLED" : "DISABLED");
+        break;
+      case 'h':
+      case 'H':
+      case '?':
+        printDiagnosticHelp();
+        break;
+      default:
+        break;  // Ignore newlines and stray bytes from the terminal.
+    }
+  }
 }
 
 void setup() {
@@ -1060,6 +1758,7 @@ void setup() {
   Serial.printf("[identity] device=%s boot=%s firmware=%s diag=%s reset=%d\n",
                 DEVICE_ID, bootId, NODE_FIRMWARE_VERSION,
                 DIAGNOSTIC_BUILD_ID, static_cast<int>(esp_reset_reason()));
+  printDiagnosticHelp();
 
   pinMode(PIN_PIR, INPUT);
   pinMode(PIN_THERMAL_CS, OUTPUT);
@@ -1104,6 +1803,7 @@ void setup() {
 
 void loop() {
   const uint32_t now = millis();
+  ++loopIterations;
 
   pollMmWave(now);
   pollCo2(now);
@@ -1114,6 +1814,8 @@ void loop() {
   }
 
   publishTelemetrySnapshot(now);
+  handleSerialCommand();
+  logLinkDiagnostics(now);
   logHealth(now);
 
   // Cooperative yield only; there is intentionally no delay() in runtime.

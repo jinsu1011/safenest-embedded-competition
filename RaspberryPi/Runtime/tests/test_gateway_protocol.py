@@ -346,6 +346,66 @@ class ProtocolDecodeTests(unittest.TestCase):
             reader.close()
             writer.close()
 
+    def test_idle_wait_does_not_close_before_the_next_header(self) -> None:
+        reader, writer = socket.socketpair()
+        reader.settimeout(0.02)
+        result: dict[str, bytes] = {}
+        error: list[BaseException] = []
+
+        def receive() -> None:
+            try:
+                result["data"] = recv_exact(
+                    reader,
+                    HEADER.size,
+                    deadline_seconds=0.05,
+                    idle_deadline_seconds=None,
+                )
+            except BaseException as exc:  # noqa: BLE001 — capture for the parent thread
+                error.append(exc)
+
+        thread = threading.Thread(target=receive)
+        thread.start()
+        time.sleep(0.12)
+        writer.sendall(b"SNST" + bytes(12))
+        thread.join(timeout=1.0)
+        reader.close()
+        writer.close()
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(error, [])
+        self.assertEqual(result["data"][:4], b"SNST")
+
+    def test_payload_stall_after_header_uses_frame_deadline_not_idle(self) -> None:
+        reader, writer = socket.socketpair()
+        reader.settimeout(0.02)
+        payload = telemetry_payload(7)
+        packet = wire_packet(PACKET_TELEMETRY_JSON, 7, payload)
+        writer.sendall(packet[: HEADER.size])
+        result: dict[str, object] = {}
+        error: list[BaseException] = []
+
+        def receive() -> None:
+            try:
+                result["packet"] = read_packet(
+                    reader,
+                    deadline_seconds=0.8,
+                    idle_deadline_seconds=None,
+                )
+            except BaseException as exc:  # noqa: BLE001
+                error.append(exc)
+
+        thread = threading.Thread(target=receive)
+        thread.start()
+        time.sleep(0.25)
+        writer.sendall(packet[HEADER.size :])
+        thread.join(timeout=1.0)
+        reader.close()
+        writer.close()
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(error, [])
+        packet_out = result["packet"]
+        assert isinstance(packet_out, TelemetryPayload)
+        self.assertEqual(packet_out.header.sequence, 7)
+
 
 class SequenceTests(unittest.TestCase):
     def test_sequences_are_independent_per_packet_type(self) -> None:
@@ -354,6 +414,11 @@ class SequenceTests(unittest.TestCase):
         self.assertEqual(tracker.accept(PacketHeader(2, 1, THERMAL_PAYLOAD_BYTES)), 0)
         self.assertEqual(tracker.accept(PacketHeader(1, 12, 1)), 1)
         self.assertEqual(tracker.accept(PacketHeader(2, 2, THERMAL_PAYLOAD_BYTES)), 0)
+
+    def test_skipped_publication_seq_is_a_gap_not_a_disconnect(self) -> None:
+        tracker = SequenceTracker()
+        self.assertEqual(tracker.accept(PacketHeader(PACKET_TELEMETRY_JSON, 151, 1)), 0)
+        self.assertEqual(tracker.accept(PacketHeader(PACKET_TELEMETRY_JSON, 153, 1)), 1)
 
     def test_duplicate_and_backward_sequences_are_rejected(self) -> None:
         duplicate = SequenceTracker()

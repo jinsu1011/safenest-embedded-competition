@@ -29,6 +29,7 @@ THERMAL_PAYLOAD_BYTES: Final = THERMAL_META.size + THERMAL_PIXEL_BYTES
 MAX_TELEMETRY_BYTES: Final = 4_096
 MAX_U32: Final = 0xFFFFFFFF
 EXPECTED_TELEMETRY_SCHEMA: Final = "safenest.telemetry.v1"
+ALLOWED_CO2_RANGE_PPM: Final = frozenset({2000, 5000, 10000})
 
 
 class ProtocolError(ValueError):
@@ -68,9 +69,6 @@ class TelemetryPayload:
     co2_measurement_event_id: int | None = None
     co2_measurement_monotonic_ms: int | None = None
     co2_measurement_event_valid: bool | None = None
-    co2_sensor_model: str | None = None
-    co2_event_identity_class: str | None = None
-    co2_preheat: bool | None = None
     pir_event_id: int | None = None
     pir_last_transition_monotonic_ms: int | None = None
     health: dict[str, int] | None = None
@@ -87,6 +85,13 @@ class TelemetryPayload:
     session_id: str | None = None
     mmwave_sequence: int | None = None
     breath_rate_raw: float | None = None
+    # Optional MH-Z19B device-domain metadata. Legacy packets omit these.
+    # Identity is INFERRED_UART_SAMPLE, not SCD40 getDataReady conversion.
+    co2_sensor_model: str | None = None
+    co2_event_identity_class: str | None = None
+    co2_preheat_complete: bool | None = None
+    abc_enabled: bool | None = None
+    configured_range_ppm: int | None = None
 
 
 @dataclass(frozen=True)
@@ -241,13 +246,6 @@ def decode_telemetry(header: PacketHeader, payload: bytes) -> TelemetryPayload:
         valid_field="co2_measurement_event_valid",
         boot_id=boot_id,
     )
-    co2_sensor_model = _optional_identifier(
-        decoded.get("co2_sensor_model"), "co2_sensor_model"
-    )
-    co2_event_identity_class = _optional_identifier(
-        decoded.get("co2_event_identity_class"), "co2_event_identity_class"
-    )
-    co2_preheat = _optional_bool(decoded.get("co2_preheat"), "co2_preheat")
     pir_event_id, pir_transition_ms = _optional_transition_provenance(
         decoded,
         id_field="pir_event_id",
@@ -268,6 +266,15 @@ def decode_telemetry(header: PacketHeader, payload: bytes) -> TelemetryPayload:
     session_id = _promoted_optional_identifier(decoded, nested_mmwave, "session_id")
     mmwave_sequence = _optional_mmwave_sequence(decoded, nested_mmwave)
     breath_rate_raw = _promoted_optional_finite(decoded, nested_mmwave, "breath_rate_raw")
+    co2_sensor_model = _optional_identifier(
+        decoded.get("co2_sensor_model"), "co2_sensor_model"
+    )
+    co2_event_identity_class = _optional_identifier(
+        decoded.get("co2_event_identity_class"), "co2_event_identity_class"
+    )
+    co2_preheat_complete = _optional_co2_preheat_complete(decoded)
+    abc_enabled = _optional_bool(decoded.get("abc_enabled"), "abc_enabled")
+    configured_range_ppm = _optional_configured_range_ppm(decoded.get("configured_range_ppm"))
 
     return TelemetryPayload(
         header=header,
@@ -282,9 +289,6 @@ def decode_telemetry(header: PacketHeader, payload: bytes) -> TelemetryPayload:
         co2_measurement_event_id=co2_event_id,
         co2_measurement_monotonic_ms=co2_event_ms,
         co2_measurement_event_valid=co2_event_valid,
-        co2_sensor_model=co2_sensor_model,
-        co2_event_identity_class=co2_event_identity_class,
-        co2_preheat=co2_preheat,
         pir_event_id=pir_event_id,
         pir_last_transition_monotonic_ms=pir_transition_ms,
         health=health,
@@ -295,6 +299,11 @@ def decode_telemetry(header: PacketHeader, payload: bytes) -> TelemetryPayload:
         session_id=session_id,
         mmwave_sequence=mmwave_sequence,
         breath_rate_raw=breath_rate_raw,
+        co2_sensor_model=co2_sensor_model,
+        co2_event_identity_class=co2_event_identity_class,
+        co2_preheat_complete=co2_preheat_complete,
+        abc_enabled=abc_enabled,
+        configured_range_ppm=configured_range_ppm,
     )
 
 
@@ -383,14 +392,6 @@ def _optional_finite(value: object, field: str) -> float | None:
     return converted
 
 
-def _optional_bool(value: object, field: str) -> bool | None:
-    if value is None:
-        return None
-    if not isinstance(value, bool):
-        raise ProtocolError(f"{field} must be boolean when present")
-    return value
-
-
 def _optional_mmwave_object(value: object) -> dict[str, object] | None:
     if value is None:
         return None
@@ -465,6 +466,38 @@ def _promoted_optional_identifier(
     if nested is not None and field in nested:
         return _optional_identifier(nested.get(field), f"mmwave.{field}")
     return None
+
+
+def _optional_bool(value: object, field: str) -> bool | None:
+    if value is None:
+        return None
+    if not isinstance(value, bool):
+        raise ProtocolError(f"{field} must be boolean when present")
+    return value
+
+
+def _optional_co2_preheat_complete(document: dict[str, object]) -> bool | None:
+    """Canonical ``co2_preheat_complete``, with firmware alias ``co2_preheat``.
+
+    Parallel MH-Z19B firmware currently emits ``co2_preheat``. The Pi ingest
+    contract name is ``co2_preheat_complete``. Canonical wins when both exist.
+    """
+
+    if "co2_preheat_complete" in document:
+        return _optional_bool(document.get("co2_preheat_complete"), "co2_preheat_complete")
+    if "co2_preheat" in document:
+        return _optional_bool(document.get("co2_preheat"), "co2_preheat")
+    return None
+
+
+def _optional_configured_range_ppm(value: object) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ProtocolError("configured_range_ppm must be an integer when present")
+    if value not in ALLOWED_CO2_RANGE_PPM:
+        raise ProtocolError("configured_range_ppm must be 2000, 5000, or 10000 when present")
+    return value
 
 
 def _optional_identifier(value: object, field: str) -> str | None:

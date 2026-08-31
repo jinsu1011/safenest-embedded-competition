@@ -80,6 +80,7 @@ class SensorStore:
         self._thermal_frames_received = 0
         self._telemetry: dict[str, object] = {
             "device_id": None,
+            "boot_id": None,
             "seq": None,
             "uptime_ms": None,
             "resp_rate_bpm": None,
@@ -91,6 +92,14 @@ class SensorStore:
                 "heart": False,
                 "co2": False,
             },
+            "co2_measurement_event_id": None,
+            "co2_measurement_monotonic_ms": None,
+            "co2_measurement_event_valid": None,
+            "co2_sensor_model": None,
+            "co2_event_identity_class": None,
+            "co2_preheat_complete": None,
+            "abc_enabled": None,
+            "configured_range_ppm": None,
         }
 
     def set_listener_error(self, error: str | None) -> None:
@@ -112,6 +121,32 @@ class SensorStore:
             raise ValueError(f"{name} must be a number or null")
         return value
 
+    @staticmethod
+    def _optional_bool(value: object, name: str) -> bool | None:
+        if value is None:
+            return None
+        if not isinstance(value, bool):
+            raise ValueError(f"{name} must be a boolean or null")
+        return value
+
+    @staticmethod
+    def _optional_text(value: object, name: str) -> str | None:
+        if value is None:
+            return None
+        if not isinstance(value, str) or not value:
+            raise ValueError(f"{name} must be a non-empty string or null")
+        return value[:64]
+
+    @staticmethod
+    def _preheat_complete(payload: dict[str, object]) -> bool | None:
+        if "co2_preheat_complete" in payload:
+            return SensorStore._optional_bool(
+                payload.get("co2_preheat_complete"), "co2_preheat_complete"
+            )
+        if "co2_preheat" in payload:
+            return SensorStore._optional_bool(payload.get("co2_preheat"), "co2_preheat")
+        return None
+
     def record_telemetry(self, payload: dict[str, object]) -> None:
         if payload.get("schema") != EXPECTED_TELEMETRY_SCHEMA:
             raise ValueError(f"unsupported telemetry schema: {payload.get('schema')!r}")
@@ -124,6 +159,9 @@ class SensorStore:
 
         telemetry: dict[str, object] = {
             "device_id": str(payload.get("device_id", ""))[:64] or None,
+            "boot_id": self._optional_text(payload.get("boot_id"), "boot_id")
+            if payload.get("boot_id") is not None
+            else None,
             "seq": self._optional_number(payload.get("seq"), "seq"),
             "uptime_ms": self._optional_number(payload.get("uptime_ms"), "uptime_ms"),
             "resp_rate_bpm": self._optional_number(
@@ -139,22 +177,29 @@ class SensorStore:
                 "heart": valid.get("heart") is True,
                 "co2": valid.get("co2") is True,
             },
+            "co2_measurement_event_id": self._optional_number(
+                payload.get("co2_measurement_event_id"), "co2_measurement_event_id"
+            ),
+            "co2_measurement_monotonic_ms": self._optional_number(
+                payload.get("co2_measurement_monotonic_ms"),
+                "co2_measurement_monotonic_ms",
+            ),
+            "co2_measurement_event_valid": self._optional_bool(
+                payload.get("co2_measurement_event_valid"),
+                "co2_measurement_event_valid",
+            ),
+            "co2_sensor_model": self._optional_text(
+                payload.get("co2_sensor_model"), "co2_sensor_model"
+            ),
+            "co2_event_identity_class": self._optional_text(
+                payload.get("co2_event_identity_class"), "co2_event_identity_class"
+            ),
+            "co2_preheat_complete": self._preheat_complete(payload),
+            "abc_enabled": self._optional_bool(payload.get("abc_enabled"), "abc_enabled"),
+            "configured_range_ppm": self._optional_number(
+                payload.get("configured_range_ppm"), "configured_range_ppm"
+            ),
         }
-        # Pass through CO2 producer identity when the ESP32 sent it. Do not
-        # invent event IDs: missing keys stay missing so /health capture can
-        # tell SCD40-v2 (no tuple) from MH-Z19B (INFERRED_UART_SAMPLE).
-        for key in (
-            "boot_id",
-            "firmware_version",
-            "co2_sensor_model",
-            "co2_event_identity_class",
-            "co2_measurement_event_id",
-            "co2_measurement_monotonic_ms",
-            "co2_measurement_event_valid",
-            "co2_preheat",
-        ):
-            if key in payload:
-                telemetry[key] = payload[key]
         with self._lock:
             self._telemetry = telemetry
             self._last_received_monotonic = time.monotonic()

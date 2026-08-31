@@ -122,6 +122,23 @@ class SlopeProfileContractTests(unittest.TestCase):
         builder.observe(event(99, 0.0, 500.0, boot="boot-b"))
         self.assertFalse(builder.latest().ready)
 
+    def test_missing_event_id_does_not_synthesize_history(self):
+        builder = CO2SlopeWindowBuilder()
+        builder.observe(
+            {
+                "device_id": "esp32-01",
+                "boot_id": "boot-a",
+                "values": {
+                    "measurement_event_valid": True,
+                    "measurement_event_id": None,
+                    "measurement_monotonic_ms": 0.0,
+                    "latest_measurement_ppm": 800.0,
+                },
+            }
+        )
+        self.assertEqual(builder.latest().status, "CO2_MEASUREMENT_CLOCK_UNAVAILABLE")
+        self.assertEqual(builder.latest().metadata["accepted_measurement_events"], 0)
+
     def test_non_monotonic_source_clock_restarts_history(self):
         builder = CO2SlopeWindowBuilder()
         feed(builder, [(0, 800.0), (60_000, 830.0), (120_000, 860.0), (180_000, 890.0)])

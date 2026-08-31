@@ -171,23 +171,6 @@ class ProtocolDecodeTests(unittest.TestCase):
         self.assertEqual(packet.health["co2_read_failures"], 4)
         self.assertEqual(packet.health["thermal_status_query_failures"], 5)
 
-    def test_mhz19b_co2_identity_fields_are_optional(self) -> None:
-        payload = telemetry_payload(
-            12,
-            boot_id="0123456789abcdef0123456789abcdef",
-            co2_measurement_event_id=7,
-            co2_measurement_monotonic_ms=180_000,
-            co2_measurement_event_valid=True,
-            co2_sensor_model="MH-Z19B",
-            co2_event_identity_class="INFERRED_UART_SAMPLE",
-            co2_preheat=False,
-        )
-        packet = decode_from_socket(wire_packet(PACKET_TELEMETRY_JSON, 12, payload))
-        self.assertEqual(packet.co2_sensor_model, "MH-Z19B")
-        self.assertEqual(packet.co2_event_identity_class, "INFERRED_UART_SAMPLE")
-        self.assertFalse(packet.co2_preheat)
-        self.assertEqual(packet.co2_measurement_event_id, 7)
-
     def test_legacy_and_unknown_extra_fields_remain_compatible(self) -> None:
         payload = telemetry_payload(9, future_optional_field={"ignored": True})
         packet = decode_from_socket(wire_packet(PACKET_TELEMETRY_JSON, 9, payload))
@@ -197,6 +180,11 @@ class ProtocolDecodeTests(unittest.TestCase):
         self.assertIsNone(packet.ts_monotonic_ms)
         self.assertIsNone(packet.phase_age_ms)
         self.assertIsNone(packet.human_detected_raw)
+        self.assertIsNone(packet.co2_sensor_model)
+        self.assertIsNone(packet.co2_event_identity_class)
+        self.assertIsNone(packet.co2_preheat_complete)
+        self.assertIsNone(packet.abc_enabled)
+        self.assertIsNone(packet.configured_range_ppm)
         self.assertEqual(packet.respiration_rate_bpm, 16.2)
 
     def test_nested_esp_mmwave_phase_trio_is_promoted(self) -> None:
@@ -271,6 +259,65 @@ class ProtocolDecodeTests(unittest.TestCase):
             ({"co2_measurement_event_id": 0, "co2_measurement_event_valid": False}, "appear together"),
         )
         for index, (updates, message) in enumerate(cases, start=20):
+            with self.subTest(updates=updates), self.assertRaisesRegex(ProtocolError, message):
+                payload = telemetry_payload(index, **updates)
+                decode_from_socket(wire_packet(PACKET_TELEMETRY_JSON, index, payload))
+
+    def test_mhz19b_optional_metadata_is_parsed_when_present(self) -> None:
+        payload = telemetry_payload(
+            21,
+            boot_id="boot-mhz19b",
+            co2_measurement_event_id=7,
+            co2_measurement_monotonic_ms=180_000,
+            co2_measurement_event_valid=True,
+            co2_sensor_model="MH-Z19B",
+            co2_event_identity_class="INFERRED_UART_SAMPLE",
+            co2_preheat_complete=True,
+            abc_enabled=False,
+            configured_range_ppm=5000,
+        )
+        packet = decode_from_socket(wire_packet(PACKET_TELEMETRY_JSON, 21, payload))
+        self.assertEqual(packet.co2_sensor_model, "MH-Z19B")
+        self.assertEqual(packet.co2_event_identity_class, "INFERRED_UART_SAMPLE")
+        self.assertTrue(packet.co2_preheat_complete)
+        self.assertFalse(packet.abc_enabled)
+        self.assertEqual(packet.configured_range_ppm, 5000)
+        self.assertEqual(packet.co2_measurement_event_id, 7)
+
+    def test_firmware_co2_preheat_alias_maps_to_preheat_complete(self) -> None:
+        payload = telemetry_payload(
+            22,
+            boot_id="boot-mhz19b",
+            co2_measurement_event_id=1,
+            co2_measurement_monotonic_ms=1_000,
+            co2_measurement_event_valid=True,
+            co2_preheat=True,
+        )
+        packet = decode_from_socket(wire_packet(PACKET_TELEMETRY_JSON, 22, payload))
+        self.assertTrue(packet.co2_preheat_complete)
+
+    def test_canonical_preheat_complete_wins_over_alias(self) -> None:
+        payload = telemetry_payload(
+            23,
+            boot_id="boot-mhz19b",
+            co2_measurement_event_id=1,
+            co2_measurement_monotonic_ms=1_000,
+            co2_measurement_event_valid=True,
+            co2_preheat_complete=False,
+            co2_preheat=True,
+        )
+        packet = decode_from_socket(wire_packet(PACKET_TELEMETRY_JSON, 23, payload))
+        self.assertFalse(packet.co2_preheat_complete)
+
+    def test_invalid_mhz19b_metadata_is_rejected(self) -> None:
+        cases = (
+            ({"co2_sensor_model": ""}, "co2_sensor_model"),
+            ({"co2_event_identity_class": 1}, "co2_event_identity_class"),
+            ({"co2_preheat_complete": "yes"}, "boolean"),
+            ({"abc_enabled": 1}, "boolean"),
+            ({"configured_range_ppm": 3000}, "2000, 5000, or 10000"),
+        )
+        for index, (updates, message) in enumerate(cases, start=24):
             with self.subTest(updates=updates), self.assertRaisesRegex(ProtocolError, message):
                 payload = telemetry_payload(index, **updates)
                 decode_from_socket(wire_packet(PACKET_TELEMETRY_JSON, index, payload))

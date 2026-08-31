@@ -457,6 +457,34 @@ def _finite(value: object) -> bool:
     )
 
 
+def h150_model_input_eligible(sensor: Mapping[str, Any]) -> bool:
+    """Whether a CO2 record may enter C-B6 H150 history.
+
+    Does not change slope math. Callers must not invent ``measurement_event_id``
+    from packet ``seq``, transport ``fresh``, or ``age_seconds``.
+
+    Preheat: missing is unknown, not complete. Only ``preheat_complete is True``
+    is model-eligible. MH-Z19B identity is inferred UART sample, not SCD40
+    getDataReady conversion.
+    """
+
+    values = sensor.get("values")
+    if not isinstance(values, Mapping):
+        return False
+    if values.get("measurement_event_valid") is not True:
+        return False
+    event_id = values.get("measurement_event_id")
+    if not isinstance(event_id, int) or isinstance(event_id, bool) or event_id == 0:
+        return False
+    if not _finite(values.get("measurement_monotonic_ms")):
+        return False
+    if not _finite(values.get("latest_measurement_ppm")):
+        return False
+    if values.get("preheat_complete") is not True:
+        return False
+    return True
+
+
 __all__ = [
     "CO2SlopeWindowBuilder",
     "CO2SlopeResult",
@@ -464,4 +492,5 @@ __all__ = [
     "CO2BaselineResult",
     "PROFILE_ID",
     "PROFILE_PATH",
+    "h150_model_input_eligible",
 ]

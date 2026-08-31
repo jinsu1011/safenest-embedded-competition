@@ -4,12 +4,19 @@ from __future__ import annotations
 
 import importlib.util
 import json
-from pathlib import Path
 import sys
 import threading
 from typing import Callable
 
-from paths import ONDEVICE_AI_ROOT
+from thermal_test_selector import (
+    DEFAULT_THERMAL_SELECTOR,
+    ThermalSelectorError,
+    describe_thermal_selection,
+    load_model_manifest,
+    resolve_thermal_runtime_selector,
+    thermal_test_mode_enabled,
+)
+from paths import MODEL_MANIFEST, ONDEVICE_AI_ROOT
 
 
 VENDOR_ROOT = ONDEVICE_AI_ROOT
@@ -44,6 +51,17 @@ class LazyModel:
         self._instance: object | None = None
         self._load_error: str | None = None
         self._lock = threading.Lock()
+        self._resolved_selector = self._ADAPTERS[sensor_id][2]
+        self._controlled_test_mode = False
+        if sensor_id == "thermal":
+            try:
+                manifest = load_model_manifest(MODEL_MANIFEST)
+                self._resolved_selector = resolve_thermal_runtime_selector(manifest)
+                self._controlled_test_mode = thermal_test_mode_enabled()
+                self._log_thermal_selection(manifest)
+            except ThermalSelectorError as error:
+                self._load_error = str(error)
+                raise ModelRuntimeUnavailable(self._load_error) from error
 
     @property
     def load_error(self) -> str | None:
@@ -51,8 +69,20 @@ class LazyModel:
 
     @property
     def model_selector(self) -> str:
-        """Expose the frozen selector without forcing an early model load."""
-        return self._ADAPTERS[self.sensor_id][2]
+        """Expose the process-launch selector without forcing an early model load."""
+        return self._resolved_selector
+
+    def _log_thermal_selection(self, manifest: dict) -> None:
+        details = describe_thermal_selection(self._resolved_selector, manifest)
+        print("[SafeNest Thermal]")
+        print(f"THERMAL SELECTOR: {details['selector']}")
+        print(f"MODEL ID: {details['model_id']}")
+        print(f"MODEL SHA: {details['sha256']}")
+        print(f"PREPROCESSING: {details['preprocessing_id']}")
+        print(
+            "CONTROLLED TEST MODE: "
+            f"{'1' if self._controlled_test_mode else '0'}"
+        )
 
     @property
     def model_meta(self) -> dict:
@@ -92,7 +122,8 @@ class LazyModel:
 
     def _load_frozen_adapter(self) -> object:
         self._assert_deployment_allowed()
-        filename, class_name, selector = self._ADAPTERS[self.sensor_id]
+        filename, class_name, default_selector = self._ADAPTERS[self.sensor_id]
+        selector = self._resolved_selector or default_selector
         adapter_path = VENDOR_ROOT / "inference" / filename
         module_name = f"_safenest_frozen_{self.sensor_id}_interpreter"
         module = sys.modules.get(module_name)
@@ -111,18 +142,45 @@ class LazyModel:
         kwargs = {"project_root": VENDOR_ROOT}
         if self.sensor_id == "thermal":
             kwargs["model_key"] = selector
-        return adapter_class(**kwargs)
+        adapter = adapter_class(**kwargs)
+        if self.sensor_id == "thermal":
+            print(
+                "THERMAL MODEL LOADED "
+                f"selector={getattr(adapter, 'model_selector', selector)} "
+                f"sha={getattr(adapter, 'sha256_hash', None)} "
+                f"preprocessing={getattr(adapter, 'preprocessing_id', None)}"
+            )
+        return adapter
 
     def _assert_deployment_allowed(self) -> None:
         manifest_path = VENDOR_ROOT / "models" / "model_manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        selector = self._ADAPTERS[self.sensor_id][2]
+        default_selector = self._ADAPTERS[self.sensor_id][2]
+        selector = self._resolved_selector
         active_selectors = manifest.get("active_runtime_selectors", {})
-        if self.sensor_id == "thermal" and active_selectors.get("thermal") != selector:
-            raise ModelRuntimeUnavailable(
-                "MODEL_SELECTOR_DRIFT: sensor=thermal, "
-                f"runtime={selector}, manifest={active_selectors.get('thermal')}"
-            )
+        if self.sensor_id == "thermal":
+            if not self._controlled_test_mode:
+                if active_selectors.get("thermal") != default_selector:
+                    raise ModelRuntimeUnavailable(
+                        "MODEL_SELECTOR_DRIFT: sensor=thermal, "
+                        f"runtime={default_selector}, manifest={active_selectors.get('thermal')}"
+                    )
+                if selector != DEFAULT_THERMAL_SELECTOR:
+                    raise ModelRuntimeUnavailable(
+                        "MODEL_SELECTOR_DRIFT: sensor=thermal, "
+                        f"runtime={selector}, expected={DEFAULT_THERMAL_SELECTOR}"
+                    )
+            else:
+                metadata = manifest.get("models", {}).get(selector)
+                if not isinstance(metadata, dict):
+                    raise ModelRuntimeUnavailable(
+                        f"MODEL_MANIFEST_ENTRY_MISSING: sensor=thermal, selector={selector}"
+                    )
+                if metadata.get("controlled_test_allowed") is not True:
+                    raise ModelRuntimeUnavailable(
+                        f"THERMAL_TEST_SELECTOR_NOT_ALLOWED: selector={selector}"
+                    )
+                return
         metadata = manifest.get("models", {}).get(selector)
         if not isinstance(metadata, dict):
             raise ModelRuntimeUnavailable(

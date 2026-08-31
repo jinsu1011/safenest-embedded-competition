@@ -20,6 +20,16 @@ Raspberry Pi에서 아래 한 명령으로 전체 SafeNest 런타임이 기동�
 ./run_safenest.sh --install
 ```
 
+Thermal 모델만 바꿔 같은 SafeNest 스택을 비교하려면 별도 테스트 런처를 씁니다. 기본 `./run_safenest.sh` 동작은 그대로입니다.
+
+```bash
+./run_safenest_thermal_test.sh baseline
+./run_safenest_thermal_test.sh a
+./run_safenest_thermal_test.sh b
+```
+
+자세한 선택 의미는 [`docs/thermal/20260831_Thermal_V2_Team_MultiModel_Test_Staging_01.md`](docs/thermal/20260831_Thermal_V2_Team_MultiModel_Test_Staging_01.md)를 봅니다.
+
 이 한 명령이 하나의 프로세스 트리 안에서 다음을 모두 띄웁니다.
 
 | 구성 요소 | 역할 |
@@ -98,6 +108,7 @@ archive/                          과거 구현·측정 증거 보존 (런타임
 hardware/                         하우징 3D 모델
 COMPONENT_SOURCES.json            컴포넌트별 상류 저장소와 commit SHA
 run_safenest.sh                   단일 실행 진입점
+run_safenest_thermal_test.sh      Thermal baseline/A/B 비교용 테스트 런처
 ```
 
 ### 구조 예외 (STRUCTURE_EXCEPTION)

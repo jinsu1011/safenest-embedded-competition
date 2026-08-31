@@ -120,12 +120,39 @@ class OnDeviceAIPipeline:
             "temperature_calibrated": False,
             "preprocessing": "per_frame_minmax",
             "heatmap_preview": _thermal_preview(pixels),
+            "model_selector": getattr(
+                self.models["thermal"], "model_selector", "thermal"
+            ),
+            "source_geometry_bridge": "TEAM_RUNTIME_62X80_AS_RECEIVED_EXPERIMENTAL_BRIDGE",
         }
         try:
             prediction = self.models["thermal"].predict(pixels)
             model_meta = getattr(self.models["thermal"], "model_meta", {})
             if not isinstance(model_meta, Mapping):
                 model_meta = {}
+            preprocessing_id = str(
+                model_meta.get("preprocessing_id") or metadata["preprocessing"]
+            )
+            metadata.update(
+                {
+                    "preprocessing": preprocessing_id,
+                    "preprocessing_id": preprocessing_id,
+                    "probabilities": list(prediction.probabilities),
+                    "model_selector": getattr(
+                        prediction,
+                        "model_selector",
+                        getattr(self.models["thermal"], "model_selector", "thermal"),
+                    ),
+                    "model_sha256": getattr(
+                        prediction, "model_sha256", model_meta.get("sha256")
+                    ),
+                    "safety_authority": model_meta.get("safety_authority", True),
+                    "risk_authority": model_meta.get("risk_authority"),
+                    "risk_contribution": model_meta.get("risk_contribution"),
+                    "runtime_role": model_meta.get("runtime_role"),
+                    "safety_semantic": model_meta.get("safety_semantic"),
+                }
+            )
             return self._prediction_result(
                 "thermal",
                 prediction,
@@ -137,18 +164,7 @@ class OnDeviceAIPipeline:
                     if prediction.class_name == "HUMAN_FALL_PROXY"
                     else 0.0
                 ),
-                metadata={
-                    **metadata,
-                    "probabilities": list(prediction.probabilities),
-                    "model_selector": getattr(
-                        self.models["thermal"], "model_selector", "thermal"
-                    ),
-                    "safety_authority": model_meta.get("safety_authority", True),
-                    "risk_authority": model_meta.get("risk_authority"),
-                    "risk_contribution": model_meta.get("risk_contribution"),
-                    "runtime_role": model_meta.get("runtime_role"),
-                    "safety_semantic": model_meta.get("safety_semantic"),
-                },
+                metadata=metadata,
             )
         except Exception as error:
             return self._model_error("thermal", now, error, metadata)

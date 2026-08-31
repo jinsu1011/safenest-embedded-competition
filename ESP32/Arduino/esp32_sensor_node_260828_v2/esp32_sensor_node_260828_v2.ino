@@ -74,8 +74,8 @@ constexpr uint32_t CO2_STALE_MS = 15000;
 // inference rather than asserting an empty room.
 constexpr uint32_t PRESENCE_MAX_AGE_MS = 5000;
 constexpr char NODE_FIRMWARE_VERSION[] =
-    "safenest-esp32-sensor-node/1.6.0-udp-backpressure.1";
-constexpr char DIAGNOSTIC_BUILD_ID[] = "udp-backpressure-20260831-03";
+    "safenest-esp32-sensor-node/1.6.1-udp-chunk-yield.1";
+constexpr char DIAGNOSTIC_BUILD_ID[] = "udp-chunk-yield-20260901-01";
 
 // -----------------------------------------------------------------------------
 // Link diagnostics.
@@ -112,6 +112,19 @@ constexpr uint32_t TCP_MUTEX_WARN_MS = 100;
 // a counted, timestamped event.
 constexpr uint32_t TCP_MUTEX_MAX_WAIT_MS = 3000;
 constexpr uint32_t UDP_DATAGRAM_WARN_MS = 40;
+// 2 ms between chunks was only a CPU yield. Nine 1200-byte datagrams still
+// hit the radio in ~34 ms, which is what filled the lwIP pool (errno 12) and
+// left no airtime for the 1 Hz TCP write. 20 ms is long enough for the TCP
+// task to wake, take the mutex, and finish a ~3 ms write, and 8 gaps stay
+// inside the ~480 ms 2 fps period and the Pi's 500 ms thermal reassembly
+// window (measured from the last chunk, not the first).
+constexpr uint32_t UDP_CHUNK_GAP_MS = 20;
+// A live telemetry write holds TCP_CRITICAL_BIT for a few milliseconds.
+// Waiting this out and then continuing the same frame is the interleave;
+// returning Preempted used to drop the remaining chunks. Connect() holds the
+// bit much longer, but tcpLinkHealthy is already false then, so we stand down
+// instead of waiting out the handshake.
+constexpr uint32_t UDP_YIELD_TO_TCP_MAX_MS = 80;
 // udpStarted was only cleared when Wi-Fi dropped, so once sendto() entered a
 // failing state the task retried the same socket forever: udp_sent froze at 61
 // for the rest of the run while udp_failed kept climbing. Rebuilding the socket
@@ -335,6 +348,7 @@ volatile uint32_t tcpConnectionFailures = 0;
 volatile uint32_t tcpSendFailures = 0;
 volatile uint32_t thermalUdpFramesSent = 0;
 volatile uint32_t thermalFramesPreempted = 0;
+volatile uint32_t thermalTcpYields = 0;
 volatile uint32_t thermalUdpSendFailures = 0;
 
 // Link diagnostics written by the network tasks on core 0, under the same
@@ -1015,6 +1029,26 @@ void logSlowDatagram(uint32_t frameSequence, uint16_t chunkIndex,
       static_cast<long>(udpLastErrno));
 }
 
+// Park this task until TCP is not in a write/connect, without holding the TX
+// mutex. The higher-priority TCP task can then take the mutex and send. false
+// means the remaining chunks of this frame should be abandoned.
+bool yieldRadioToTcp(uint32_t maxWaitMs) {
+  const uint32_t startedMs = millis();
+  bool waited = false;
+  for (;;) {
+    if (!tcpLinkHealthy) return false;
+    if ((xEventGroupGetBits(networkEvents) & TCP_CRITICAL_BIT) == 0) {
+      if (waited) thermalTcpYields = thermalTcpYields + 1;
+      return true;
+    }
+    if (static_cast<uint32_t>(millis() - startedMs) >= maxWaitMs) {
+      return false;
+    }
+    waited = true;
+    vTaskDelay(pdMS_TO_TICKS(2));
+  }
+}
+
 ThermalSendResult sendThermalUdp(WiFiUDP &udp,
                                  const ThermalTxFrame &frame) {
   constexpr TickType_t MUTEX_TIMEOUT = pdMS_TO_TICKS(1000);
@@ -1035,10 +1069,10 @@ ThermalSendResult sendThermalUdp(WiFiUDP &udp,
   putU16(meta + 14, frame.maximumRaw);
   const uint32_t crc32 = thermalFrameCrc32(frame, meta);
 
-  for (uint16_t chunkIndex = 0; chunkIndex < THERMAL_UDP_CHUNK_COUNT;
-       ++chunkIndex) {
-    if ((xEventGroupGetBits(networkEvents) & TCP_CRITICAL_BIT) != 0) {
-      return ThermalSendResult::Preempted;
+  for (uint16_t chunkIndex = 0; chunkIndex < THERMAL_UDP_CHUNK_COUNT;) {
+    if (!yieldRadioToTcp(UDP_YIELD_TO_TCP_MAX_MS)) {
+      return tcpLinkHealthy ? ThermalSendResult::Preempted
+                            : ThermalSendResult::Deferred;
     }
 
     const size_t offset = chunkIndex * THERMAL_UDP_CHUNK_SIZE;
@@ -1065,9 +1099,11 @@ ThermalSendResult sendThermalUdp(WiFiUDP &udp,
     if (xSemaphoreTake(networkTxMutex, MUTEX_TIMEOUT) != pdTRUE) {
       return ThermalSendResult::Preempted;
     }
+    // TCP set the bit and is blocked on this mutex. Sending now would jump
+    // the queue; give it back and retry the same chunk after the write.
     if ((xEventGroupGetBits(networkEvents) & TCP_CRITICAL_BIT) != 0) {
       xSemaphoreGive(networkTxMutex);
-      return ThermalSendResult::Preempted;
+      continue;
     }
 
     // Timed inside the mutex, because this is exactly the window during which
@@ -1094,16 +1130,13 @@ ThermalSendResult sendThermalUdp(WiFiUDP &udp,
       udpSlowDatagrams = udpSlowDatagrams + 1;
       logSlowDatagram(frame.frameSequence, chunkIndex, datagramMs);
     }
-    // Capture a TCP request that arrived while this datagram held the mutex.
-    // After give, the higher-priority TCP task may run and clear the bit before
-    // this task resumes, so sampling only at the next chunk would miss it.
-    const bool preemptedDuringSend =
-        (xEventGroupGetBits(networkEvents) & TCP_CRITICAL_BIT) != 0;
     xSemaphoreGive(networkTxMutex);
     if (!sent) return ThermalSendResult::Failed;
-    if (preemptedDuringSend) return ThermalSendResult::Preempted;
 
-    vTaskDelay(pdMS_TO_TICKS(2));
+    chunkIndex = static_cast<uint16_t>(chunkIndex + 1);
+    if (chunkIndex < THERMAL_UDP_CHUNK_COUNT) {
+      vTaskDelay(pdMS_TO_TICKS(UDP_CHUNK_GAP_MS));
+    }
   }
   return ThermalSendResult::Sent;
 }
@@ -1517,12 +1550,13 @@ void logHealth(uint32_t now) {
 
   Serial.printf(
       "[health] thermal frames=%lu udp_sent=%lu udp_fail=%lu preempt=%lu "
-      "defer=%lu restarts=%lu crc_err=%lu rng_err=%lu status_fail=%lu "
+      "yield=%lu defer=%lu restarts=%lu crc_err=%lu rng_err=%lu status_fail=%lu "
       "queue_ovw=%lu\n",
       static_cast<unsigned long>(thermalSequence),
       static_cast<unsigned long>(thermalUdpFramesSent),
       static_cast<unsigned long>(thermalUdpSendFailures),
       static_cast<unsigned long>(thermalFramesPreempted),
+      static_cast<unsigned long>(thermalTcpYields),
       static_cast<unsigned long>(thermalFramesDeferred),
       static_cast<unsigned long>(udpSocketRestarts),
       static_cast<unsigned long>(thermalCrcErrors),
@@ -1680,6 +1714,7 @@ void resetDiagnosticCounters() {
   udpFrameMaxMs = 0;
   thermalFramesSuppressed = 0;
   thermalFramesDeferred = 0;
+  thermalTcpYields = 0;
   udpSocketRestarts = 0;
   tcpLastErrno = 0;
   udpLastErrno = 0;

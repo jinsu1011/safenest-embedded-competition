@@ -16,6 +16,11 @@ from types import SimpleNamespace
 
 from ai.mmwave_b23_bridge import bundle_from_packet, observation_timestamp_s
 from ai.mmwave_b23_runtime import B23TeamRuntime, MODEL_ID
+from ai.mmwave_prototype.mmwave_m_prot_3_integration_runtime import (
+    DEFAULT_MAX_GAP_S,
+    MProt3IntegrationRuntime,
+)
+from ai.mmwave_prototype.mmwave_sw01_interface_checker import Sample, StreamBundle
 from ai.mmwave_prototype.mmwave_m_prot_2_b23_runtime import (
     CANONICAL_PARAMETER_SHA256,
     SCALER_CONTENT_SHA256,
@@ -240,7 +245,7 @@ class B23PipelinePathTests(unittest.TestCase):
         self._feed(telemetry(1, seq=103, publication_seq=501), 1)
         result = self._evaluate()
         self._assert_not_mn9(result)
-        self.assertEqual(self.pipeline._mmwave_b23.buffered_count, 1)
+        self.assertEqual(self.pipeline._mmwave_b23.buffered_count, 2)
         self.assertFalse(result["available"])
         self.assertEqual(result["state"], "WINDOW_NOT_READY")
         monitor = result["metadata"]["live_phase_seq_monitor"]
@@ -580,6 +585,101 @@ class ESPProducerContractTests(unittest.TestCase):
         self.assertNotIn("ts_ms) - float(age_ms)", runtime_text)
         self.assertIn("update_ms = float(ts_ms) - float(age_ms)", canonical_text)
         self.assertEqual(observation_timestamp_s(10_000, 80), 10.0)
+
+
+def _mprot3_phase_bundle(
+    *,
+    seq: int,
+    t: float,
+    session_id: str = "sess-a",
+    reset_flag: bool = False,
+) -> StreamBundle:
+    return StreamBundle(
+        device_identity="safenest-mmwave",
+        interface_identity="safenest.telemetry.v1",
+        configuration_identity="mr60_tcp_v1_phase_waveform",
+        observation_kind="near_raw_phase",
+        samples=[
+            Sample(
+                t=t,
+                phase=0.1,
+                seq=seq,
+                health_ok=True,
+                session_id=session_id,
+                reset_flag=reset_flag,
+            )
+        ],
+    )
+
+
+class MProt6SeqHoleContinuityTests(unittest.TestCase):
+    """Short nested-seq holes must not flush the 30s causal buffer."""
+
+    def test_seq_plus_one_keeps_continuity(self) -> None:
+        runtime = B23TeamRuntime()
+        runtime.observe_packet(telemetry(0, seq=100, publication_seq=1))
+        runtime.observe_packet(telemetry(1, seq=101, publication_seq=2))
+        self.assertEqual(runtime.buffered_count, 2)
+        self.assertEqual(runtime.phase_seq_monitor["missing_phase_event_count"], 0)
+
+    def test_short_seq_hole_preserves_buffer_and_counts_missing(self) -> None:
+        runtime = B23TeamRuntime()
+        runtime.observe_packet(telemetry(0, seq=100, publication_seq=1))
+        runtime.observe_packet(telemetry(1, seq=102, publication_seq=2))
+        self.assertEqual(runtime.buffered_count, 2)
+        self.assertEqual(runtime.phase_seq_monitor["missing_phase_event_count"], 1)
+        self.assertEqual(runtime.phase_seq_monitor["delta"], 2)
+
+    def test_seq_hole_with_large_timestamp_gap_flushes(self) -> None:
+        runtime = B23TeamRuntime()
+        runtime.observe_packet(telemetry(0, seq=100, publication_seq=1, ts_monotonic_ms=0.0))
+        late = telemetry(1, seq=102, publication_seq=2)
+        object.__setattr__(late, "ts_monotonic_ms", 2000.0)
+        runtime.observe_packet(late)
+        self.assertEqual(runtime.buffered_count, 1)
+
+    def test_boot_id_change_flushes(self) -> None:
+        runtime = B23TeamRuntime()
+        for i in range(20):
+            runtime.observe_packet(telemetry(i, boot_id="boot-a"))
+        self.assertEqual(runtime.buffered_count, 20)
+        runtime.observe_packet(telemetry(20, boot_id="boot-b"))
+        self.assertEqual(runtime.buffered_count, 1)
+
+    def test_timestamp_regression_flushes(self) -> None:
+        runtime = B23TeamRuntime()
+        runtime.observe_packet(telemetry(5, seq=100, publication_seq=1, rate=10.0))
+        self.assertEqual(runtime.buffered_count, 1)
+        runtime.observe_packet(telemetry(1, seq=101, publication_seq=2, rate=10.0))
+        self.assertEqual(runtime.buffered_count, 1)
+
+    def test_short_seq_holes_still_reach_30s_window(self) -> None:
+        runtime = B23TeamRuntime()
+        n = ready_count(10.0)
+        seq = 100
+        last = None
+        for i in range(n):
+            last = telemetry(i, seq=seq, publication_seq=i + 1)
+            runtime.observe_packet(last)
+            seq += 2 if i in {10, 50, 120} else 1
+        self.assertEqual(runtime.buffered_count, n)
+        self.assertGreaterEqual(runtime.phase_seq_monitor["missing_phase_event_count"], 3)
+        result = runtime.evaluate(sensor_view(last), 20_000.0)
+        self.assertTrue(result.metadata.get("window_ready"))
+
+    def test_mprot3_seq_hole_with_small_index_gap_does_not_flush(self) -> None:
+        runtime = MProt3IntegrationRuntime()
+        runtime.ingest_bundle(_mprot3_phase_bundle(seq=100, t=0.0))
+        self.assertEqual(runtime.composer.buffered_count, 1)
+        runtime.ingest_bundle(_mprot3_phase_bundle(seq=102, t=0.1))
+        self.assertEqual(runtime.composer.buffered_count, 2)
+        self.assertLessEqual(0.1, DEFAULT_MAX_GAP_S)
+
+    def test_mprot3_seq_hole_with_large_index_gap_flushes(self) -> None:
+        runtime = MProt3IntegrationRuntime()
+        runtime.ingest_bundle(_mprot3_phase_bundle(seq=100, t=0.0))
+        runtime.ingest_bundle(_mprot3_phase_bundle(seq=102, t=DEFAULT_MAX_GAP_S + 0.1))
+        self.assertEqual(runtime.composer.buffered_count, 1)
 
 
 def sensor_view(packet: TelemetryPayload) -> dict:

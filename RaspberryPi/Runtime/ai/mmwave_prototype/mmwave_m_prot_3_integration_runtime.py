@@ -420,8 +420,12 @@ class MProt3IntegrationRuntime:
         if dt > self.composer.max_gap_s:
             return False
         if first.seq is not None and self._boundary.last_seq is not None:
-            if int(first.seq) != int(self._boundary.last_seq) + 1:
+            seq_delta = int(first.seq) - int(self._boundary.last_seq)
+            if seq_delta <= 0:
                 return False
+            # seq_delta > 1 is a short hole. Timestamp already passed the
+            # positive / max-gap checks, so keep the causal buffer. Missing
+            # nested seq is a diagnostic on the live B23 adapter, not a flush.
         return True
 
     def _set_boundary_from_sample(self, sample: Sample) -> None:

@@ -5,7 +5,7 @@
 이 스케치는 `ESP32/Arduino/esp32_sensor_node_260828_v2/`를 **제자리에서 덮어쓰지 않고** 복사한 뒤, CO₂ 계측만 Sensirion SCD40/SCD4x I²C에서 Winsen MH-Z19B UART로 바꾼 형제 스케치입니다.
 
 - 폴더: `ESP32/Arduino/esp32_sensor_node_mhz19b_v2/`
-- 펌웨어: `safenest-esp32-sensor-node/1.7.0-mhz19b.1`
+- 펌웨어: `safenest-esp32-sensor-node/1.7.2-mhz19b.1`
 - SCD40 v2 스케치(`esp32_sensor_node_260828_v2`)는 참조로 유지합니다.
 
 모델 재학습, threshold 0.43, C-B6 scaler/TFLite, ESP32 쪽 slope/점유 모델은 **범위 밖**입니다. Pi `RaspberryPi/Runtime/ai/co2_canonical_runtime.py`가 이미 ENDPOINT_H150 / 150 s slope를 재구성합니다.
@@ -79,3 +79,21 @@ ESP32는 slope를 계산하지 않습니다.
 - Arduino CLI가 있으면 이 스케치를 컴파일합니다.
 - **실기 flash / MH-Z19B UART ppm 관측은 이 작업에서 수행하지 않았습니다.** `DEVICE_VALIDATED=NO`.
 - 잔여 위험: ABC 출하 상태, 범위 variant(2000/5000/10000), manufacturer data-ready 부재.
+
+## 1.7.1 — UDP 청크 양보 + 주기 힙 회수
+
+MH-Z19B 스케치는 PR #71 청크 양보가 빠져 있었고, 9개 UDP datagram을 2 ms 간격으로 연속 송신하면 lwIP 풀이 차고 TCP 1 Hz JSON이 밀렸습니다. 힙이 ~40 KB 떨어지는 현상과 같은 경로입니다.
+
+- 청크 사이 `UDP_CHUNK_GAP_MS = 20`. TCP가 그 틈에 mutex를 잡고 JSON을 보냅니다.
+- TCP write/connect 중이면 같은 청크를 버리고 끝내지 않고 기다렸다가 이어서 보냅니다 (`yieldRadioToTcp`). 센서 JSON 값/시퀀스는 바꾸지 않습니다.
+- 5초마다, 또는 free heap이 48 KB 아래로 떨어지면 thermal UDP 소켓만 `stop()`/`begin()` 해서 lwIP pbuf를 돌려줍니다. TCP 클라이언트와 큐에 있는 telemetry JSON은 건드리지 않습니다. TCP가 보내는 중이면 회수를 건너뜁니다.
+- 펌웨어 id: `safenest-esp32-sensor-node/1.7.1-mhz19b.1`
+
+## 1.7.2 — mmWave 0.0 vs stale null
+
+`[health] sensors resp=0.0`는 Pi의 `nan`/`null`과 다른 의미였습니다. 헬스는 마지막 캐시를 stale 검사 없이 찍고, `mmw_miss`는 레이더 고장이 아니라 `update(0)`이 빈 UART에서 false를 준 루프 횟수였습니다.
+
+- 헬스 `resp`/`heart`는 TCP와 같이 10 s stale이면 `null`. `resp_age_ms` / `heart_age_ms` / `presence_age_ms`를 같이 찍습니다.
+- `mmw_miss`는 UART에 바이트가 있는데 프레임이 안 열릴 때만 증가합니다.
+- thermal SPI 전후에 mmWave를 drain합니다.
+- 레이더가 보낸 0.0 bpm(미검출)은 그대로 0.00으로 둡니다. 0을 숨기지 않습니다.

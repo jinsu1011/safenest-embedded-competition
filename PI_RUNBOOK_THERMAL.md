@@ -301,7 +301,7 @@ Thermal: A | thermal_tv2_candidate_a_a0_fp32_v1 | FRAME_ROBUST_P2_P98_V1
 - UDP thermal frames `Δ`가 증가하는가
 - thermal sensor `LIVE`
 - Thermal AI 상태 (`WARMUP` / 클래스 / `FALL_PX`)
-- `HUMAN_NORMAL` → `HUMAN_FALL_PROXY` 전환이 수상하면 기록만. 실제 낙양으로 쓰지 말 것
+- `HUMAN_NORMAL` → `HUMAN_FALL_PROXY` 전환이 수상하면 기록만. 실제 낙상으로 쓰지 말 것
 - latency가 보이면 참고
 - risk는 bounded proxy 유지
 - LCD state

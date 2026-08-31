@@ -24,7 +24,8 @@ python3 hil/pi_field_monitor.py --raw-labels    # 짧은 라벨 대신 원문 �
 # 맥에서: python3 hil/pi_field_monitor.py --base http://<PI_IP>:8000
 ```
 
-표 읽는 법 → **3-B**. 짧은 라벨(`PHYS_OK` 등) 의미 → **3-C**.
+맨 위 `Thermal:` 줄은 지금 기동된 프로세스의 Thermal selector다 (`BASELINE` / `A` / `B`). 표 읽는 법 → **3-B**. 짧은 라벨(`PHYS_OK` 등) 의미 → **3-C**.
+Thermal baseline/A/B 현장 비교는 `PI_RUNBOOK_THERMAL.md` 참조.
 
 ---
 
@@ -133,6 +134,8 @@ bash ./run_safenest_thermal_test.sh a
 bash ./run_safenest_thermal_test.sh b
 ```
 
+Thermal baseline/A/B 현장 비교·LCD·필드 모니터 모델 확인은 **`PI_RUNBOOK_THERMAL.md`** 를 본다. 핫 스위칭 없음. Team default는 바뀌지 않는다.
+
 기동 직후 확인:
 
 ```bash
@@ -223,6 +226,8 @@ ss -lunp | grep 5005 || echo "udp free"
 파일: `RaspberryPi/Runtime/hil/pi_field_monitor.py`
 실행(계속): `cd …/RaspberryPi/Runtime && python3 hil/pi_field_monitor.py`
 실행(한 번): 같은 명령 + `--once` / 종료: `Ctrl+C` / 맥 원격: `--base http://192.168.0.3:8000`
+
+헤더 `Thermal:` 줄은 GET `/api/status`의 `runtime_status.model_selector`다. A/B 전용 모니터 스크립트는 없다.
 
 아래는 **화면에 나오는 표 4개를 읽는 법**이다. 위→아래 순서로 본다.
 

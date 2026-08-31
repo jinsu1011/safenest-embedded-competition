@@ -9,10 +9,18 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from thermal_test_selector import peek_configured_thermal_selector
+from paths import MODEL_MANIFEST
+from thermal_test_selector import (
+    ThermalSelectorError,
+    describe_thermal_selection,
+    load_model_manifest,
+    peek_configured_thermal_selector,
+)
 
 
 SENSOR_IDS = ("mmwave", "thermal", "co2", "pir")
+_THERMAL_MANIFEST: Mapping[str, Any] | None = None
+_THERMAL_MANIFEST_LOADED = False
 
 
 def runtime_status_document(
@@ -92,6 +100,41 @@ def _co2_status(sensor: Mapping[str, Any], result: Mapping[str, Any]) -> dict[st
     return status
 
 
+def _thermal_manifest() -> Mapping[str, Any]:
+    global _THERMAL_MANIFEST, _THERMAL_MANIFEST_LOADED
+    if _THERMAL_MANIFEST_LOADED:
+        return _THERMAL_MANIFEST or {}
+    _THERMAL_MANIFEST_LOADED = True
+    try:
+        _THERMAL_MANIFEST = load_model_manifest(MODEL_MANIFEST)
+    except (OSError, ValueError, ThermalSelectorError):
+        _THERMAL_MANIFEST = {}
+    return _THERMAL_MANIFEST
+
+
+def _thermal_identity(metadata: Mapping[str, Any]) -> dict[str, Any]:
+    """Process-selected Thermal identity, even before a valid prediction."""
+
+    selector = str(
+        metadata.get("model_selector") or peek_configured_thermal_selector() or ""
+    ).strip()
+    described: Mapping[str, Any] = {}
+    if selector:
+        described = describe_thermal_selection(selector, _thermal_manifest())
+    sha = (
+        metadata.get("model_sha256")
+        or metadata.get("sha256")
+        or described.get("sha256")
+    )
+    return {
+        "model_selector": selector,
+        "model_id": metadata.get("model_id") or described.get("model_id"),
+        "model_sha256": sha,
+        "preprocessing_id": metadata.get("preprocessing_id")
+        or described.get("preprocessing_id"),
+    }
+
+
 def _thermal_status(sensor: Mapping[str, Any], result: Mapping[str, Any]) -> dict[str, Any]:
     status = _sensor_base(sensor)
     # The public-SDT FP32 model is the active inference/risk selector. Its
@@ -99,9 +142,7 @@ def _thermal_status(sensor: Mapping[str, Any], result: Mapping[str, Any]) -> dic
     # authority until Pi and real-fall validation are complete.
     status["artifact_status"] = "PRESENT"
     metadata = _mapping(result.get("metadata"))
-    status["model_selector"] = str(
-        metadata.get("model_selector") or peek_configured_thermal_selector()
-    )
+    status.update(_thermal_identity(metadata))
     status["safety_status"] = "LIMITED_PROXY_NO_EMERGENCY"
     if status["sensor_status"] != "AVAILABLE":
         return _blocked_for_sensor(status)
@@ -112,16 +153,12 @@ def _thermal_status(sensor: Mapping[str, Any], result: Mapping[str, Any]) -> dic
                 "ai_status": "ACTIVE",
                 "blocked_reason": None,
                 "output_status": "AVAILABLE",
-                "model_selector": str(
-                    metadata.get("model_selector")
-                    or peek_configured_thermal_selector()
-                ),
                 "risk_authority": metadata.get(
                     "risk_authority", "LIMITED_POSTURE_PROXY"
                 ),
-                "preprocessing_id": metadata.get("preprocessing_id"),
             }
         )
+        status.update(_thermal_identity(metadata))
         return status
     error = str(result.get("error") or "")
     status.update(

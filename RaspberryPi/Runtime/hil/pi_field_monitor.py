@@ -3,6 +3,9 @@
 
 Read-only. Polls GET /health, /api/status, /api/state.
 
+The header Thermal line is inferred from GET /api/status runtime_status
+(model_selector / preprocessing_id), not from launch flags or logs.
+
 Examples (on Pi):
   python3 hil/pi_field_monitor.py
   python3 hil/pi_field_monitor.py --once
@@ -44,6 +47,7 @@ AI_STATE_SHORT = {
     "NOT_HUMAN": "NO_HUM",
     "HUMAN_NORMAL": "HUMAN",
     "HUMAN_FALL": "FALL",
+    "HUMAN_FALL_PROXY": "FALL_PX",
     "VACANT": "VACANT",
     "OCCUPIED": "OCC",
     "MOTION": "MOVE",
@@ -86,6 +90,7 @@ RISK_SHORT = {
     "NOT_HUMAN": "NO_HUM",
     "HUMAN_NORMAL": "HUMAN",
     "HUMAN_FALL": "FALL",
+    "HUMAN_FALL_PROXY": "FALL_PX",
     "CO2_NORMAL": "CO2_OK",
     "CO2_WARNING": "CO2_WN",
     "CO2_DANGER": "CO2_DG",
@@ -108,6 +113,13 @@ STATUS_SHORT = {
     "DISCONNECTED": "DISC",
     "INVALID": "BAD",
     "DEGRADED": "DEG",
+}
+
+# Process-selected Thermal identity. Unknown selectors stay UNKNOWN + raw id.
+THERMAL_SELECTOR_LABELS = {
+    "thermal_public_sdt_fp32_active": "BASELINE",
+    "thermal_tv2_candidate_a_a0_fp32_v1": "A",
+    "thermal_tv2_candidate_b_seed42_fp32_test_v1": "B",
 }
 
 
@@ -194,6 +206,44 @@ def dig(mapping: Any, *keys: str, default: Any = None) -> Any:
             return default
         cur = cur.get(key, default)
     return cur
+
+
+def thermal_runtime_status(status: Any) -> dict[str, Any]:
+    """Read Thermal identity from GET /api/status. Never from env or logs."""
+
+    if not isinstance(status, dict):
+        return {}
+    thermal = status.get("thermal")
+    if isinstance(thermal, dict):
+        runtime = thermal.get("runtime_status")
+        if isinstance(runtime, dict):
+            return runtime
+    nested = dig(status, "runtime_status", "sensors", "thermal", default={})
+    return nested if isinstance(nested, dict) else {}
+
+
+def friendly_thermal_choice(selector: Any) -> str:
+    text = str(selector).strip() if selector is not None else ""
+    if not text:
+        return "UNAVAILABLE"
+    return THERMAL_SELECTOR_LABELS.get(text, "UNKNOWN")
+
+
+def format_thermal_model_line(status: Any) -> str:
+    runtime = thermal_runtime_status(status)
+    selector = runtime.get("model_selector")
+    text = str(selector).strip() if selector is not None else ""
+    if not text:
+        return "Thermal: UNAVAILABLE | selector=-"
+    parts = [f"Thermal: {friendly_thermal_choice(text)} | {text}"]
+    preprocessing = runtime.get("preprocessing_id")
+    if preprocessing:
+        parts.append(str(preprocessing))
+    sha = runtime.get("model_sha256")
+    if sha:
+        sha_text = str(sha)
+        parts.append(sha_text[:12] if len(sha_text) > 12 else sha_text)
+    return " | ".join(parts)
 
 
 def snapshot(base: str, timeout: float) -> dict[str, Any]:
@@ -283,6 +333,7 @@ def render(
 
     lines: list[str] = []
     lines.append(f"{title}  |  {stamp}  |  Δ window {dt_s}  |  cols≈{cols}")
+    lines.append(format_thermal_model_line(s))
     lines.append("")
 
     # --- overview judgments ---

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import unittest
+from unittest.mock import patch
 
 from backend.runtime_status import runtime_status_document
 from backend.views import sensors_document, status_document
@@ -58,6 +60,11 @@ class RuntimeStatusTests(unittest.TestCase):
         self.assertEqual(thermal["ai_status"], "BLOCKED")
         self.assertEqual(thermal["blocked_reason"], "THERMAL_MODEL_RUNTIME_UNAVAILABLE")
         self.assertEqual(thermal["safety_status"], "LIMITED_PROXY_NO_EMERGENCY")
+        self.assertEqual(thermal["model_selector"], "thermal_public_sdt_fp32_active")
+        self.assertEqual(
+            thermal["preprocessing_id"],
+            "PUBLIC_SDT_BILINEAR_62X80_FRAME_MINMAX_V1",
+        )
 
     def test_thermal_final_model_result_is_active_with_limited_risk(self) -> None:
         result = ai_result(available=True)
@@ -73,7 +80,56 @@ class RuntimeStatusTests(unittest.TestCase):
         self.assertEqual(thermal["output_status"], "AVAILABLE")
         self.assertEqual(thermal["model_selector"], "thermal_public_sdt_fp32_active")
         self.assertEqual(thermal["risk_authority"], "LIMITED_POSTURE_PROXY")
+        self.assertEqual(
+            thermal["preprocessing_id"],
+            "PUBLIC_SDT_BILINEAR_62X80_FRAME_MINMAX_V1",
+        )
+        self.assertEqual(
+            thermal["model_sha256"],
+            "f88d65d76dbb21862e1f3cdff17cefb038a432047ded6ac8d5563bc8bc8c52ff",
+        )
         self.assertIsNone(thermal["blocked_reason"])
+
+    def test_thermal_identity_survives_stale_sensor_and_warmup(self) -> None:
+        candidate_a = "thermal_tv2_candidate_a_a0_fp32_v1"
+        env = {
+            "SAFENEST_THERMAL_TEST_MODE": "1",
+            "SAFENEST_THERMAL_MODEL_SELECTOR": candidate_a,
+        }
+        with patch.dict(os.environ, env, clear=False):
+            stale = runtime_status_document(
+                state(thermal=sensor("STALE")), {}
+            )["sensors"]["thermal"]
+            warmup = runtime_status_document(
+                state(thermal=sensor()),
+                {"thermal": ai_result(available=False, error="THERMAL_FRAME_MISSING")},
+            )["sensors"]["thermal"]
+        for thermal in (stale, warmup):
+            self.assertEqual(thermal["model_selector"], candidate_a)
+            self.assertEqual(thermal["preprocessing_id"], "FRAME_ROBUST_P2_P98_V1")
+            self.assertEqual(thermal["model_id"], candidate_a)
+            self.assertEqual(
+                thermal["model_sha256"],
+                "a158a70c4735e28eec70b5a996f82c91f452b94bcc24c040838143f4a55b1985",
+            )
+            self.assertEqual(thermal["ai_status"], "BLOCKED")
+        self.assertEqual(stale["blocked_reason"], "SENSOR_STALE")
+
+    def test_thermal_controlled_b_identity_without_prediction(self) -> None:
+        candidate_b = "thermal_tv2_candidate_b_seed42_fp32_test_v1"
+        env = {
+            "SAFENEST_THERMAL_TEST_MODE": "1",
+            "SAFENEST_THERMAL_MODEL_SELECTOR": candidate_b,
+        }
+        with patch.dict(os.environ, env, clear=False):
+            thermal = runtime_status_document(state(thermal=sensor()), {})["sensors"]["thermal"]
+        self.assertEqual(thermal["model_selector"], candidate_b)
+        self.assertEqual(thermal["preprocessing_id"], "FRAME_ROBUST_P2_P98_V1")
+        self.assertEqual(
+            thermal["model_sha256"],
+            "f5b9ecef8def2668bb65131671134e443c600e38c2575d4350e242f1abc0dfb4",
+        )
+        self.assertEqual(thermal["ai_status"], "BLOCKED")
 
     def test_pir_motion_and_no_motion_are_both_valid_without_ai(self) -> None:
         for motion, expected in ((True, "MOTION"), (False, "NO_MOTION")):

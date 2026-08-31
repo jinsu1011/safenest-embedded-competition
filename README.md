@@ -29,6 +29,7 @@ Thermal 모델만 바꿔 같은 SafeNest 스택을 비교하려면 별도 테스
 ```
 
 자세한 선택 의미는 [`docs/thermal/20260831_Thermal_V2_Team_MultiModel_Test_Staging_01.md`](docs/thermal/20260831_Thermal_V2_Team_MultiModel_Test_Staging_01.md)를 봅니다.
+Pi 현장에서 baseline/A/B를 켜고 확인하는 절차는 [`PI_RUNBOOK_THERMAL.md`](PI_RUNBOOK_THERMAL.md)입니다.
 
 이 한 명령이 하나의 프로세스 트리 안에서 다음을 모두 띄웁니다.
 
@@ -109,6 +110,8 @@ hardware/                         하우징 3D 모델
 COMPONENT_SOURCES.json            컴포넌트별 상류 저장소와 commit SHA
 run_safenest.sh                   단일 실행 진입점
 run_safenest_thermal_test.sh      Thermal baseline/A/B 비교용 테스트 런처
+PI_RUNBOOK.md                     Pi 일반 현장 기동
+PI_RUNBOOK_THERMAL.md             Pi Thermal baseline/A/B 비교 현장 가이드
 ```
 
 ### 구조 예외 (STRUCTURE_EXCEPTION)

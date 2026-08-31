@@ -196,7 +196,7 @@
 
   setInterval(() => {
     if (token && !standalone) reload().catch(() => {});
-  }, 1000);
+  }, 3000);
 
   if (standalone && token === "standalone-preview") {
     setAuthenticated(true);

@@ -135,3 +135,18 @@ curl -s -X POST http://127.0.0.1:8080/api/state \
 3. `/health`의 `sensors.status`, `peer`, `age_seconds`, `listener_error`를 확인합니다.
 4. HTTP 서버는 정상이지만 LCD가 보이지 않으면 `logs/chromium.log`를 확인합니다.
 5. 종료할 때는 `bash stop_lcd.sh`를 사용합니다.
+
+## Pi ingest note (MH-Z19B, 2026-08-31)
+
+ESP32 스케치 변경은 병렬 브랜치 `feature/esp32-mhz19b-co2-v2-port`가 담당합니다. 이 절은 Raspberry Pi 수신만 적습니다.
+
+Pi Runtime은 아래 필드를 `safenest.telemetry.v1`의 **optional** 확장으로 파싱합니다. 없으면 거절하지 않습니다.
+
+- `co2_sensor_model` (`MH-Z19B`)
+- `co2_event_identity_class` (`INFERRED_UART_SAMPLE`; SCD40 `getDataReady` 변환이 아님)
+- `co2_preheat_complete` (bool). 펌웨어가 `co2_preheat`만 보내면 Pi가 같은 의미로 매핑합니다.
+- `abc_enabled`, `configured_range_ppm` (`2000` / `5000` / `10000`)
+
+H150(`CO2_slope`, 150 s endpoint difference)은 `co2_measurement_event_id`만 이력 키로 씁니다. Pi는 `seq`, `/health`의 `fresh`, `age_seconds`로 event id를 만들지 않습니다. `co2_preheat_complete`가 true가 아니면 C-B6 입력에 넣지 않습니다. 수식·scaler·threshold 0.43은 그대로입니다.
+
+자세한 ingest 계약: `RaspberryPi/Runtime/docs/20260831_MHZ19B_H150_INGEST_CONTRACT.md`

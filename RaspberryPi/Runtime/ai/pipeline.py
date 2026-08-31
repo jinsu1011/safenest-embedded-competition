@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import time
-from typing import Mapping
+from typing import Any, Mapping
 
 from ai.result import AIResult
 from ai.runtime import LazyModel
-from ai.co2_canonical_runtime import CO2BaselineLock, CO2SlopeWindowBuilder
+from ai.co2_canonical_runtime import (
+    CO2BaselineLock,
+    CO2SlopeWindowBuilder,
+    h150_model_input_eligible,
+)
 from ai.mmwave_b23_runtime import B23TeamRuntime
 from gateway.protocol import TelemetryPayload, ThermalFrame
 from state.manager import SensorStateManager
@@ -33,6 +37,8 @@ class OnDeviceAIPipeline:
         self._co2_window = CO2SlopeWindowBuilder()
         self._co2_baseline = CO2BaselineLock.from_risk_config()
         self._co2_wire_observed = False
+        self._co2_domain: dict[str, Any] = {}
+        self._co2_ingested_sensor_model: str | None = None
 
     def observe_telemetry(self, packet: TelemetryPayload) -> None:
         """Accumulate the MR60 phase stream at wire rate, not at publication rate.
@@ -50,18 +56,7 @@ class OnDeviceAIPipeline:
 
         self._mmwave_b23.observe_packet(packet)
         self._mmwave_wire_observed = True
-        self.observe_co2(
-            {
-                "device_id": packet.device_id,
-                "boot_id": packet.boot_id,
-                "values": {
-                    "measurement_event_valid": packet.co2_measurement_event_valid,
-                    "measurement_event_id": packet.co2_measurement_event_id,
-                    "measurement_monotonic_ms": packet.co2_measurement_monotonic_ms,
-                    "latest_measurement_ppm": packet.co2_ppm,
-                },
-            }
-        )
+        self.observe_co2(_co2_sensor_from_packet(packet))
 
     def observe_co2(self, sensor: Mapping[str, object]) -> None:
         """Accumulate CO2 measurement events at state-update rate.
@@ -70,11 +65,19 @@ class OnDeviceAIPipeline:
         ``measurement_event_id``; sampling it from the publication loop would
         both starve the history and let the 60 s presentation throttle
         masquerade as the physical measurement cadence.
+
+        Live H150 ingest is fail-closed: missing event identity is not
+        synthesized from ``seq``, and MH-Z19B preheat-unknown/false samples
+        never enter the frozen C-B6 window. Slope math itself is unchanged.
         """
 
+        self._co2_wire_observed = True
+        self._remember_co2_domain(sensor)
+        if not h150_model_input_eligible(sensor):
+            return
+        self._reset_co2_history_on_device_domain_change(sensor)
         self._co2_window.observe(sensor)
         self._co2_baseline.observe(sensor)
-        self._co2_wire_observed = True
 
     def evaluate(
         self,
@@ -189,6 +192,8 @@ class OnDeviceAIPipeline:
         slope = self._co2_window.latest()
         diagnostics = dict(slope.metadata)
         diagnostics.update(self._co2_baseline.latest().as_metadata())
+        if self._co2_domain:
+            diagnostics.update(self._co2_domain)
         if not slope.ready or slope.ppm is None or slope.slope_ppm_per_min is None:
             return self._unavailable(
                 "co2",
@@ -319,6 +324,66 @@ class OnDeviceAIPipeline:
             error=reason,
             metadata=metadata,
         )
+
+    def _remember_co2_domain(self, sensor: Mapping[str, object]) -> None:
+        values = sensor.get("values")
+        values = values if isinstance(values, Mapping) else {}
+        model = values.get("sensor_model")
+        identity = values.get("event_identity_class")
+        limitation = "EVENT_IDENTITY_UNVERIFIED"
+        if identity == "INFERRED_UART_SAMPLE":
+            limitation = "INFERRED_UART_SAMPLE_NOT_SCD40_DATA_READY"
+        self._co2_domain = {
+            "co2_sensor_model": model,
+            "co2_event_identity_class": identity,
+            "co2_preheat_complete": values.get("preheat_complete"),
+            "abc_enabled": values.get("abc_enabled"),
+            "configured_range_ppm": values.get("configured_range_ppm"),
+            "co2_device_domain": model if isinstance(model, str) and model else "UNKNOWN",
+            "co2_identity_limitation": limitation,
+            "co2_h150_ingest_eligible": h150_model_input_eligible(sensor),
+        }
+
+    def _reset_co2_history_on_device_domain_change(
+        self, sensor: Mapping[str, object]
+    ) -> None:
+        """MH-Z19B history must not be pooled with a prior SCD40 (or other) domain."""
+
+        values = sensor.get("values")
+        model = values.get("sensor_model") if isinstance(values, Mapping) else None
+        if (
+            self._co2_ingested_sensor_model is not None
+            and isinstance(model, str)
+            and model
+            and model != self._co2_ingested_sensor_model
+        ):
+            self._co2_window.reset("DEVICE_DOMAIN")
+            self._co2_baseline.reset("DEVICE_DOMAIN")
+        if isinstance(model, str) and model:
+            self._co2_ingested_sensor_model = model
+
+
+def _co2_sensor_from_packet(packet: TelemetryPayload) -> dict[str, object]:
+    """Map wire fields into the slope builder's sensor record.
+
+    Does not invent ``measurement_event_id`` from publication ``seq``.
+    """
+
+    return {
+        "device_id": packet.device_id,
+        "boot_id": packet.boot_id,
+        "values": {
+            "measurement_event_valid": packet.co2_measurement_event_valid,
+            "measurement_event_id": packet.co2_measurement_event_id,
+            "measurement_monotonic_ms": packet.co2_measurement_monotonic_ms,
+            "latest_measurement_ppm": packet.co2_ppm,
+            "preheat_complete": packet.co2_preheat_complete,
+            "sensor_model": packet.co2_sensor_model,
+            "event_identity_class": packet.co2_event_identity_class,
+            "abc_enabled": packet.abc_enabled,
+            "configured_range_ppm": packet.configured_range_ppm,
+        },
+    }
 
 
 def _thermal_preview(pixels: object, width: int = 20, height: int = 16) -> dict[str, object]:

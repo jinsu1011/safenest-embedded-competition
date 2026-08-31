@@ -340,6 +340,11 @@ class SensorDataLogger:
                 "co2_measurement_event_id": packet.co2_measurement_event_id,
                 "co2_measurement_monotonic_ms": packet.co2_measurement_monotonic_ms,
                 "co2_measurement_event_valid": packet.co2_measurement_event_valid,
+                "co2_sensor_model": packet.co2_sensor_model,
+                "co2_event_identity_class": packet.co2_event_identity_class,
+                "co2_preheat_complete": packet.co2_preheat_complete,
+                "abc_enabled": packet.abc_enabled,
+                "configured_range_ppm": packet.configured_range_ppm,
             }
         with self._io_lock:
             _, handle, _ = self._scalar_handle(item.sensor, item.received_at)

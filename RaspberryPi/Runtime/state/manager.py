@@ -256,6 +256,14 @@ class SensorStateManager:
         record.disconnected_at = None
         record.error = None if packet.valid["co2"] else "CO2_VALUE_INVALID"
 
+        domain = {
+            "sensor_model": packet.co2_sensor_model,
+            "event_identity_class": packet.co2_event_identity_class,
+            "preheat_complete": packet.co2_preheat_complete,
+            "abc_enabled": packet.abc_enabled,
+            "configured_range_ppm": packet.configured_range_ppm,
+        }
+
         event_key = None
         if (
             packet.co2_measurement_event_valid is True
@@ -277,6 +285,7 @@ class SensorStateManager:
                     "measurement_monotonic_ms": packet.co2_measurement_monotonic_ms,
                     "measurement_event_valid": True,
                     "measurement_event_count": self._co2_measurement_event_count,
+                    **domain,
                 }
             )
         elif not record.values:
@@ -287,7 +296,10 @@ class SensorStateManager:
                 "measurement_monotonic_ms": packet.co2_measurement_monotonic_ms,
                 "measurement_event_valid": packet.co2_measurement_event_valid,
                 "measurement_event_count": self._co2_measurement_event_count,
+                **domain,
             }
+        else:
+            record.values.update(domain)
 
         if not packet.valid["co2"]:
             return

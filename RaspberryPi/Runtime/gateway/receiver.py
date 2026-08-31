@@ -22,6 +22,21 @@ PacketCallback = Callable[[DecodedPacket, tuple[str, int]], None]
 ErrorCallback = Callable[[Exception, tuple[str, int] | None], None]
 
 
+def enable_tcp_keepalive(connection: socket.socket, *, idle_seconds: int = 30) -> None:
+    """Detect a dead peer after idle waits that no longer use a packet deadline."""
+
+    try:
+        connection.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        if hasattr(socket, "TCP_KEEPIDLE"):
+            connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, idle_seconds)
+        if hasattr(socket, "TCP_KEEPINTVL"):
+            connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 5)
+        if hasattr(socket, "TCP_KEEPCNT"):
+            connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 3)
+    except OSError:
+        return
+
+
 @dataclass
 class ReceiverStats:
     connections: int = 0
@@ -60,6 +75,7 @@ class ConnectionProcessor:
                 packet = read_packet(
                     connection,
                     deadline_seconds=self.packet_deadline_seconds,
+                    idle_deadline_seconds=None,
                 )
                 self.stats.sequence_gaps += tracker.accept(packet.header)
                 if isinstance(packet, TelemetryPayload):
@@ -135,6 +151,7 @@ class SafeNestTCPServer:
                             break
                         raise
                     connection.settimeout(0.25)
+                    enable_tcp_keepalive(connection)
                     self._replace_connection(connection, peer)
             finally:
                 self._replace_connection(None, None)

@@ -114,26 +114,44 @@ def recv_exact(
     size: int,
     *,
     deadline_seconds: float = 5.0,
+    idle_deadline_seconds: float | None = None,
 ) -> bytes:
     """Receive exactly ``size`` bytes without discarding partial progress.
 
     The socket may have a short per-recv timeout. Such a timeout does not lose
-    bytes already consumed. If the total deadline expires, the caller closes
-    this connection so the next packet cannot start from a desynchronized
-    stream position.
+    bytes already consumed.
+
+    ``idle_deadline_seconds`` bounds the wait while zero bytes have arrived.
+    ``None`` waits indefinitely for the first byte so a skipped 1 Hz snapshot
+    does not close a live ESP socket. Once any byte is buffered,
+    ``deadline_seconds`` bounds completion of this field. Expiry closes the
+    connection so the next packet cannot start from a desynchronized stream.
     """
 
     if size < 0:
         raise ValueError("size must be non-negative")
     if deadline_seconds <= 0:
         raise ValueError("deadline_seconds must be positive")
+    if idle_deadline_seconds is not None and idle_deadline_seconds <= 0:
+        raise ValueError("idle_deadline_seconds must be positive when set")
     if size == 0:
         return b""
 
     buffer = bytearray()
-    deadline = time.monotonic() + deadline_seconds
+    idle_deadline = (
+        None
+        if idle_deadline_seconds is None
+        else time.monotonic() + idle_deadline_seconds
+    )
+    frame_deadline: float | None = None
     while len(buffer) < size:
-        if time.monotonic() >= deadline:
+        now = time.monotonic()
+        if len(buffer) == 0:
+            if idle_deadline is not None and now >= idle_deadline:
+                raise ReceiveDeadlineExceeded(
+                    f"receive deadline exceeded: got 0 of {size} bytes"
+                )
+        elif frame_deadline is not None and now >= frame_deadline:
             raise ReceiveDeadlineExceeded(
                 f"receive deadline exceeded: got {len(buffer)} of {size} bytes"
             )
@@ -148,6 +166,8 @@ def recv_exact(
                 f"peer closed connection: got {len(buffer)} of {size} bytes"
             )
         buffer.extend(chunk)
+        if frame_deadline is None:
+            frame_deadline = time.monotonic() + deadline_seconds
     return bytes(buffer)
 
 
@@ -179,14 +199,21 @@ def read_packet(
     connection: socket.socket,
     *,
     deadline_seconds: float = 5.0,
+    idle_deadline_seconds: float | None = None,
 ) -> DecodedPacket:
     header = decode_header(
-        recv_exact(connection, HEADER.size, deadline_seconds=deadline_seconds)
+        recv_exact(
+            connection,
+            HEADER.size,
+            deadline_seconds=deadline_seconds,
+            idle_deadline_seconds=idle_deadline_seconds,
+        )
     )
     payload = recv_exact(
         connection,
         header.payload_length,
         deadline_seconds=deadline_seconds,
+        idle_deadline_seconds=deadline_seconds,
     )
     if header.packet_type == PACKET_TELEMETRY_JSON:
         return decode_telemetry(header, payload)

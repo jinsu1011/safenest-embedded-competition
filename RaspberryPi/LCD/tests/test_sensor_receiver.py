@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import socket
 import threading
+import time
 import unittest
 
 import server
@@ -139,6 +140,97 @@ class SensorProtocolTests(unittest.TestCase):
         snapshot = store.snapshot()
         self.assertEqual(snapshot["seq"], 42)
         self.assertEqual(snapshot["thermal_frames_received"], 1)
+
+    def test_skipped_snapshot_gap_does_not_close_the_socket(self) -> None:
+        store = server.SensorStore(stale_seconds=5.0)
+        receiver = server.SensorReceiver("127.0.0.1", 0, store)
+        server_socket, client_socket = socket.socketpair()
+        finished = threading.Event()
+
+        def receive_until_close() -> None:
+            try:
+                receiver._handle_connection(server_socket, ("127.0.0.1", 40001))
+            except ConnectionError:
+                pass
+            finally:
+                finished.set()
+
+        thread = threading.Thread(target=receive_until_close)
+        thread.start()
+        first = json.dumps(sample_telemetry()).encode("utf-8")
+        client_socket.sendall(
+            server.PACKET_HEADER.pack(
+                server.SENSOR_MAGIC,
+                server.SENSOR_PROTOCOL_VERSION,
+                server.PACKET_TELEMETRY_JSON,
+                0,
+                42,
+                len(first),
+            )
+            + first
+        )
+        deadline = time.monotonic() + 1.0
+        while store.snapshot()["seq"] != 42 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        time.sleep(2.3)
+        self.assertFalse(finished.is_set())
+        second = json.dumps({**sample_telemetry(), "seq": 44, "uptime_ms": 14_345}).encode("utf-8")
+        client_socket.sendall(
+            server.PACKET_HEADER.pack(
+                server.SENSOR_MAGIC,
+                server.SENSOR_PROTOCOL_VERSION,
+                server.PACKET_TELEMETRY_JSON,
+                0,
+                44,
+                len(second),
+            )
+            + second
+        )
+        deadline = time.monotonic() + 1.0
+        while store.snapshot()["seq"] != 44 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        client_socket.close()
+        thread.join(timeout=2.0)
+        server_socket.close()
+        self.assertEqual(store.snapshot()["seq"], 44)
+
+    def test_header_then_delayed_payload_stays_on_the_same_socket(self) -> None:
+        store = server.SensorStore(stale_seconds=5.0)
+        receiver = server.SensorReceiver("127.0.0.1", 0, store)
+        server_socket, client_socket = socket.socketpair()
+        finished = threading.Event()
+
+        def receive_until_close() -> None:
+            try:
+                receiver._handle_connection(server_socket, ("127.0.0.1", 40002))
+            except ConnectionError:
+                pass
+            finally:
+                finished.set()
+
+        thread = threading.Thread(target=receive_until_close)
+        thread.start()
+        body = json.dumps(sample_telemetry()).encode("utf-8")
+        client_socket.sendall(
+            server.PACKET_HEADER.pack(
+                server.SENSOR_MAGIC,
+                server.SENSOR_PROTOCOL_VERSION,
+                server.PACKET_TELEMETRY_JSON,
+                0,
+                42,
+                len(body),
+            )
+        )
+        time.sleep(2.1)
+        self.assertFalse(finished.is_set())
+        client_socket.sendall(body)
+        deadline = time.monotonic() + 1.0
+        while store.snapshot().get("seq") != 42 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        client_socket.close()
+        thread.join(timeout=2.0)
+        server_socket.close()
+        self.assertEqual(store.snapshot()["seq"], 42)
 
 
 if __name__ == "__main__":

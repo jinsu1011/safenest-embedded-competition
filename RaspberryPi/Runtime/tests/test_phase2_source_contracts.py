@@ -64,9 +64,13 @@ class Phase2SourceContracts(unittest.TestCase):
         self.assertIn("헤더 크기는 16바이트", self.protocol)
 
     def test_tcp_receiver_handles_partial_reads(self) -> None:
-        self.assertRegex(self.server, r"def recv_exact\(connection: socket\.socket, size: int\)")
+        self.assertRegex(
+            self.server,
+            r"def recv_exact\(\s*connection: socket\.socket,\s*size: int",
+        )
         self.assertIn("connection.recv(remaining)", self.server)
-        self.assertIn("recv_exact(connection, payload_length)", self.server)
+        self.assertIn("idle_ok=True", self.server)
+        self.assertIn("frame_deadline_seconds", self.server)
 
     def test_thermal_payload_is_9936_bytes_by_contract(self) -> None:
         width = self._constexpr("THERMAL_WIDTH")

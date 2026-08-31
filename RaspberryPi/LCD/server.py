@@ -243,14 +243,67 @@ class SensorStore:
             }
 
 
-def recv_exact(connection: socket.socket, size: int) -> bytes:
+def recv_exact(
+    connection: socket.socket,
+    size: int,
+    *,
+    stop_event: threading.Event | None = None,
+    idle_ok: bool = False,
+    frame_deadline_seconds: float = 5.0,
+) -> bytes:
+    """Receive exactly ``size`` bytes, keeping partial progress.
+
+    When ``idle_ok`` is true, a timeout with zero bytes is not fatal. ESP 1.7.3
+    may skip a 1 Hz snapshot and leave a ~2 s gap on a live socket. Once any
+    byte of this field has arrived, ``frame_deadline_seconds`` bounds completion
+    so a truncated SNST header/body still closes the connection.
+    """
+
+    if size < 0:
+        raise ValueError("size must be non-negative")
+    if frame_deadline_seconds <= 0:
+        raise ValueError("frame_deadline_seconds must be positive")
+    if size == 0:
+        return b""
+
     chunks: list[bytes] = []
     remaining = size
+    received = 0
+    frame_deadline: float | None = None
     while remaining:
-        chunk = connection.recv(remaining)
+        if stop_event is not None and stop_event.is_set():
+            raise ConnectionError("ESP32 receiver stopping")
+        now = time.monotonic()
+        if received == 0:
+            pass
+        elif frame_deadline is not None and now >= frame_deadline:
+            raise ConnectionError(
+                f"receive deadline exceeded: got {received} of {size} bytes"
+            )
+        try:
+            chunk = connection.recv(remaining)
+        except socket.timeout:
+            if received == 0 and idle_ok:
+                continue
+            if received == 0:
+                if frame_deadline is None:
+                    frame_deadline = time.monotonic() + frame_deadline_seconds
+                if time.monotonic() >= frame_deadline:
+                    raise ConnectionError(
+                        f"receive deadline exceeded: got 0 of {size} bytes"
+                    )
+                continue
+            if frame_deadline is not None and time.monotonic() >= frame_deadline:
+                raise ConnectionError(
+                    f"receive deadline exceeded: got {received} of {size} bytes"
+                )
+            continue
         if not chunk:
             raise ConnectionError("ESP32 closed the TCP connection")
+        if received == 0:
+            frame_deadline = time.monotonic() + frame_deadline_seconds
         chunks.append(chunk)
+        received += len(chunk)
         remaining -= len(chunk)
     return b"".join(chunks)
 
@@ -281,14 +334,27 @@ class SensorReceiver:
         connection: socket.socket,
         peer: tuple[str, int],
     ) -> None:
-        connection.settimeout(2.0)
+        connection.settimeout(0.25)
+        try:
+            connection.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            if hasattr(socket, "TCP_KEEPIDLE"):
+                connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 30)
+            if hasattr(socket, "TCP_KEEPINTVL"):
+                connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 5)
+            if hasattr(socket, "TCP_KEEPCNT"):
+                connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 3)
+        except OSError:
+            pass
         self.store.set_connected(True, peer)
         try:
             while not self.stop_event.is_set():
-                try:
-                    header_bytes = recv_exact(connection, PACKET_HEADER.size)
-                except socket.timeout:
-                    continue
+                header_bytes = recv_exact(
+                    connection,
+                    PACKET_HEADER.size,
+                    stop_event=self.stop_event,
+                    idle_ok=True,
+                    frame_deadline_seconds=5.0,
+                )
                 magic, version, packet_type, flags, _sequence, payload_length = (
                     PACKET_HEADER.unpack(header_bytes)
                 )
@@ -301,7 +367,13 @@ class SensorReceiver:
                 if payload_length > MAX_SENSOR_PAYLOAD_BYTES:
                     raise ValueError(f"payload is too large: {payload_length} bytes")
 
-                payload = recv_exact(connection, payload_length)
+                payload = recv_exact(
+                    connection,
+                    payload_length,
+                    stop_event=self.stop_event,
+                    idle_ok=False,
+                    frame_deadline_seconds=5.0,
+                )
                 if packet_type == PACKET_TELEMETRY_JSON:
                     decoded = json.loads(payload.decode("utf-8"))
                     if not isinstance(decoded, dict):

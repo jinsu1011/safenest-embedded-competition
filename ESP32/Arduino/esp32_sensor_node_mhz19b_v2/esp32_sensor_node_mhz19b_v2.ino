@@ -91,8 +91,8 @@ constexpr uint32_t CO2_STALE_MS = 15000;
 // inference rather than asserting an empty room.
 constexpr uint32_t PRESENCE_MAX_AGE_MS = 5000;
 constexpr char NODE_FIRMWARE_VERSION[] =
-    "safenest-esp32-sensor-node/1.7.0-mhz19b.1";
-constexpr char DIAGNOSTIC_BUILD_ID[] = "mhz19b-20260831-01";
+    "safenest-esp32-sensor-node/1.7.2-mhz19b.1";
+constexpr char DIAGNOSTIC_BUILD_ID[] = "mhz19b-mmw-stale-diag-20260901-01";
 constexpr char CO2_SENSOR_MODEL[] = "MH-Z19B";
 constexpr char CO2_EVENT_IDENTITY_CLASS[] = "INFERRED_UART_SAMPLE";
 
@@ -131,6 +131,24 @@ constexpr uint32_t TCP_MUTEX_WARN_MS = 100;
 // a counted, timestamped event.
 constexpr uint32_t TCP_MUTEX_MAX_WAIT_MS = 3000;
 constexpr uint32_t UDP_DATAGRAM_WARN_MS = 40;
+// 2 ms between chunks was only a CPU yield. Nine 1200-byte datagrams still
+// hit the radio in ~34 ms, which is what filled the lwIP pool (errno 12) and
+// left no airtime for the 1 Hz TCP write. 20 ms is long enough for the TCP
+// task to wake, take the mutex, and finish a ~3 ms write, and 8 gaps stay
+// inside the ~480 ms 2 fps period and the Pi's 500 ms thermal reassembly
+// window (measured from the last chunk, not the first).
+constexpr uint32_t UDP_CHUNK_GAP_MS = 20;
+// A live telemetry write holds TCP_CRITICAL_BIT for a few milliseconds.
+// Waiting this out and then continuing the same frame is the interleave;
+// returning Preempted used to drop the remaining chunks. Connect() holds the
+// bit much longer, but tcpLinkHealthy is already false then, so we stand down
+// instead of waiting out the handshake.
+constexpr uint32_t UDP_YIELD_TO_TCP_MAX_MS = 80;
+// Recycle the thermal UDP socket on this cadence so lwIP pbufs from the
+// 9-datagram burst return to the heap. The TCP client and JSON snapshot are
+// never touched here; skip the recycle while TCP_CRITICAL_BIT is set.
+constexpr uint32_t HEAP_RECLAIM_PERIOD_MS = 5000;
+constexpr uint32_t HEAP_RECLAIM_LOW_WATER_BYTES = 48000;
 // udpStarted was only cleared when Wi-Fi dropped, so once sendto() entered a
 // failing state the task retried the same socket forever: udp_sent froze at 61
 // for the rest of the run while udp_failed kept climbing. Rebuilding the socket
@@ -371,7 +389,10 @@ volatile uint32_t tcpConnectionFailures = 0;
 volatile uint32_t tcpSendFailures = 0;
 volatile uint32_t thermalUdpFramesSent = 0;
 volatile uint32_t thermalFramesPreempted = 0;
+volatile uint32_t thermalTcpYields = 0;
 volatile uint32_t thermalUdpSendFailures = 0;
+volatile uint32_t heapReclaims = 0;
+volatile uint32_t heapReclaimSkippedTcp = 0;
 
 // Link diagnostics written by the network tasks on core 0, under the same
 // single-writer, aligned-32-bit rule as the counters above.
@@ -780,34 +801,58 @@ void pollCo2(uint32_t now) {
 }
 
 void pollMmWave(uint32_t now) {
-  // timeout=0 makes the library consume currently buffered UART data without
-  // waiting. Repeated loop calls drain all queued radar frames.
-  if (!mmWave.update(0)) {
+  // timeout=0 consumes currently buffered UART bytes without blocking.
+  // Drain several complete frames so a later thermal SPI burst does not leave
+  // a half-assembled SOF in the Seeed static parser. update() returning false
+  // on an empty UART is the idle path, not a radar fault -- do not count it
+  // as mmw_miss (that used to climb by ~loop Hz and looked like a crash).
+  bool parsed = false;
+  bool gotBreath = false;
+  bool gotHeart = false;
+  for (uint8_t n = 0; n < 16; ++n) {
+    if (!mmWave.update(0)) break;
+    parsed = true;
+    ++mmWaveUpdateSuccesses;
+    lastMmWaveUpdateMs = now;
+
+    float value = 0.0f;
+    if (mmWave.getBreathRate(value) && isfinite(value)) {
+      respirationRate = value;
+      lastRespirationMs = now;
+      gotBreath = true;
+    }
+    if (mmWave.getHeartRate(value) && isfinite(value)) {
+      heartRate = value;
+      lastHeartMs = now;
+      gotHeart = true;
+    }
+
+    // MR60's own normalized occupancy boolean. It is recorded verbatim: no
+    // occupancy threshold is derived from breath rate or any other signal, and
+    // no majority-vote smoothing is applied, because the wire contract carries
+    // human_detected_raw only. Staleness is judged at publish time so a radar
+    // that stops reporting eventually degrades this to null.
+    bool presenceValue = false;
+    if (mmWave.takePresence(presenceValue)) {
+      humanDetectedRaw = presenceValue;
+      lastPresenceMs = now;
+    }
+  }
+  if (!parsed && mmWaveSerial.available() > 0) {
     ++mmWaveUpdateMisses;
-    return;
   }
-  ++mmWaveUpdateSuccesses;
-  lastMmWaveUpdateMs = now;
-
-  float value = 0.0f;
-  if (mmWave.getBreathRate(value) && isfinite(value)) {
-    respirationRate = value;
-    lastRespirationMs = now;
-  }
-  if (mmWave.getHeartRate(value) && isfinite(value)) {
-    heartRate = value;
-    lastHeartMs = now;
-  }
-
-  // MR60's own normalized occupancy boolean. It is recorded verbatim: no
-  // occupancy threshold is derived from breath rate or any other signal, and
-  // no majority-vote smoothing is applied, because the wire contract carries
-  // human_detected_raw only. Staleness is judged at publish time so a radar
-  // that stops reporting eventually degrades this to null.
-  bool presenceValue = false;
-  if (mmWave.takePresence(presenceValue)) {
-    humanDetectedRaw = presenceValue;
-    lastPresenceMs = now;
+  if (gotBreath || gotHeart) {
+    static uint32_t lastMmwSampleLogMs = 0;
+    if (lastMmwSampleLogMs == 0 ||
+        static_cast<uint32_t>(now - lastMmwSampleLogMs) >= 2000) {
+      lastMmwSampleLogMs = now;
+      Serial.printf(
+          "[mmw] breath=%.2f heart=%.2f presence=%s uart=%u\n",
+          respirationRate, heartRate,
+          lastPresenceMs == 0 ? "unknown"
+                              : (humanDetectedRaw ? "true" : "false"),
+          static_cast<unsigned>(mmWaveSerial.available()));
+    }
   }
 }
 
@@ -1055,6 +1100,58 @@ void logSlowDatagram(uint32_t frameSequence, uint16_t chunkIndex,
       static_cast<long>(udpLastErrno));
 }
 
+// Park this task until TCP is not in a write/connect, without holding the TX
+// mutex. The higher-priority TCP task can then take the mutex and send. false
+// means the remaining chunks of this frame should be abandoned.
+bool yieldRadioToTcp(uint32_t maxWaitMs) {
+  const uint32_t startedMs = millis();
+  bool waited = false;
+  for (;;) {
+    if (!tcpLinkHealthy) return false;
+    if ((xEventGroupGetBits(networkEvents) & TCP_CRITICAL_BIT) == 0) {
+      if (waited) thermalTcpYields = thermalTcpYields + 1;
+      return true;
+    }
+    if (static_cast<uint32_t>(millis() - startedMs) >= maxWaitMs) {
+      return false;
+    }
+    waited = true;
+    vTaskDelay(pdMS_TO_TICKS(2));
+  }
+}
+
+// Return lwIP UDP pbufs by rebuilding only the thermal socket. Never called
+// from the TCP task, never mutates queued JSON, and skipped while a scalar
+// write/connect holds TCP_CRITICAL_BIT so value transmission is not delayed.
+bool reclaimUdpHeap(WiFiUDP &udp, bool &udpStarted) {
+  if ((xEventGroupGetBits(networkEvents) & TCP_CRITICAL_BIT) != 0) {
+    heapReclaimSkippedTcp = heapReclaimSkippedTcp + 1;
+    return false;
+  }
+  const uint32_t heapBefore = ESP.getFreeHeap();
+  if (udpStarted) {
+    udp.stop();
+    udpStarted = false;
+  }
+  udpStarted = udp.begin(0);
+  heapReclaims = heapReclaims + 1;
+  static uint32_t lastLogMs = 0;
+  const uint32_t now = millis();
+  if (lastLogMs == 0 || static_cast<uint32_t>(now - lastLogMs) >= 10000) {
+    lastLogMs = now;
+    Serial.printf(
+        "[heap] reclaim=%lu skipped_tcp=%lu heap_before=%lu heap_after=%lu "
+        "max_alloc=%lu udp_up=%d\n",
+        static_cast<unsigned long>(heapReclaims),
+        static_cast<unsigned long>(heapReclaimSkippedTcp),
+        static_cast<unsigned long>(heapBefore),
+        static_cast<unsigned long>(ESP.getFreeHeap()),
+        static_cast<unsigned long>(ESP.getMaxAllocHeap()),
+        udpStarted ? 1 : 0);
+  }
+  return udpStarted;
+}
+
 ThermalSendResult sendThermalUdp(WiFiUDP &udp,
                                  const ThermalTxFrame &frame) {
   constexpr TickType_t MUTEX_TIMEOUT = pdMS_TO_TICKS(1000);
@@ -1075,10 +1172,10 @@ ThermalSendResult sendThermalUdp(WiFiUDP &udp,
   putU16(meta + 14, frame.maximumRaw);
   const uint32_t crc32 = thermalFrameCrc32(frame, meta);
 
-  for (uint16_t chunkIndex = 0; chunkIndex < THERMAL_UDP_CHUNK_COUNT;
-       ++chunkIndex) {
-    if ((xEventGroupGetBits(networkEvents) & TCP_CRITICAL_BIT) != 0) {
-      return ThermalSendResult::Preempted;
+  for (uint16_t chunkIndex = 0; chunkIndex < THERMAL_UDP_CHUNK_COUNT;) {
+    if (!yieldRadioToTcp(UDP_YIELD_TO_TCP_MAX_MS)) {
+      return tcpLinkHealthy ? ThermalSendResult::Preempted
+                            : ThermalSendResult::Deferred;
     }
 
     const size_t offset = chunkIndex * THERMAL_UDP_CHUNK_SIZE;
@@ -1105,9 +1202,11 @@ ThermalSendResult sendThermalUdp(WiFiUDP &udp,
     if (xSemaphoreTake(networkTxMutex, MUTEX_TIMEOUT) != pdTRUE) {
       return ThermalSendResult::Preempted;
     }
+    // TCP set the bit and is blocked on this mutex. Sending now would jump
+    // the queue; give it back and retry the same chunk after the write.
     if ((xEventGroupGetBits(networkEvents) & TCP_CRITICAL_BIT) != 0) {
       xSemaphoreGive(networkTxMutex);
-      return ThermalSendResult::Preempted;
+      continue;
     }
 
     // Timed inside the mutex, because this is exactly the window during which
@@ -1134,16 +1233,13 @@ ThermalSendResult sendThermalUdp(WiFiUDP &udp,
       udpSlowDatagrams = udpSlowDatagrams + 1;
       logSlowDatagram(frame.frameSequence, chunkIndex, datagramMs);
     }
-    // Capture a TCP request that arrived while this datagram held the mutex.
-    // After give, the higher-priority TCP task may run and clear the bit before
-    // this task resumes, so sampling only at the next chunk would miss it.
-    const bool preemptedDuringSend =
-        (xEventGroupGetBits(networkEvents) & TCP_CRITICAL_BIT) != 0;
     xSemaphoreGive(networkTxMutex);
     if (!sent) return ThermalSendResult::Failed;
-    if (preemptedDuringSend) return ThermalSendResult::Preempted;
 
-    vTaskDelay(pdMS_TO_TICKS(2));
+    chunkIndex = static_cast<uint16_t>(chunkIndex + 1);
+    if (chunkIndex < THERMAL_UDP_CHUNK_COUNT) {
+      vTaskDelay(pdMS_TO_TICKS(UDP_CHUNK_GAP_MS));
+    }
   }
   return ThermalSendResult::Sent;
 }
@@ -1445,6 +1541,7 @@ void thermalUdpTask(void *parameter) {
   bool udpStarted = false;
   uint32_t lastDequeuedSequence = 0;
   uint32_t consecutiveFailures = 0;
+  uint32_t lastHeapReclaimMs = 0;
   for (;;) {
     if (WiFi.status() != WL_CONNECTED) {
       if (udpStarted) {
@@ -1460,6 +1557,7 @@ void thermalUdpTask(void *parameter) {
         vTaskDelay(pdMS_TO_TICKS(250));
         continue;
       }
+      if (lastHeapReclaimMs == 0) lastHeapReclaimMs = millis();
     }
     if (xQueueReceive(thermalQueue, &thermalNetworkFrame, 0) == pdTRUE) {
       thermalQueueOverwrites = thermalQueueOverwrites +
@@ -1520,6 +1618,25 @@ void thermalUdpTask(void *parameter) {
           thermalFramesDeferred = thermalFramesDeferred + 1;
           break;
       }
+      const uint32_t reclaimNow = millis();
+      const bool periodDue =
+          static_cast<uint32_t>(reclaimNow - lastHeapReclaimMs) >=
+              HEAP_RECLAIM_PERIOD_MS;
+      const bool heapLow =
+          ESP.getFreeHeap() < HEAP_RECLAIM_LOW_WATER_BYTES;
+      if (periodDue || heapLow) {
+        if (reclaimUdpHeap(udp, udpStarted)) {
+          lastHeapReclaimMs = reclaimNow;
+        }
+      }
+    } else {
+      const uint32_t reclaimNow = millis();
+      if (static_cast<uint32_t>(reclaimNow - lastHeapReclaimMs) >=
+              HEAP_RECLAIM_PERIOD_MS) {
+        if (reclaimUdpHeap(udp, udpStarted)) {
+          lastHeapReclaimMs = reclaimNow;
+        }
+      }
     }
     vTaskDelay(pdMS_TO_TICKS(2));
   }
@@ -1557,12 +1674,13 @@ void logHealth(uint32_t now) {
 
   Serial.printf(
       "[health] thermal frames=%lu udp_sent=%lu udp_fail=%lu preempt=%lu "
-      "defer=%lu restarts=%lu crc_err=%lu rng_err=%lu status_fail=%lu "
+      "yield=%lu defer=%lu restarts=%lu crc_err=%lu rng_err=%lu status_fail=%lu "
       "queue_ovw=%lu\n",
       static_cast<unsigned long>(thermalSequence),
       static_cast<unsigned long>(thermalUdpFramesSent),
       static_cast<unsigned long>(thermalUdpSendFailures),
       static_cast<unsigned long>(thermalFramesPreempted),
+      static_cast<unsigned long>(thermalTcpYields),
       static_cast<unsigned long>(thermalFramesDeferred),
       static_cast<unsigned long>(udpSocketRestarts),
       static_cast<unsigned long>(thermalCrcErrors),
@@ -1570,12 +1688,24 @@ void logHealth(uint32_t now) {
       static_cast<unsigned long>(thermalStatusQueryFailures),
       static_cast<unsigned long>(thermalQueueOverwrites));
 
+  char respText[16];
+  char heartText[16];
+  formatNullableFloat(respText, sizeof(respText),
+                      isFresh(lastRespirationMs, now, MMWAVE_STALE_MS),
+                      respirationRate);
+  formatNullableFloat(heartText, sizeof(heartText),
+                      isFresh(lastHeartMs, now, MMWAVE_STALE_MS), heartRate);
   Serial.printf(
-      "[health] sensors resp=%.1f heart=%.1f co2=%u pir=%d co2_age_ms=%ld "
+      "[health] sensors resp=%s heart=%s co2=%u pir=%d co2_age_ms=%ld "
+      "resp_age_ms=%ld heart_age_ms=%ld presence_age_ms=%ld "
       "mmw_ok=%lu mmw_age_ms=%ld mmw_uart=%u mmw_miss=%lu\n",
-      respirationRate, heartRate, static_cast<unsigned>(co2Ppm),
+      respText, heartText, static_cast<unsigned>(co2Ppm),
       pirMotion ? 1 : 0,
       lastCo2Ms == 0 ? -1L : static_cast<long>(now - lastCo2Ms),
+      lastRespirationMs == 0 ? -1L
+                             : static_cast<long>(now - lastRespirationMs),
+      lastHeartMs == 0 ? -1L : static_cast<long>(now - lastHeartMs),
+      lastPresenceMs == 0 ? -1L : static_cast<long>(now - lastPresenceMs),
       static_cast<unsigned long>(mmWaveUpdateSuccesses),
       lastMmWaveUpdateMs == 0
           ? -1L
@@ -1599,9 +1729,14 @@ void logHealth(uint32_t now) {
   // min_heap is the one that matters here: the transmit-path collapse showed up
   // as a ~40 KB dip that the instantaneous value had already recovered from by
   // the time the next line printed.
-  Serial.printf("[health] sys     heap=%lu min_heap=%lu\n",
-                static_cast<unsigned long>(ESP.getFreeHeap()),
-                static_cast<unsigned long>(ESP.getMinFreeHeap()));
+  Serial.printf(
+      "[health] sys     heap=%lu min_heap=%lu max_alloc=%lu reclaim=%lu "
+      "reclaim_skip_tcp=%lu\n",
+      static_cast<unsigned long>(ESP.getFreeHeap()),
+      static_cast<unsigned long>(ESP.getMinFreeHeap()),
+      static_cast<unsigned long>(ESP.getMaxAllocHeap()),
+      static_cast<unsigned long>(heapReclaims),
+      static_cast<unsigned long>(heapReclaimSkippedTcp));
 }
 
 // Absolute counters answer "did it ever happen"; rates answer "is it happening
@@ -1717,6 +1852,9 @@ void resetDiagnosticCounters() {
   udpFrameMaxMs = 0;
   thermalFramesSuppressed = 0;
   thermalFramesDeferred = 0;
+  thermalTcpYields = 0;
+  heapReclaims = 0;
+  heapReclaimSkippedTcp = 0;
   udpSocketRestarts = 0;
   tcpLastErrno = 0;
   udpLastErrno = 0;
@@ -1858,6 +1996,9 @@ void loop() {
   pollMmWave(now);
   pollCo2(now);
   captureThermalIfReady(now);
+  // SPI capture blocks UART servicing. Drain again so a mid-frame SOF does
+  // not sit in the Seeed assembler until the next ~2 fps camera tick.
+  pollMmWave(millis());
 
   if (scheduleDue(now, lastPirPollMs, PIR_PERIOD_MS)) {
     pirMotion = digitalRead(PIN_PIR) == HIGH;

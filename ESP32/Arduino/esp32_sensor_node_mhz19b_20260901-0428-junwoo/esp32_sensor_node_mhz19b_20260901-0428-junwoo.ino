@@ -95,9 +95,9 @@ constexpr uint32_t PHASE_MAX_AGE_MS = 500;
 // inference rather than asserting an empty room.
 constexpr uint32_t PRESENCE_MAX_AGE_MS = 5000;
 constexpr char NODE_FIRMWARE_VERSION[] =
-    "safenest-esp32-sensor-node/1.7.4-mhz19b.1";
+    "safenest-esp32-sensor-node/1.7.5-mhz19b.1";
 constexpr char DIAGNOSTIC_BUILD_ID[] =
-    "mhz19b-restore-breath-phase-20260901-01";
+    "mhz19b-tcp-skip-partial-20260901-02";
 constexpr char MMWAVE_SCHEMA_VERSION[] = "1.3";
 constexpr char CO2_SENSOR_MODEL[] = "MH-Z19B";
 constexpr char CO2_EVENT_IDENTITY_CLASS[] = "INFERRED_UART_SAMPLE";
@@ -129,17 +129,23 @@ constexpr char CO2_EVENT_IDENTITY_CLASS[] = "INFERRED_UART_SAMPLE";
 // already closed (2 s) long before that returns, which is why peer_closed,
 // tcp_errno=104 (ECONNRESET) and connect_ms≈1500 follow.
 //
-// writeAll() therefore calls lwip_send(MSG_DONTWAIT) itself and fails the
-// packet inside TCP_WRITE_DEADLINE_MS. That is below the Pi deadline with
-// room for the 1 Hz production gap, and it is long enough for a merely
-// slow write (field write_ms=565 that did eventually succeed).
+// writeAll() therefore calls lwip_send(MSG_DONTWAIT) itself. An 800 ms retry
+// loop on EAGAIN was still long enough to desynchronize the Pi: a partial
+// SNST prefix (field wrote=97/808) forces this node to close, then
+// reconnect SYN storms fill the TX queue even with thermal UDP off. Skip
+// before any byte is on the wire; only a started packet uses the finish
+// deadline.
 // ----------------------------------------------------------------------------
 constexpr uint32_t PI_PACKET_DEADLINE_MS = 2000;
 // Warn below the Pi deadline so the log shows the approach, not only the crash.
 constexpr uint32_t TELEMETRY_GAP_WARN_MS = 1500;
 constexpr uint32_t TCP_WRITE_WARN_MS = 150;
-constexpr uint32_t TCP_WRITE_DEADLINE_MS = 800;
+// No byte sent yet: abandon this snapshot and keep the socket.
+constexpr uint32_t TCP_WRITE_SKIP_MS = 40;
+// Some bytes already on the wire: finish or close (partial SNST is fatal).
+constexpr uint32_t TCP_WRITE_DEADLINE_MS = 200;
 constexpr uint32_t TCP_CONNECT_TIMEOUT_MS = 1500;
+constexpr uint32_t SERIAL_ERROR_LOG_PERIOD_MS = 1000;
 constexpr uint32_t TCP_MUTEX_WARN_MS = 100;
 // UDP sendto is O_NONBLOCK, so the mutex should be held for milliseconds.
 // 250 ms turns a stuck datagram into a counted timeout instead of a 3 s
@@ -504,6 +510,20 @@ bool scheduleDue(uint32_t now, uint32_t &lastRun, uint32_t period) {
   return true;
 }
 
+// TCP-task error lines are hundreds of characters. Unthrottled they block
+// loop() on the Serial mutex long enough for MR60 UART2 to lose SOF sync,
+// after which [health] prints resp=null even though the radar is still up.
+bool tcpErrorLogDue() {
+  static uint32_t lastMs = 0;
+  const uint32_t now = millis();
+  if (lastMs != 0 &&
+      static_cast<uint32_t>(now - lastMs) < SERIAL_ERROR_LOG_PERIOD_MS) {
+    return false;
+  }
+  lastMs = now;
+  return true;
+}
+
 bool isFresh(uint32_t timestamp, uint32_t now, uint32_t timeout) {
   if (timestamp == 0) return false;
   const int32_t age = static_cast<int32_t>(now - timestamp);
@@ -708,6 +728,10 @@ bool thermalDataReady(uint32_t now) {
 
 void captureThermalIfReady(uint32_t now) {
   if (!thermalStarted || !thermalCaptureEnabled) return;
+  // 'u' used to disable only sendto(). SPI capture still blocked loop()
+  // for ~20 ms/frame, which is enough for MR60 bytes to pile up. Skipping
+  // capture when UDP is off (or TCP is down) is the actual A/B isolation.
+  if (!thermalUdpEnabled || !tcpLinkHealthy) return;
   if (!thermalDataReady(now)) return;
 
   ++thermalCaptureAttempts;
@@ -1030,10 +1054,16 @@ bool writeAll(WiFiClient &client, const uint8_t *data, size_t length,
   while (sent < length) {
     const uint32_t elapsedMs =
         static_cast<uint32_t>(millis() - startedMs);
-    if (elapsedMs > TCP_WRITE_DEADLINE_MS) {
+    // 0 bytes on the wire: skip this snapshot. Any prefix must be finished
+    // because the Pi SNST reader cannot resync mid-packet.
+    const uint32_t limit =
+        sent == 0 ? TCP_WRITE_SKIP_MS : TCP_WRITE_DEADLINE_MS;
+    if (elapsedMs > limit) {
       report.bytesWritten = sent;
       report.elapsedMs = elapsedMs;
-      if (report.lastErrno == 0) report.lastErrno = ETIMEDOUT;
+      if (report.lastErrno == 0) {
+        report.lastErrno = sent == 0 ? EAGAIN : ETIMEDOUT;
+      }
       report.connectedAtEnd = client.connected();
       return false;
     }
@@ -1421,6 +1451,7 @@ void logTcpDrop(const char *reason, uint32_t sessionStartedMs,
                             : static_cast<uint32_t>(now - sessionStartedMs);
   tcpDrops = tcpDrops + 1;
   if (sessionMs < 10000) tcpShortSessions = tcpShortSessions + 1;
+  if (!tcpErrorLogDue()) return;
   Serial.printf(
       "[tcp-drop] reason=%s session_ms=%lu session_packets=%lu "
       "since_last_send_ms=%ld gap_max_ms=%lu gap_late=%lu write_max_ms=%lu "
@@ -1525,13 +1556,15 @@ void telemetryTcpTask(void *parameter) {
       }
       if (!connected) {
         tcpConnectionFailures = tcpConnectionFailures + 1;
-        Serial.printf(
-            "[tcp-connect-fail] mutex_wait_ms=%lu connect_ms=%lu errno=%ld "
-            "failures=%lu\n",
-            static_cast<unsigned long>(mutexWaitMs),
-            static_cast<unsigned long>(lastConnectDurationMs),
-            static_cast<long>(tcpLastErrno),
-            static_cast<unsigned long>(tcpConnectionFailures));
+        if (tcpErrorLogDue()) {
+          Serial.printf(
+              "[tcp-connect-fail] mutex_wait_ms=%lu connect_ms=%lu errno=%ld "
+              "failures=%lu\n",
+              static_cast<unsigned long>(mutexWaitMs),
+              static_cast<unsigned long>(lastConnectDurationMs),
+              static_cast<long>(tcpLastErrno),
+              static_cast<unsigned long>(tcpConnectionFailures));
+        }
         vTaskDelay(pdMS_TO_TICKS(1000));
         continue;
       }
@@ -1599,13 +1632,15 @@ void telemetryTcpTask(void *parameter) {
         if (report.partialWrites > 0) tcpPartialWrites = tcpPartialWrites + 1;
       } else {
         tcpMutexTimeouts = tcpMutexTimeouts + 1;
-        Serial.printf(
-            "[tcp-blocked] seq=%lu mutex_wait_ms=%lu timeouts=%lu -- the "
-            "thermal UDP task held the TX mutex past the limit, so this "
-            "telemetry packet never reached the socket\n",
-            static_cast<unsigned long>(telemetry.sequence),
-            static_cast<unsigned long>(mutexWaitMs),
-            static_cast<unsigned long>(tcpMutexTimeouts));
+        if (tcpErrorLogDue()) {
+          Serial.printf(
+              "[tcp-blocked] seq=%lu mutex_wait_ms=%lu timeouts=%lu -- the "
+              "thermal UDP task held the TX mutex past the limit, so this "
+              "telemetry packet never reached the socket\n",
+              static_cast<unsigned long>(telemetry.sequence),
+              static_cast<unsigned long>(mutexWaitMs),
+              static_cast<unsigned long>(tcpMutexTimeouts));
+        }
       }
       lastMutexWaitMs = mutexWaitMs;
 
@@ -1617,19 +1652,21 @@ void telemetryTcpTask(void *parameter) {
         requestUdpHoldoff(millis(), UDP_SLOW_TCP_HOLDOFF_MS);
         if (!socketClosedByFailure && writeAttempted) {
           tcpWriteTimeouts = tcpWriteTimeouts + 1;
-          Serial.printf(
-              "[tcp-send-timeout] seq=%lu wrote=%u/%u elapsed_ms=%lu "
-              "stall_ms=%lu zero_writes=%u errno=%ld kept_open=1 "
-              "timeouts=%lu -- skipped this snapshot instead of blocking "
-              "the radio past the Pi deadline\n",
-              static_cast<unsigned long>(telemetry.sequence),
-              static_cast<unsigned>(report.bytesWritten),
-              static_cast<unsigned>(PACKET_HEADER_SIZE + jsonPayloadLength),
-              static_cast<unsigned long>(report.elapsedMs),
-              static_cast<unsigned long>(report.longestStallMs),
-              static_cast<unsigned>(report.zeroWrites),
-              static_cast<long>(report.lastErrno),
-              static_cast<unsigned long>(tcpWriteTimeouts));
+          if (tcpErrorLogDue()) {
+            Serial.printf(
+                "[tcp-send-timeout] seq=%lu wrote=%u/%u elapsed_ms=%lu "
+                "stall_ms=%lu zero_writes=%u errno=%ld kept_open=1 "
+                "timeouts=%lu -- skipped this snapshot instead of blocking "
+                "the radio past the Pi deadline\n",
+                static_cast<unsigned long>(telemetry.sequence),
+                static_cast<unsigned>(report.bytesWritten),
+                static_cast<unsigned>(PACKET_HEADER_SIZE + jsonPayloadLength),
+                static_cast<unsigned long>(report.elapsedMs),
+                static_cast<unsigned long>(report.longestStallMs),
+                static_cast<unsigned>(report.zeroWrites),
+                static_cast<long>(report.lastErrno),
+                static_cast<unsigned long>(tcpWriteTimeouts));
+          }
         }
       }
 
@@ -1639,19 +1676,21 @@ void telemetryTcpTask(void *parameter) {
         // is quiet before the reconnect starts. tcpLinkHealthy is set true only
         // after a successful write, not after connect().
         tcpLinkHealthy = false;
-        Serial.printf(
-            "[tcp-send-fail] seq=%lu wrote=%u/%u elapsed_ms=%lu stall_ms=%lu "
-            "zero_writes=%u partial=%u errno=%ld connected=%d failures=%lu\n",
-            static_cast<unsigned long>(telemetry.sequence),
-            static_cast<unsigned>(report.bytesWritten),
-            static_cast<unsigned>(PACKET_HEADER_SIZE + jsonPayloadLength),
-            static_cast<unsigned long>(report.elapsedMs),
-            static_cast<unsigned long>(report.longestStallMs),
-            static_cast<unsigned>(report.zeroWrites),
-            static_cast<unsigned>(report.partialWrites),
-            static_cast<long>(report.lastErrno),
-            report.connectedAtEnd ? 1 : 0,
-            static_cast<unsigned long>(tcpSendFailures));
+        if (tcpErrorLogDue()) {
+          Serial.printf(
+              "[tcp-send-fail] seq=%lu wrote=%u/%u elapsed_ms=%lu stall_ms=%lu "
+              "zero_writes=%u partial=%u errno=%ld connected=%d failures=%lu\n",
+              static_cast<unsigned long>(telemetry.sequence),
+              static_cast<unsigned>(report.bytesWritten),
+              static_cast<unsigned>(PACKET_HEADER_SIZE + jsonPayloadLength),
+              static_cast<unsigned long>(report.elapsedMs),
+              static_cast<unsigned long>(report.longestStallMs),
+              static_cast<unsigned>(report.zeroWrites),
+              static_cast<unsigned>(report.partialWrites),
+              static_cast<long>(report.lastErrno),
+              report.connectedAtEnd ? 1 : 0,
+              static_cast<unsigned long>(tcpSendFailures));
+        }
         if (sessionOpen) {
           logTcpDrop("write_failed", sessionStartedMs, sessionPackets, 0);
           sessionOpen = false;
@@ -2109,11 +2148,11 @@ void printDiagnosticHelp() {
       "l = toggle periodic [link], r = reset diagnostic counters, "
       "h = this help");
   Serial.printf(
-      "[help] pi receive deadlines: LCD server settimeout=%lu ms, runtime "
-      "gateway=5000 ms; this node warns at gap_ms>=%lu and fail-fast TCP "
-      "writes at %lu ms\n",
-      static_cast<unsigned long>(PI_PACKET_DEADLINE_MS),
+      "[help] pi receive deadlines: LCD/runtime frame=5000 ms; this node "
+      "warns at gap_ms>=%lu, skips a TCP snapshot after %lu ms with 0 "
+      "bytes sent, and closes only if a partial packet exceeds %lu ms\n",
       static_cast<unsigned long>(TELEMETRY_GAP_WARN_MS),
+      static_cast<unsigned long>(TCP_WRITE_SKIP_MS),
       static_cast<unsigned long>(TCP_WRITE_DEADLINE_MS));
   Serial.println(
       "[help] to isolate capture vs UDP: 'c' then 'u' cycle through "

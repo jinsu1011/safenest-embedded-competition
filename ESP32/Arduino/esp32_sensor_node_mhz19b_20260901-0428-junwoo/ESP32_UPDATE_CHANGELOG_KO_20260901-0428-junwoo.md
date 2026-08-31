@@ -108,3 +108,13 @@ LCD 슬림 JSON이 `mmwave.human_detected_raw`만 남겨서 Pi M-N4/B23 창이 �
 - `TELEMETRY_PERIOD_MS`를 1000 → 100으로 되돌립니다. 1 Hz면 500 ms freshness에 걸려 `breath_phase`가 거의 항상 null입니다.
 - JSON 버퍼 1536 B. 펌웨어 id: `safenest-esp32-sensor-node/1.7.4-mhz19b.1`
 
+## 1.7.5 — 부분 TCP 패킷 스킵
+
+UDP를 꺼도 TCP가 `wrote=97/808 errno=11`로 세션을 닫고, 실패 로그가 Serial mutex를 잡아 MR60 파서가 풀렸습니다.
+
+- 한 바이트도 못 나가면 40 ms 후 그 스냅샷만 버리고 소켓은 유지.
+- 이미 나간 부분 패킷만 200 ms 안에 끝내고, 실패 시 세션 종료.
+- `[tcp-drop]`/`[tcp-send-fail]`/`[tcp-send-timeout]`는 1초에 한 줄.
+- `u`로 UDP를 끄면 SPI capture도 같이 멈춤.
+- 펌웨어 id: `safenest-esp32-sensor-node/1.7.5-mhz19b.1`
+

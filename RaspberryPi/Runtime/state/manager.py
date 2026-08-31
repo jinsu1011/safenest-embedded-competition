@@ -277,6 +277,8 @@ class SensorStateManager:
                     "measurement_monotonic_ms": packet.co2_measurement_monotonic_ms,
                     "measurement_event_valid": True,
                     "measurement_event_count": self._co2_measurement_event_count,
+                    "sensor_model": packet.co2_sensor_model,
+                    "event_identity_class": packet.co2_event_identity_class,
                 }
             )
         elif not record.values:

@@ -341,6 +341,12 @@ class SensorDataLogger:
                 "co2_measurement_monotonic_ms": packet.co2_measurement_monotonic_ms,
                 "co2_measurement_event_valid": packet.co2_measurement_event_valid,
             }
+            if packet.co2_sensor_model is not None:
+                document["co2_sensor_model"] = packet.co2_sensor_model
+            if packet.co2_event_identity_class is not None:
+                document["co2_event_identity_class"] = packet.co2_event_identity_class
+            if packet.co2_preheat is not None:
+                document["co2_preheat"] = packet.co2_preheat
         with self._io_lock:
             _, handle, _ = self._scalar_handle(item.sensor, item.received_at)
             handle.write(json.dumps(document, separators=(",", ":"), allow_nan=False) + "\n")

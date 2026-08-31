@@ -68,6 +68,9 @@ class TelemetryPayload:
     co2_measurement_event_id: int | None = None
     co2_measurement_monotonic_ms: int | None = None
     co2_measurement_event_valid: bool | None = None
+    co2_sensor_model: str | None = None
+    co2_event_identity_class: str | None = None
+    co2_preheat: bool | None = None
     pir_event_id: int | None = None
     pir_last_transition_monotonic_ms: int | None = None
     health: dict[str, int] | None = None
@@ -238,6 +241,13 @@ def decode_telemetry(header: PacketHeader, payload: bytes) -> TelemetryPayload:
         valid_field="co2_measurement_event_valid",
         boot_id=boot_id,
     )
+    co2_sensor_model = _optional_identifier(
+        decoded.get("co2_sensor_model"), "co2_sensor_model"
+    )
+    co2_event_identity_class = _optional_identifier(
+        decoded.get("co2_event_identity_class"), "co2_event_identity_class"
+    )
+    co2_preheat = _optional_bool(decoded.get("co2_preheat"), "co2_preheat")
     pir_event_id, pir_transition_ms = _optional_transition_provenance(
         decoded,
         id_field="pir_event_id",
@@ -272,6 +282,9 @@ def decode_telemetry(header: PacketHeader, payload: bytes) -> TelemetryPayload:
         co2_measurement_event_id=co2_event_id,
         co2_measurement_monotonic_ms=co2_event_ms,
         co2_measurement_event_valid=co2_event_valid,
+        co2_sensor_model=co2_sensor_model,
+        co2_event_identity_class=co2_event_identity_class,
+        co2_preheat=co2_preheat,
         pir_event_id=pir_event_id,
         pir_last_transition_monotonic_ms=pir_transition_ms,
         health=health,
@@ -368,6 +381,14 @@ def _optional_finite(value: object, field: str) -> float | None:
     if not math.isfinite(converted):
         raise ProtocolError(f"{field} must be finite")
     return converted
+
+
+def _optional_bool(value: object, field: str) -> bool | None:
+    if value is None:
+        return None
+    if not isinstance(value, bool):
+        raise ProtocolError(f"{field} must be boolean when present")
+    return value
 
 
 def _optional_mmwave_object(value: object) -> dict[str, object] | None:

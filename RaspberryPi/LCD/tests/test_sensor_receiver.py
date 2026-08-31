@@ -39,6 +39,36 @@ class SensorStoreTests(unittest.TestCase):
         self.assertEqual(snapshot["heart_rate_bpm"], 72.5)
         self.assertEqual(snapshot["co2_ppm"], 820)
         self.assertTrue(snapshot["pir_motion"])
+        self.assertNotIn("co2_measurement_event_id", snapshot)
+
+    def test_co2_event_fields_are_passed_through_when_present(self) -> None:
+        payload = sample_telemetry()
+        payload.update(
+            {
+                "boot_id": "0123456789abcdef0123456789abcdef",
+                "firmware_version": "safenest-esp32-sensor-node/1.7.0-mhz19b.1",
+                "co2_sensor_model": "MH-Z19B",
+                "co2_event_identity_class": "INFERRED_UART_SAMPLE",
+                "co2_measurement_event_id": 42,
+                "co2_measurement_monotonic_ms": 180_000,
+                "co2_measurement_event_valid": True,
+                "co2_preheat": False,
+            }
+        )
+        store = server.SensorStore(stale_seconds=5.0)
+        store.set_connected(True, ("192.168.1.50", 45678))
+        store.record_telemetry(payload)
+        snapshot = store.snapshot()
+        self.assertEqual(snapshot["co2_sensor_model"], "MH-Z19B")
+        self.assertEqual(snapshot["co2_event_identity_class"], "INFERRED_UART_SAMPLE")
+        self.assertEqual(snapshot["co2_measurement_event_id"], 42)
+        self.assertEqual(snapshot["co2_measurement_monotonic_ms"], 180_000)
+        self.assertTrue(snapshot["co2_measurement_event_valid"])
+        self.assertFalse(snapshot["co2_preheat"])
+        self.assertEqual(
+            snapshot["firmware_version"],
+            "safenest-esp32-sensor-node/1.7.0-mhz19b.1",
+        )
 
     def test_disconnect_marks_previous_values_stale(self) -> None:
         store = server.SensorStore(stale_seconds=5.0)

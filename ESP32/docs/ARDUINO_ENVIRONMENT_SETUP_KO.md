@@ -6,9 +6,13 @@
 
 ```text
 ESP32/Arduino/esp32_sensor_node/esp32_sensor_node.ino
+ESP32/Arduino/esp32_sensor_node_260828_v2/esp32_sensor_node_260828_v2.ino
+ESP32/Arduino/esp32_sensor_node_mhz19b_v2/esp32_sensor_node_mhz19b_v2.ino
 ```
 
 > 이 프로젝트의 기준 보드는 일반적인 ESP32-WROOM 계열의 `ESP32 Dev Module`입니다. XIAO ESP32C6용 보드 설정이 아닙니다. 소스의 핀 번호도 `ESP32 Dev Module` 기준이므로 다른 보드로 바꾸면 배선과 핀 정의를 함께 수정해야 합니다.
+
+`esp32_sensor_node_mhz19b_v2`는 v2 노드의 CO₂ 경로만 MH-Z19B UART로 바꾼 형제 스케치입니다. Sensirion SCD4x 라이브러리가 필요 없고, MR60은 계속 UART2(GPIO 16/17), MH-Z19B는 UART1(GPIO 32/33)을 씁니다. 모듈 전원은 4.5–5.5 V이며 ESP32 3.3 V 레일로 켜지 않습니다. 자세한 배선은 `ESP32/Arduino/esp32_sensor_node_mhz19b_v2/ESP32_UPDATE_CHANGELOG_KO.md`를 봅니다.
 
 ## 1. 준비물
 
@@ -222,6 +226,7 @@ arduino-cli lib install "Seeed Arduino mmWave"
 
 ```bash
 arduino-cli compile --fqbn esp32:esp32:esp32 ESP32/Arduino/esp32_sensor_node
+arduino-cli compile --fqbn esp32:esp32:esp32 ESP32/Arduino/esp32_sensor_node_mhz19b_v2
 ```
 
 업로드 예시:

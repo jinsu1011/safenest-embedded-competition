@@ -171,6 +171,23 @@ class ProtocolDecodeTests(unittest.TestCase):
         self.assertEqual(packet.health["co2_read_failures"], 4)
         self.assertEqual(packet.health["thermal_status_query_failures"], 5)
 
+    def test_mhz19b_co2_identity_fields_are_optional(self) -> None:
+        payload = telemetry_payload(
+            12,
+            boot_id="0123456789abcdef0123456789abcdef",
+            co2_measurement_event_id=7,
+            co2_measurement_monotonic_ms=180_000,
+            co2_measurement_event_valid=True,
+            co2_sensor_model="MH-Z19B",
+            co2_event_identity_class="INFERRED_UART_SAMPLE",
+            co2_preheat=False,
+        )
+        packet = decode_from_socket(wire_packet(PACKET_TELEMETRY_JSON, 12, payload))
+        self.assertEqual(packet.co2_sensor_model, "MH-Z19B")
+        self.assertEqual(packet.co2_event_identity_class, "INFERRED_UART_SAMPLE")
+        self.assertFalse(packet.co2_preheat)
+        self.assertEqual(packet.co2_measurement_event_id, 7)
+
     def test_legacy_and_unknown_extra_fields_remain_compatible(self) -> None:
         payload = telemetry_payload(9, future_optional_field={"ignored": True})
         packet = decode_from_socket(wire_packet(PACKET_TELEMETRY_JSON, 9, payload))

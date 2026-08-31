@@ -140,6 +140,21 @@ class SensorStore:
                 "co2": valid.get("co2") is True,
             },
         }
+        # Pass through CO2 producer identity when the ESP32 sent it. Do not
+        # invent event IDs: missing keys stay missing so /health capture can
+        # tell SCD40-v2 (no tuple) from MH-Z19B (INFERRED_UART_SAMPLE).
+        for key in (
+            "boot_id",
+            "firmware_version",
+            "co2_sensor_model",
+            "co2_event_identity_class",
+            "co2_measurement_event_id",
+            "co2_measurement_monotonic_ms",
+            "co2_measurement_event_valid",
+            "co2_preheat",
+        ):
+            if key in payload:
+                telemetry[key] = payload[key]
         with self._lock:
             self._telemetry = telemetry
             self._last_received_monotonic = time.monotonic()

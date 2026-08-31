@@ -97,3 +97,14 @@ MH-Z19B 스케치는 PR #71 청크 양보가 빠져 있었고, 9개 UDP datagram
 - `mmw_miss`는 UART에 바이트가 있는데 프레임이 안 열릴 때만 증가합니다.
 - thermal SPI 전후에 mmWave를 drain합니다.
 - 레이더가 보낸 0.0 bpm(미검출)은 그대로 0.00으로 둡니다. 0을 숨기지 않습니다.
+
+## 1.7.4 — MR60 breath_phase 복구 (Pi 300윈도우)
+
+LCD 슬림 JSON이 `mmwave.human_detected_raw`만 남겨서 Pi M-N4/B23 창이 한 샘플도 못 쌓았습니다. 벤더 `resp_rate_bpm`은 창에 들어가지 않습니다.
+
+- `pollMmWave()`가 다시 `getHeartBreathPhases()`를 호출합니다 (0x0A13).
+- JSON `mmwave`에 1.3.0과 같은 `breath_phase` / `total_phase` / `heart_phase` / `breath_rate_raw` / `phase_age_ms` / `ts_monotonic_ms` / `seq` / `schema_version`을 넣습니다. MH-Z19B 이벤트 필드는 유지합니다.
+- 위상 값은 `PHASE_MAX_AGE_MS = 500` 안에서만 숫자로 나갑니다. seq/시각은 마지막 샘플이 있으면 남깁니다.
+- `TELEMETRY_PERIOD_MS`를 1000 → 100으로 되돌립니다. 1 Hz면 500 ms freshness에 걸려 `breath_phase`가 거의 항상 null입니다.
+- JSON 버퍼 1536 B. 펌웨어 id: `safenest-esp32-sensor-node/1.7.4-mhz19b.1`
+

@@ -80,21 +80,25 @@ constexpr uint32_t CO2_UART_SAMPLE_PERIOD_MS = 5000;
 constexpr uint32_t CO2_UART_RESPONSE_TIMEOUT_MS = 200;
 constexpr uint32_t CO2_PREHEAT_MS = 180000;  // Winsen: 3 min
 constexpr uint16_t CO2_PPM_MAX_ACCEPTED = 10000;
-// One scalar snapshot per second is sufficient for the default LCD display.
+// 10 Hz matches the 1.3.0 phase contract. PHASE_MAX_AGE_MS is 500, so a 1 Hz
+// snapshot would publish breath_phase as null on almost every packet and the
+// Pi 300-sample window would never fill. LCD can ignore the extra packets.
 // TCP writes remain isolated in their own task.
-constexpr uint32_t TELEMETRY_PERIOD_MS = 1000;
+constexpr uint32_t TELEMETRY_PERIOD_MS = 100;
 constexpr uint32_t HEALTH_LOG_PERIOD_MS = 10000;
 constexpr uint32_t MMWAVE_STALE_MS = 10000;
 constexpr uint32_t CO2_STALE_MS = 15000;
+constexpr uint32_t PHASE_MAX_AGE_MS = 500;
 // The MR60 reports 0x0F09 occupancy on its own cadence, independent of the
 // respiration/heart-rate stream. This bound only has to outlive normal report
 // gaps; once it lapses the field goes null (unknown), which suppresses mmWave
 // inference rather than asserting an empty room.
 constexpr uint32_t PRESENCE_MAX_AGE_MS = 5000;
 constexpr char NODE_FIRMWARE_VERSION[] =
-    "safenest-esp32-sensor-node/1.7.3-mhz19b.1";
+    "safenest-esp32-sensor-node/1.7.4-mhz19b.1";
 constexpr char DIAGNOSTIC_BUILD_ID[] =
-    "mhz19b-tcp-failfast-thermal-1fps-20260901-01";
+    "mhz19b-restore-breath-phase-20260901-01";
+constexpr char MMWAVE_SCHEMA_VERSION[] = "1.3";
 constexpr char CO2_SENSOR_MODEL[] = "MH-Z19B";
 constexpr char CO2_EVENT_IDENTITY_CLASS[] = "INFERRED_UART_SAMPLE";
 
@@ -261,7 +265,8 @@ struct TelemetrySnapshot {
   bool respirationValid;
   bool heartValid;
   bool co2Valid;
-  // Inferred MH-Z19B UART sample identity. Same event_id on later 1 Hz TCP
+  bool phaseSamplePresent;
+  // Inferred MH-Z19B UART sample identity. Same event_id on later TCP
   // snapshots is a cached retransmission; Pi slope must ignore repeats.
   uint32_t co2MeasurementEventId;
   uint32_t co2MeasurementMonotonicMs;
@@ -272,6 +277,11 @@ struct TelemetrySnapshot {
   // and would then suppress mmWave inference for the wrong reason.
   bool humanDetectedRaw;
   bool humanDetectedKnown;
+  float totalPhase;
+  float breathPhase;
+  float heartPhase;
+  uint32_t phaseTimestampMs;
+  uint32_t phaseSequence;
 };
 
 struct ThermalTxFrame {
@@ -366,9 +376,13 @@ bool thermalStarted = false;
 
 float respirationRate = NAN;
 float heartRate = NAN;
+float totalPhase = NAN;
+float breathPhase = NAN;
+float heartPhase = NAN;
 uint16_t co2Ppm = 0;
 bool pirMotion = false;
 bool humanDetectedRaw = false;
+bool phaseSamplePresent = false;
 
 uint32_t lastRespirationMs = 0;
 uint32_t lastHeartMs = 0;
@@ -477,6 +491,8 @@ uint32_t thermalStatusQueryFailures = 0;
 uint32_t mmWaveUpdateSuccesses = 0;
 uint32_t mmWaveUpdateMisses = 0;
 uint32_t lastMmWaveUpdateMs = 0;
+uint32_t lastPhaseMs = 0;
+uint32_t phaseSequence = 0;
 uint8_t thermalUdpDatagram[THERMAL_UDP_DATAGRAM_SIZE];
 
 // Wrap-safe periodic scheduling helper. Updating by period, rather than assigning
@@ -874,6 +890,21 @@ void pollMmWave(uint32_t now) {
     ++mmWaveUpdateSuccesses;
     lastMmWaveUpdateMs = now;
 
+    float nextTotalPhase = NAN;
+    float nextBreathPhase = NAN;
+    float nextHeartPhase = NAN;
+    if (mmWave.getHeartBreathPhases(nextTotalPhase, nextBreathPhase,
+                                    nextHeartPhase) &&
+        isfinite(nextTotalPhase) && isfinite(nextBreathPhase) &&
+        isfinite(nextHeartPhase)) {
+      totalPhase = nextTotalPhase;
+      breathPhase = nextBreathPhase;
+      heartPhase = nextHeartPhase;
+      lastPhaseMs = millis();
+      phaseSamplePresent = true;
+      ++phaseSequence;
+    }
+
     float value = 0.0f;
     if (mmWave.getBreathRate(value) && isfinite(value)) {
       respirationRate = value;
@@ -906,10 +937,12 @@ void pollMmWave(uint32_t now) {
         static_cast<uint32_t>(now - lastMmwSampleLogMs) >= 2000) {
       lastMmwSampleLogMs = now;
       Serial.printf(
-          "[mmw] breath=%.2f heart=%.2f presence=%s uart=%u\n",
+          "[mmw] breath=%.2f heart=%.2f presence=%s phase=%.4f "
+          "phase_seq=%lu uart=%u\n",
           respirationRate, heartRate,
           lastPresenceMs == 0 ? "unknown"
                               : (humanDetectedRaw ? "true" : "false"),
+          breathPhase, static_cast<unsigned long>(phaseSequence),
           static_cast<unsigned>(mmWaveSerial.available()));
     }
   }
@@ -946,6 +979,12 @@ void publishTelemetrySnapshot(uint32_t now) {
   snapshot.humanDetectedRaw = humanDetectedRaw;
   snapshot.humanDetectedKnown = isFresh(lastPresenceMs, now,
                                         PRESENCE_MAX_AGE_MS);
+  snapshot.phaseSamplePresent = phaseSamplePresent;
+  snapshot.totalPhase = totalPhase;
+  snapshot.breathPhase = breathPhase;
+  snapshot.heartPhase = heartPhase;
+  snapshot.phaseTimestampMs = phaseSamplePresent ? lastPhaseMs : 0;
+  snapshot.phaseSequence = phaseSequence;
   xQueueOverwrite(telemetryQueue, &snapshot);
 }
 
@@ -1069,6 +1108,25 @@ void formatNullableFloat(char *output, size_t outputSize, bool valid,
   strlcpy(output, "null", outputSize);
 }
 
+void formatNullablePhase(char *output, size_t outputSize, bool valid,
+                         float value) {
+  if (valid && isfinite(value)) {
+    const int written = snprintf(output, outputSize, "%.6f", value);
+    if (written > 0 && static_cast<size_t>(written) < outputSize) return;
+  }
+  strlcpy(output, "null", outputSize);
+}
+
+void formatNullableU32(char *output, size_t outputSize, bool valid,
+                       uint32_t value) {
+  if (valid) {
+    const int written = snprintf(output, outputSize, "%lu",
+                                 static_cast<unsigned long>(value));
+    if (written > 0 && static_cast<size_t>(written) < outputSize) return;
+  }
+  strlcpy(output, "null", outputSize);
+}
+
 bool sendTelemetry(WiFiClient &client, const TelemetrySnapshot &snapshot,
                    size_t &payloadLength, TcpWriteReport &report) {
   payloadLength = 0;
@@ -1093,9 +1151,34 @@ bool sendTelemetry(WiFiClient &client, const TelemetrySnapshot &snapshot,
                                                                    : "false")
                                       : "null";
 
-  // Slim LCD contract plus the CO2 event-identity fields Pi slope needs.
-  // Extra keys are additive to safenest.telemetry.v1. Truncation is fail-closed.
-  char json[1024];
+  char totalPhaseText[32], breathPhaseText[32], heartPhaseText[32];
+  char breathRateRawText[20], phaseAgeText[20], phaseTimestampText[20];
+  char phaseSequenceText[20];
+  const uint32_t sendNow = millis();
+  const uint32_t phaseAgeMs = snapshot.phaseSamplePresent
+                                  ? static_cast<uint32_t>(
+                                        sendNow - snapshot.phaseTimestampMs)
+                                  : 0;
+  const bool phaseFresh = snapshot.phaseSamplePresent &&
+                          phaseAgeMs < PHASE_MAX_AGE_MS;
+  formatNullablePhase(totalPhaseText, sizeof(totalPhaseText), phaseFresh,
+                      snapshot.totalPhase);
+  formatNullablePhase(breathPhaseText, sizeof(breathPhaseText), phaseFresh,
+                      snapshot.breathPhase);
+  formatNullablePhase(heartPhaseText, sizeof(heartPhaseText), phaseFresh,
+                      snapshot.heartPhase);
+  formatNullableFloat(breathRateRawText, sizeof(breathRateRawText),
+                      snapshot.respirationValid, snapshot.respirationRate);
+  formatNullableU32(phaseAgeText, sizeof(phaseAgeText),
+                    snapshot.phaseSamplePresent, phaseAgeMs);
+  formatNullableU32(phaseTimestampText, sizeof(phaseTimestampText),
+                    snapshot.phaseSamplePresent, snapshot.phaseTimestampMs);
+  formatNullableU32(phaseSequenceText, sizeof(phaseSequenceText),
+                    snapshot.phaseSamplePresent, snapshot.phaseSequence);
+
+  // 1.3.0 mmwave phase object plus MH-Z19B event-identity fields.
+  // Truncation is fail-closed.
+  char json[1536];
   const int length = snprintf(
       json, sizeof(json),
       "{\"schema\":\"safenest.telemetry.v1\",\"device_id\":\"%s\","
@@ -1109,7 +1192,11 @@ bool sendTelemetry(WiFiClient &client, const TelemetrySnapshot &snapshot,
       "\"co2_measurement_event_valid\":%s,\"co2_preheat\":%s,"
       "\"pir_motion\":%s,"
       "\"valid\":{\"respiration\":%s,\"heart\":%s,\"co2\":%s},"
-      "\"mmwave\":{\"human_detected_raw\":%s}}",
+      "\"mmwave\":{\"breath_phase\":%s,\"total_phase\":%s,"
+      "\"heart_phase\":%s,\"breath_rate_raw\":%s,"
+      "\"human_detected_raw\":%s,"
+      "\"phase_age_ms\":%s,\"ts_monotonic_ms\":%s,\"seq\":%s,"
+      "\"firmware_version\":\"%s\",\"schema_version\":\"%s\"}}",
       DEVICE_ID, bootId, static_cast<unsigned long>(snapshot.sequence),
       static_cast<unsigned long>(snapshot.uptimeMs), NODE_FIRMWARE_VERSION,
       respiration, heart, co2, CO2_SENSOR_MODEL, CO2_EVENT_IDENTITY_CLASS,
@@ -1120,7 +1207,10 @@ bool sendTelemetry(WiFiClient &client, const TelemetrySnapshot &snapshot,
       snapshot.pirMotion ? "true" : "false",
       snapshot.respirationValid ? "true" : "false",
       snapshot.heartValid ? "true" : "false",
-      snapshot.co2Valid ? "true" : "false", humanDetectedText);
+      snapshot.co2Valid ? "true" : "false", breathPhaseText, totalPhaseText,
+      heartPhaseText, breathRateRawText, humanDetectedText, phaseAgeText,
+      phaseTimestampText, phaseSequenceText, NODE_FIRMWARE_VERSION,
+      MMWAVE_SCHEMA_VERSION);
   if (length <= 0 || static_cast<size_t>(length) >= sizeof(json)) return false;
 
   payloadLength = static_cast<size_t>(length);
@@ -1830,6 +1920,7 @@ void logHealth(uint32_t now) {
   Serial.printf(
       "[health] sensors resp=%s heart=%s co2=%u pir=%d co2_age_ms=%ld "
       "resp_age_ms=%ld heart_age_ms=%ld presence_age_ms=%ld "
+      "phase=%.4f phase_age_ms=%ld phase_seq=%lu "
       "mmw_ok=%lu mmw_age_ms=%ld mmw_uart=%u mmw_miss=%lu\n",
       respText, heartText, static_cast<unsigned>(co2Ppm),
       pirMotion ? 1 : 0,
@@ -1838,6 +1929,9 @@ void logHealth(uint32_t now) {
                              : static_cast<long>(now - lastRespirationMs),
       lastHeartMs == 0 ? -1L : static_cast<long>(now - lastHeartMs),
       lastPresenceMs == 0 ? -1L : static_cast<long>(now - lastPresenceMs),
+      breathPhase,
+      lastPhaseMs == 0 ? -1L : static_cast<long>(now - lastPhaseMs),
+      static_cast<unsigned long>(phaseSequence),
       static_cast<unsigned long>(mmWaveUpdateSuccesses),
       lastMmWaveUpdateMs == 0
           ? -1L

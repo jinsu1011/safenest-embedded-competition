@@ -125,6 +125,14 @@ cd /home/sandi/safenest-team-main
 bash ./run_safenest.sh
 ```
 
+Thermal V2 후보를 같은 스택에서 바꿔 보려면 (기본 `./run_safenest.sh`는 기존 baseline 유지):
+
+```bash
+bash ./run_safenest_thermal_test.sh baseline
+bash ./run_safenest_thermal_test.sh a
+bash ./run_safenest_thermal_test.sh b
+```
+
 기동 직후 확인:
 
 ```bash

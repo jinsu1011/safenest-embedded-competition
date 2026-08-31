@@ -23,6 +23,16 @@ import json
 import time
 import numpy as np
 
+BASELINE_PREPROCESSING_IDS = frozenset(
+    {
+        "",
+        "per_frame_minmax",
+        "PUBLIC_SDT_BILINEAR_62X80_FRAME_MINMAX_V1",
+    }
+)
+ROBUST_PREPROCESSING_ID = "FRAME_ROBUST_P2_P98_V1"
+_ROBUST_EPS = 1e-6
+
 try:
     import ai_edge_litert.interpreter as tflite
 except ImportError:
@@ -45,6 +55,9 @@ class ThermalPrediction:
     latency_ms: float
     model_id: str
     model_version: str
+    model_selector: str = ""
+    model_sha256: str = ""
+    preprocessing_id: str = ""
 
 
 DEFAULT_THERMAL_SELECTOR = "thermal_public_sdt_fp32_active"
@@ -78,6 +91,7 @@ class ThermalInterpreter:
             raise KeyError(f"thermal model selector missing from manifest: {selector}")
         self.model_selector = selector
         self.model_meta = models[selector]
+        self.preprocessing_id = str(self.model_meta.get("preprocessing_id") or "per_frame_minmax")
         self.class_map = {
             int(key): value
             for key, value in self.model_meta["class_map"].items()
@@ -176,8 +190,42 @@ class ThermalInterpreter:
 
         return array
 
+    @staticmethod
+    def _prepare_robust_p2_p98_frame(frame: np.ndarray) -> np.ndarray:
+        array = np.asarray(frame, dtype=np.float32)
+
+        if array.shape == (62, 80):
+            spatial = array
+        elif array.shape == (62, 80, 1):
+            spatial = array[:, :, 0]
+        elif array.shape == (1, 62, 80, 1):
+            spatial = array[0, :, :, 0]
+        else:
+            raise ValueError(
+                f"thermal frame must have shape (62,80), (62,80,1), or (1,62,80,1), got {array.shape}"
+            )
+
+        if not np.all(np.isfinite(spatial)):
+            raise ValueError("thermal frame contains NaN or infinity")
+
+        p2 = float(np.percentile(spatial, 2.0))
+        p98 = float(np.percentile(spatial, 98.0))
+        denom = max(p98 - p2, _ROBUST_EPS)
+        normalized = np.clip((spatial - p2) / denom, 0.0, 1.0)
+        return normalized.reshape(1, 62, 80, 1).astype(np.float32)
+
+    def _prepare_model_frame(self, frame: np.ndarray) -> np.ndarray:
+        preprocessing_id = str(self.model_meta.get("preprocessing_id") or "")
+        if preprocessing_id in BASELINE_PREPROCESSING_IDS:
+            return self._prepare_float_frame(frame)
+        if preprocessing_id == ROBUST_PREPROCESSING_ID:
+            return self._prepare_robust_p2_p98_frame(frame)
+        raise ValueError(
+            f"unsupported thermal preprocessing_id: {preprocessing_id!r}"
+        )
+
     def _encode_input(self, frame: np.ndarray) -> np.ndarray:
-        float_input = self._prepare_float_frame(frame)
+        float_input = self._prepare_model_frame(frame)
         dtype = self.input_info["dtype"]
 
         if np.issubdtype(dtype, np.integer):
@@ -241,4 +289,12 @@ class ThermalInterpreter:
             latency_ms=float(latency_ms),
             model_id=self.model_meta["model_id"],
             model_version=self.model_meta["version"],
+            model_selector=self.model_selector,
+            model_sha256=self.sha256_hash,
+            preprocessing_id=self.preprocessing_id,
         )
+
+
+def prepare_frame_robust_p2_p98_v1(frame: np.ndarray) -> np.ndarray:
+    """RELATIVE_THERMAL_APPEARANCE_V1 / FRAME_ROBUST_P2_P98_V1 for Candidate A/B."""
+    return ThermalInterpreter._prepare_robust_p2_p98_frame(frame)

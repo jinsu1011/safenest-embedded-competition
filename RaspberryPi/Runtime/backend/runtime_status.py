@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
+from thermal_test_selector import peek_configured_thermal_selector
+
 
 SENSOR_IDS = ("mmwave", "thermal", "co2", "pir")
 
@@ -96,12 +98,14 @@ def _thermal_status(sensor: Mapping[str, Any], result: Mapping[str, Any]) -> dic
     # HUMAN_FALL_PROXY output contributes bounded risk but has no emergency
     # authority until Pi and real-fall validation are complete.
     status["artifact_status"] = "PRESENT"
-    status["model_selector"] = "thermal_public_sdt_fp32_active"
+    metadata = _mapping(result.get("metadata"))
+    status["model_selector"] = str(
+        metadata.get("model_selector") or peek_configured_thermal_selector()
+    )
     status["safety_status"] = "LIMITED_PROXY_NO_EMERGENCY"
     if status["sensor_status"] != "AVAILABLE":
         return _blocked_for_sensor(status)
     if bool(result.get("available")):
-        metadata = _mapping(result.get("metadata"))
         status.update(
             {
                 "input_contract_status": "SATISFIED_WITH_LIMITATIONS",
@@ -110,11 +114,12 @@ def _thermal_status(sensor: Mapping[str, Any], result: Mapping[str, Any]) -> dic
                 "output_status": "AVAILABLE",
                 "model_selector": str(
                     metadata.get("model_selector")
-                    or "thermal_public_sdt_fp32_active"
+                    or peek_configured_thermal_selector()
                 ),
                 "risk_authority": metadata.get(
                     "risk_authority", "LIMITED_POSTURE_PROXY"
                 ),
+                "preprocessing_id": metadata.get("preprocessing_id"),
             }
         )
         return status

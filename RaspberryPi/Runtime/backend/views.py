@@ -135,7 +135,24 @@ def legacy_state_document(
             "HUMAN_FALL",
         }
         display_state = "normal-occupied" if human else "normal-empty"
+    elif status.get("system") != "OFFLINE":
+        # risk_level 이 INDETERMINATE(판정 근거 부족)이거나 아직 None 인데,
+        # 센서 데이터 자체는 들어오고 있는 상태입니다.
+        #
+        # 예전에는 이 경우도 "offline" 으로 내려보내 LCD 가 "통신 오류 /
+        # 센서 데이터를 받을 수 없습니다" 를 띄웠습니다. 현장에서 PIR·CO2·
+        # Thermal 이 정상 수신되는 동안에도 이 화면이 떠서, 실제로는 살아
+        # 있는 시스템이 완전히 죽은 것처럼 보였습니다.
+        #
+        # 저장소 문서도 두 가지를 구분합니다: risk_level 이 확정되지 않은 것은
+        # "안전 확인"도 "통신 두절"도 아니고 "판정 근거 부족" 입니다.
+        # 화면에도 그대로 구분해서 내려보냅니다.
+        #
+        # 이 상태를 모르는 예전 화면(display.html)은 자체 fallback 으로
+        # offline 을 쓰므로 하위호환이 깨지지 않습니다.
+        display_state = "indeterminate"
     else:
+        # 어떤 센서도 연결된 적이 없거나 전부 끊긴 상태 - 진짜 통신 두절입니다.
         display_state = "offline"
     return {
         "state": display_state,

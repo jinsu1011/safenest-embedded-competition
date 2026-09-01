@@ -25,7 +25,7 @@ _STOP = object()
 class SensorStorageConfig:
     root: Path
     enabled: bool = True
-    co2_interval_seconds: float = 60.0
+    co2_interval_seconds: float = 5.0
     queue_capacity: int = 512
     thermal_batch_frames: int = 64
     thermal_flush_seconds: float = 2.0
@@ -70,7 +70,7 @@ class SensorStorageConfig:
         return cls(
             root=Path(_optional_env("SAFENEST_SENSOR_DATA_ROOT", str(default_root))),
             enabled=_bool_env("SAFENEST_SENSOR_DATA_ENABLED", True),
-            co2_interval_seconds=_float_env("SAFENEST_CO2_UPDATE_INTERVAL_SECONDS", 60.0),
+            co2_interval_seconds=_float_env("SAFENEST_CO2_UPDATE_INTERVAL_SECONDS", 5.0),
             queue_capacity=_int_env("SAFENEST_SENSOR_DATA_QUEUE_CAPACITY", 512),
             thermal_batch_frames=_int_env("SAFENEST_THERMAL_BATCH_FRAMES", 64),
             thermal_flush_seconds=_float_env("SAFENEST_THERMAL_FLUSH_SECONDS", 2.0),

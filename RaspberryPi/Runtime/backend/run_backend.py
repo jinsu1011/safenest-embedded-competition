@@ -30,7 +30,7 @@ def main() -> int:
     parser.add_argument(
         "--thermal-udp-frame-timeout",
         type=float,
-        default=float(os.getenv("SAFENEST_THERMAL_UDP_FRAME_TIMEOUT_SECONDS", "0.5")),
+        default=float(os.getenv("SAFENEST_THERMAL_UDP_FRAME_TIMEOUT_SECONDS", "1.0")),
     )
     parser.add_argument(
         "--thermal-udp-max-pending-frames",
@@ -38,7 +38,7 @@ def main() -> int:
         default=int(os.getenv("SAFENEST_THERMAL_UDP_MAX_PENDING_FRAMES", "8")),
     )
     parser.add_argument("--packet-deadline", type=float, default=5.0)
-    parser.add_argument("--evaluation-interval", type=float, default=15.0)
+    parser.add_argument("--evaluation-interval", type=float, default=1.0)
     parser.add_argument("--room", default="밀폐공간 A-01")
     parser.add_argument(
         "--db-path",

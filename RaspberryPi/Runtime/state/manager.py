@@ -19,11 +19,20 @@ from gateway.protocol import (
 SENSOR_IDS: Final = ("mmwave", "thermal", "co2", "pir")
 DEFAULT_STALE_SECONDS: Final = {
     "mmwave": 3.0,
-    "thermal": 3.0,
+    # Thermal 은 ~1 fps 로 옵니다(펌웨어 THERMAL_FRAME_RATE_DIVIDER = 25).
+    # 게다가 UDP 9-chunk 재조립이라 한 chunk 만 잃어도 그 프레임은 통째로
+    # 사라집니다. 현장 측정: 완성 850 / 미완성 144 = 약 14% 프레임 손실.
+    # 손실이 2~3프레임 연속되면 간격이 3초를 넘어 TTL 3.0 으로는 LIVE 와
+    # STALE 을 계속 오갔고, 그때마다 thermal AI 가 INPUT_UNAVAILABLE 로
+    # 떨어졌습니다. 10초면 연속 손실 몇 프레임은 견딥니다.
+    "thermal": 10.0,
     "co2": 10.0,
     "pir": 10.0,
 }
-DEFAULT_CO2_UPDATE_INTERVAL_SECONDS: Final = 60.0
+# CO2 표시값 갱신 주기. 60초였을 때는 대시보드의 ppm 이 분당 한 번만 바뀌어
+# 센서가 죽은 것처럼 보였습니다. 수신·이벤트 계상은 이 값과 무관하게 계속
+# 이루어지므로 표시만 자주 갱신하는 것은 계약을 바꾸지 않습니다.
+DEFAULT_CO2_UPDATE_INTERVAL_SECONDS: Final = 5.0
 
 
 @dataclass

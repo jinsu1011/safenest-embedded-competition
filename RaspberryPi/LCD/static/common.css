@@ -113,6 +113,13 @@ button, input { font: inherit; }
 }
 .emergency-banner[data-phase="active"] { animation: emergency-border-pulse 1.2s ease-in-out infinite; }
 .emergency-banner[data-phase="acknowledged"] { color: #8f2525; background: #fff7f7; }
+.emergency-banner[data-phase="warning"] {
+  color: #835900;
+  background: #fff9e8;
+  border-color: var(--warning);
+  box-shadow: 0 0 0 3px rgba(183, 110, 0, .08);
+}
+.emergency-banner[data-phase="warning"] .emergency-confirm { background: var(--warning); }
 .emergency-banner[data-phase="recovered"] {
   color: #12623a;
   background: #f3fbf6;

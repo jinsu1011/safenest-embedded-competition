@@ -11,8 +11,6 @@ from backend.runtime_status import runtime_status_document
 
 ROUTE_CONTRACTS = {
     "GET /display": "integrated LCD display page",
-    "GET /control": "integrated LCD control page",
-    "GET /lcd/assets/{asset}": "LCD static asset",
     "GET /admin": "integrated administrator login and management UI",
     "POST /api/auth/login": "administrator credential exchange for a signed token",
     "GET/POST /api/spaces": "authenticated space registry",
@@ -27,10 +25,8 @@ ROUTE_CONTRACTS = {
     "GET /api/sensors": "sensor state with AI and risk component overlays",
     "GET /api/events": "bounded newest-first transition events",
     "GET /api/history": "newest-first persisted sensor and risk snapshots",
-    "GET/POST /api/state": "LCD compatibility state view and manual state update",
+    "GET /api/state": "read-only LCD projection of current runtime state",
     "GET /api/emergency/state": "current alarm latch and buzzer state",
-    "POST /api/emergency/119/simulation/start": "competition-only mock 119 countdown start",
-    "POST /api/emergency/119/simulation/complete": "competition-only mock 119 completion",
     "POST /api/emergency/contact": "server-side configured manager SMS request",
     "POST /api/emergency/acknowledge": "silence alarm without clearing risk",
     "POST /api/emergency/recovery/acknowledge": "dismiss recovered alarm banner without changing risk",
@@ -38,6 +34,14 @@ ROUTE_CONTRACTS = {
     "POST /api/client-connection": "log dashboard connection state transitions",
     "GET /health": "process liveness and runtime readiness",
     "WS /ws": "current status publication stream",
+}
+
+DEMO_ROUTE_CONTRACTS = {
+    "GET /control": "manual LCD demo control page",
+    "GET /lcd/assets/{asset}": "LCD demo static asset",
+    "POST /api/state": "manual LCD demo state update",
+    "POST /api/emergency/119/simulation/start": "competition-only mock 119 countdown start",
+    "POST /api/emergency/119/simulation/complete": "competition-only mock 119 completion",
 }
 
 

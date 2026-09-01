@@ -10,6 +10,7 @@ from backend.app import BackendDependencyError, _notify_demo_tts, create_app
 from backend.runtime import SafeNestRuntime
 from backend.store import RuntimeStore
 from backend.views import (
+    DEMO_ROUTE_CONTRACTS,
     ROUTE_CONTRACTS,
     events_document,
     health_document,
@@ -235,8 +236,6 @@ class FastAPIContractTests(unittest.TestCase):
     def test_route_contracts_are_complete(self):
         self.assertEqual(set(ROUTE_CONTRACTS), {
             "GET /display",
-            "GET /control",
-            "GET /lcd/assets/{asset}",
             "GET /admin",
             "POST /api/auth/login",
             "GET/POST /api/spaces",
@@ -251,10 +250,8 @@ class FastAPIContractTests(unittest.TestCase):
             "GET /api/sensors",
             "GET /api/events",
             "GET /api/history",
-            "GET/POST /api/state",
+            "GET /api/state",
             "GET /api/emergency/state",
-            "POST /api/emergency/119/simulation/start",
-            "POST /api/emergency/119/simulation/complete",
             "POST /api/emergency/contact",
             "POST /api/emergency/acknowledge",
             "POST /api/emergency/recovery/acknowledge",
@@ -262,6 +259,13 @@ class FastAPIContractTests(unittest.TestCase):
             "POST /api/client-connection",
             "GET /health",
             "WS /ws",
+        })
+        self.assertEqual(set(DEMO_ROUTE_CONTRACTS), {
+            "GET /control",
+            "GET /lcd/assets/{asset}",
+            "POST /api/state",
+            "POST /api/emergency/119/simulation/start",
+            "POST /api/emergency/119/simulation/complete",
         })
 
     def test_app_factory_has_clear_dependency_boundary_or_routes(self):
@@ -271,6 +275,11 @@ class FastAPIContractTests(unittest.TestCase):
             return
         app = create_app(start_runtime=False)
         paths = {route.path for route in app.routes}
+        methods = {
+            (route.path, method)
+            for route in app.routes
+            for method in (getattr(route, "methods", None) or set())
+        }
         for path in (
             "/", "/admin", "/admin/", "/admin-api.js", "/thermal-client.js",
             "/guest/dashboard/{space_id}", "/api/auth/login", "/api/spaces",
@@ -279,15 +288,39 @@ class FastAPIContractTests(unittest.TestCase):
             "/api/qr/{space_id}.png",
             "/dashboard", "/dashboard/",
             "/display", "/display/", "/display.html",
-            "/control", "/control/", "/control.html", "/lcd/assets",
+            "/common.css",
             "/api/status", "/api/sensors", "/api/events",
             "/api/history", "/api/state", "/api/emergency/state",
-            "/api/emergency/119/simulation/start", "/api/emergency/119/simulation/complete",
             "/api/emergency/contact", "/api/emergency/acknowledge", "/api/emergency/voice",
             "/api/emergency/recovery/acknowledge",
             "/api/client-connection", "/health", "/ws",
         ):
             self.assertIn(path, paths)
+        self.assertFalse(app.state.safenest_demo_mode)
+        self.assertIn(("/api/state", "GET"), methods)
+        self.assertNotIn(("/api/state", "POST"), methods)
+        for path in (
+            "/control", "/control/", "/control.html", "/lcd/assets",
+            "/api/emergency/119/simulation/start",
+            "/api/emergency/119/simulation/complete",
+        ):
+            self.assertNotIn(path, paths)
+
+        demo_app = create_app(start_runtime=False, demo_mode=True)
+        demo_paths = {route.path for route in demo_app.routes}
+        demo_methods = {
+            (route.path, method)
+            for route in demo_app.routes
+            for method in (getattr(route, "methods", None) or set())
+        }
+        self.assertTrue(demo_app.state.safenest_demo_mode)
+        for path in (
+            "/control", "/control/", "/control.html", "/lcd/assets",
+            "/api/emergency/119/simulation/start",
+            "/api/emergency/119/simulation/complete",
+        ):
+            self.assertIn(path, demo_paths)
+        self.assertIn(("/api/state", "POST"), demo_methods)
 
 
 if __name__ == "__main__":

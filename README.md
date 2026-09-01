@@ -54,7 +54,7 @@ Pi 현장에서 baseline/A/B를 켜고 확인하는 절차는 [`PI_RUNBOOK_THERM
 | A01 방문자 열화상 | `http://<pi-주소>:8000/guest/dashboard/A01` |
 | 실시간 대시보드 | `http://<pi-주소>:8000/dashboard` |
 | LCD 표시 화면 | `http://<pi-주소>:8000/display` |
-| LCD 제어 화면 | `http://<pi-주소>:8000/control` |
+| LCD 데모 제어 (명시적 opt-in) | `SAFENEST_DEMO_MODE=true`일 때 `http://<pi-주소>:8000/control` |
 | 통합 상태 API | `http://<pi-주소>:8000/api/status` |
 | 센서 상세 | `http://<pi-주소>:8000/api/sensors` |
 | 이력 / 이벤트 | `/api/history`, `/api/events` |
@@ -238,7 +238,9 @@ python -m hil.preflight                                   # Pi 환경 사전 점
 
 ### LCD 경로
 
-`run_safenest.sh`가 시작하는 FastAPI가 웹 대시보드와 LCD 화면을 함께 제공합니다. 물리 LCD에는 `http://localhost:8000/display`, 노트북 제어 화면에는 `http://<pi-주소>:8000/control`을 엽니다. LCD 정적 파일은 `RaspberryPi/LCD/static/`에서 `/lcd/assets/`로 제공되며, 기존 호환용 `/common.css` 별칭도 지원합니다. 화면은 `/api/state`를 통해 같은 센서 상태를 사용합니다.
+`run_safenest.sh`가 시작하는 FastAPI가 production 웹 대시보드와 LCD 화면을 함께 제공합니다. 물리 LCD에는 `http://localhost:8000/display`를 엽니다. 화면은 read-only `/api/state`를 통해 실제 센서/application 상태를 사용합니다. 기본 실행에서는 수동 LCD override, demo TTS, 모의 119 신고 route가 등록되지 않습니다.
+
+경진대회용 Web/LCD 데모가 꼭 필요할 때만 저장소 루트 `.env`에 `SAFENEST_DEMO_MODE=true`를 명시하고 정상 런처를 실행합니다. 이 경우 기존 demo 대시보드, `http://<pi-주소>:8000/control`, `POST /api/state`, 모의 119 route가 함께 활성화됩니다. 설정이 없거나 `false`이면 항상 production 경로입니다.
 
 HTML 파일을 `file://`로 직접 열지 말고 위 HTTP 주소로 접속해야 CSS·JavaScript와 센서 API가 같은 origin으로 연결됩니다.
 

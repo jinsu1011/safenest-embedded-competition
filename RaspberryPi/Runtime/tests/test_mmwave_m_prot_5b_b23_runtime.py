@@ -728,13 +728,78 @@ class FailClosedWindowTests(unittest.TestCase):
         self._assert_no_old_inference(runtime, stale)
         self.assertEqual(runtime.evaluate(sensor_view(stale), 20_000.0).error, "PHASE_STALE")
 
-    def test_b_ready_window_null_phase_drops_old_inference(self) -> None:
+    def test_b_ready_window_null_phase_is_skipped_not_wiped(self) -> None:
+        """null breath_phase 는 건너뛴 tick 이지 세션 단절이 아닙니다.
+
+        이 테스트는 원래 "null 이 ready 창을 없앤다"를 요구했습니다. 그 계약은
+        현장에서 mmWave 를 영구히 죽였습니다. MR60 의 phase 리포트는 본래
+        간헐적이라 10 Hz 발행에서는 상당수 패킷의 phase 가 null 인데, null 하나가
+        299개까지 모은 창을 0 으로 되돌리면 창은 절대 300 에 도달하지 못합니다.
+        실제로 ESP 가 phase 를 2,785개 만들어 보낸 동안 Pi 창은 0 이었습니다.
+        """
+
         runtime, n = self._ready()
+        before = runtime.buffered_count
         missing = telemetry(n)
         object.__setattr__(missing, "breath_phase", None)
         runtime.observe_packet(missing)
-        self._assert_no_old_inference(runtime, missing)
-        self.assertEqual(runtime.evaluate(sensor_view(missing), 20_000.0).error, "PHASE_MISSING")
+
+        # 버퍼가 그대로여야 하고
+        self.assertEqual(runtime.buffered_count, before)
+        # PHASE_MISSING 으로 오염되어 추론이 막히면 안 됩니다.
+        result = runtime.evaluate(sensor_view(missing), 20_000.0)
+        self.assertNotEqual(result.error, "PHASE_MISSING")
+
+    def test_b2_null_phase_then_valid_continues_same_window(self) -> None:
+        """null 이후의 유효 샘플은 새 창이 아니라 같은 창에 이어 쌓입니다."""
+
+        runtime = B23TeamRuntime()
+        for i in range(50):
+            runtime.observe_packet(telemetry(i, boot_id="boot-x"))
+        self.assertEqual(runtime.buffered_count, 50)
+
+        missing = telemetry(50, boot_id="boot-x")
+        object.__setattr__(missing, "breath_phase", None)
+        runtime.observe_packet(missing)
+        self.assertEqual(runtime.buffered_count, 50)  # 1 로 리셋되지 않음
+
+        for i in range(51, 61):
+            runtime.observe_packet(telemetry(i, boot_id="boot-x"))
+        self.assertEqual(runtime.buffered_count, 60)  # 51 이 아니라 60
+
+    def test_b3_mixed_valid_null_stream_reaches_ready(self) -> None:
+        """유효/null 이 섞인 스트림도 유효 샘플만으로 300 에 도달합니다."""
+
+        runtime = B23TeamRuntime()
+        target = ready_count(10.0)
+        valid = 0
+        index = 0
+        while valid < target:
+            packet = telemetry(index, boot_id="boot-y")
+            if index % 3 == 1:  # 3틱마다 하나는 null
+                object.__setattr__(packet, "breath_phase", None)
+            else:
+                valid += 1
+            runtime.observe_packet(packet)
+            index += 1
+        self.assertGreaterEqual(runtime.buffered_count, 300)
+
+    def test_b4_null_phase_does_not_use_vendor_bpm_as_sample(self) -> None:
+        """벤더 호흡수/심박수는 표시용입니다. 결측 phase 를 대신 채우지 않습니다."""
+
+        runtime = B23TeamRuntime()
+        for i in range(20):
+            runtime.observe_packet(telemetry(i, boot_id="boot-z"))
+        before = runtime.buffered_count
+
+        missing = telemetry(20, boot_id="boot-z")
+        object.__setattr__(missing, "breath_phase", None)
+        object.__setattr__(missing, "breath_rate_raw", 16.0)
+        object.__setattr__(missing, "respiration_rate_bpm", 16.0)
+        runtime.observe_packet(missing)
+
+        # BPM 이 있어도 샘플은 늘지 않습니다.
+        self.assertEqual(runtime.buffered_count, before)
 
     def test_c_ready_window_missing_nested_seq_drops_old_inference(self) -> None:
         runtime, n = self._ready()

@@ -111,5 +111,23 @@ class DashboardStaticTests(unittest.TestCase):
         self.assertNotIn('repository_root / "web"', backend)
 
 
+class ProductionDashboardStaticTests(unittest.TestCase):
+    def test_final_assets_are_same_origin_and_exclude_demo_controls(self):
+        html = (DASHBOARD / "index_final.html").read_text(encoding="utf-8")
+        javascript = (DASHBOARD / "app_final.js").read_text(encoding="utf-8")
+        parser = DashboardParser()
+        parser.feed(html)
+
+        self.assertEqual(parser.scripts, ["/dashboard/assets/app_final.js"])
+        self.assertEqual(parser.stylesheets, ["/dashboard/assets/styles_final.css"])
+        self.assertNotIn("COMPETITION DEMO ONLY", html)
+        self.assertNotIn("report119Button", html)
+        self.assertNotIn("/api/emergency/119/simulation", javascript)
+        self.assertNotIn("simulationRunning", javascript)
+        for endpoint in ("/ws", "/api/status", "/api/events", "/api/history"):
+            with self.subTest(endpoint=endpoint):
+                self.assertIn(endpoint, javascript)
+
+
 if __name__ == "__main__":
     unittest.main()

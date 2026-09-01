@@ -71,6 +71,7 @@ def create_app(
     sms_provider: SMSProvider | None = None,
     buzzer: BuzzerProtocol | None = None,
     sms_cooldown_seconds: float | None = None,
+    demo_mode: bool | None = None,
 ) -> Any:
     if websocket_interval_seconds <= 0:
         raise ValueError("websocket interval must be positive")
@@ -91,6 +92,11 @@ def create_app(
         _float_env("SAFENEST_SMS_COOLDOWN_SECONDS", 60.0)
         if sms_cooldown_seconds is None
         else float(sms_cooldown_seconds)
+    )
+    selected_demo_mode = (
+        _bool_env("SAFENEST_DEMO_MODE", False)
+        if demo_mode is None
+        else bool(demo_mode)
     )
     selected_buzzer = buzzer
     if emergency_service is None:
@@ -131,6 +137,7 @@ def create_app(
     app.state.safenest_runtime = selected_runtime
     app.state.safenest_store = selected_store
     app.state.safenest_emergency = selected_emergency
+    app.state.safenest_demo_mode = selected_demo_mode
 
     frontend_dir = Path(
         os.getenv("SAFENEST_WEB_DIR", str(WEB_PORTAL))
@@ -144,6 +151,7 @@ def create_app(
     app.state.safenest_portal_auth = portal_auth
 
     dashboard_dir = WEB_ROOT
+    dashboard_index = "index.html" if selected_demo_mode else "index_final.html"
     app.mount(
         "/dashboard/assets",
         StaticFiles(directory=str(dashboard_dir)),
@@ -154,16 +162,10 @@ def create_app(
     @app.get("/dashboard", include_in_schema=False)
     @app.get("/dashboard/", include_in_schema=False)
     def dashboard() -> Any:
-        return FileResponse(dashboard_dir / "index.html")
+        return FileResponse(dashboard_dir / dashboard_index)
 
     # LCD panel (RaspberryPi/LCD/static) — served by the same :8000 runtime
     if LCD_STATIC.is_dir():
-        app.mount(
-            "/lcd/assets",
-            StaticFiles(directory=str(LCD_STATIC)),
-            name="lcd-assets",
-        )
-
         @app.get("/display", include_in_schema=False)
         @app.get("/display/", include_in_schema=False)
         @app.get("/display.html", include_in_schema=False)
@@ -174,11 +176,18 @@ def create_app(
         def lcd_common_css() -> Any:
             return FileResponse(LCD_STATIC / "common.css")
 
-        @app.get("/control", include_in_schema=False)
-        @app.get("/control/", include_in_schema=False)
-        @app.get("/control.html", include_in_schema=False)
-        def lcd_control() -> Any:
-            return FileResponse(LCD_STATIC / "control.html")
+        if selected_demo_mode:
+            app.mount(
+                "/lcd/assets",
+                StaticFiles(directory=str(LCD_STATIC)),
+                name="lcd-assets",
+            )
+
+            @app.get("/control", include_in_schema=False)
+            @app.get("/control/", include_in_schema=False)
+            @app.get("/control.html", include_in_schema=False)
+            def lcd_control() -> Any:
+                return FileResponse(LCD_STATIC / "control.html")
 
     def require_admin(request: Request) -> None:
         authorization = request.headers.get("authorization", "")
@@ -204,7 +213,7 @@ def create_app(
             selected_store.latest(),
             room=str(lcd_override["room"] or room),
         )
-        if lcd_override["state"] is not None:
+        if selected_demo_mode and lcd_override["state"] is not None:
             document["state"] = lcd_override["state"]
         snapshot = selected_runtime.manager.snapshot()
         current_sensors = snapshot.get("sensors")
@@ -393,29 +402,30 @@ def create_app(
     def api_state_compatibility() -> dict[str, Any]:
         return lcd_state_document()
 
-    @app.post("/api/state")
-    async def api_state_update(request: Request) -> dict[str, Any]:
-        payload = await json_payload(request)
-        state = payload.get("state")
-        requested_room = payload.get("room")
-        allowed_states = {"normal-empty", "normal-occupied", "warning", "danger", "emergency", "offline"}
-        if state is not None and state not in allowed_states:
-            raise HTTPException(status_code=422, detail="지원하지 않는 LCD 상태입니다.")
-        if requested_room is not None and (not isinstance(requested_room, str) or not requested_room.strip()):
-            raise HTTPException(status_code=422, detail="공간 이름을 입력하세요.")
-        if state is None and requested_room is None:
-            raise HTTPException(status_code=422, detail="변경할 항목이 없습니다.")
-        if state is not None:
-            demo_state = str(state)
-            lcd_override["state"] = demo_state
-            _notify_demo_tts(selected_runtime, selected_store, demo_state)
-        if requested_room is not None:
-            lcd_override["room"] = str(requested_room).strip()[:24]
-        selected_store.record_event(
-            "LCD_STATE_UPDATED",
-            {"state": lcd_override["state"], "room": lcd_override["room"]},
-        )
-        return lcd_state_document()
+    if selected_demo_mode:
+        @app.post("/api/state")
+        async def api_state_update(request: Request) -> dict[str, Any]:
+            payload = await json_payload(request)
+            state = payload.get("state")
+            requested_room = payload.get("room")
+            allowed_states = {"normal-empty", "normal-occupied", "warning", "danger", "emergency", "offline"}
+            if state is not None and state not in allowed_states:
+                raise HTTPException(status_code=422, detail="지원하지 않는 LCD 상태입니다.")
+            if requested_room is not None and (not isinstance(requested_room, str) or not requested_room.strip()):
+                raise HTTPException(status_code=422, detail="공간 이름을 입력하세요.")
+            if state is None and requested_room is None:
+                raise HTTPException(status_code=422, detail="변경할 항목이 없습니다.")
+            if state is not None:
+                demo_state = str(state)
+                lcd_override["state"] = demo_state
+                _notify_demo_tts(selected_runtime, selected_store, demo_state)
+            if requested_room is not None:
+                lcd_override["room"] = str(requested_room).strip()[:24]
+            selected_store.record_event(
+                "LCD_STATE_UPDATED",
+                {"state": lcd_override["state"], "room": lcd_override["room"]},
+            )
+            return lcd_state_document()
 
     @app.get("/api/emergency/state")
     def api_emergency_state() -> dict[str, Any]:
@@ -442,20 +452,21 @@ def create_app(
             raise HTTPException(status_code=422, detail="JSON object body is required")
         return payload
 
-    @app.post("/api/emergency/119/simulation/start", response_model=None)
-    def start_119_simulation() -> dict[str, Any] | JSONResponse:
-        try:
-            return selected_emergency.start_119_simulation()
-        except EmergencyActionError as error:
-            return action_error(error)
+    if selected_demo_mode:
+        @app.post("/api/emergency/119/simulation/start", response_model=None)
+        def start_119_simulation() -> dict[str, Any] | JSONResponse:
+            try:
+                return selected_emergency.start_119_simulation()
+            except EmergencyActionError as error:
+                return action_error(error)
 
-    @app.post("/api/emergency/119/simulation/complete", response_model=None)
-    async def complete_119_simulation(request: Request) -> dict[str, Any] | JSONResponse:
-        payload = await json_payload(request)
-        try:
-            return selected_emergency.complete_119_simulation(str(payload.get("simulation_id", "")))
-        except EmergencyActionError as error:
-            return action_error(error)
+        @app.post("/api/emergency/119/simulation/complete", response_model=None)
+        async def complete_119_simulation(request: Request) -> dict[str, Any] | JSONResponse:
+            payload = await json_payload(request)
+            try:
+                return selected_emergency.complete_119_simulation(str(payload.get("simulation_id", "")))
+            except EmergencyActionError as error:
+                return action_error(error)
 
     @app.post("/api/emergency/contact", response_model=None)
     async def contact_manager(request: Request) -> dict[str, Any] | JSONResponse:
@@ -539,3 +550,15 @@ def _float_env(name: str, default: float) -> float:
     except ValueError:
         return default
     return value if value > 0 else default
+
+
+def _bool_env(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    normalized = raw.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"{name} must be a boolean")

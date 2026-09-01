@@ -103,11 +103,14 @@ class ConfigContractTests(unittest.TestCase):
         self.assertEqual(engine.caution_formula_id, "SAFENEST_CAUTION_CO2_V1")
         self.assertEqual(engine.caution_delta_enter, 500.0)
         self.assertNotIn("warning_ppm", engine._co2)
+        self.assertNotIn("danger_ppm", engine._co2)
+        self.assertEqual(engine._co2["immediate_danger_ppm"], 5000.0)
         warning_floors = {
             name for name, level in engine._floors.items() if level == "WARNING"
         }
         self.assertEqual(warning_floors, {"co2_relative_warning", "co2_fast_rise"})
-        self.assertEqual(engine._floors["co2_danger"], "DANGER")
+        self.assertNotIn("co2_danger", engine._floors)
+        self.assertEqual(engine._floors["co2_immediate_danger"], "DANGER")
 
     def test_document_is_a_superset_of_the_legacy_contract(self):
         engine = SafeNestRiskFormulaV1()
@@ -258,7 +261,7 @@ class EscalationFloorTests(unittest.TestCase):
         self.assertNotIn("HIGH_CO2_WARNING", result.reasons)
         self.assertFalse(result.is_emergency)
 
-    def test_high_co2_absolute_threshold_raises_danger_not_caution(self):
+    def test_retired_2500_ppm_does_not_raise_danger(self):
         engine = SafeNestRiskFormulaV1()
         state, ai = scene(
             thermal=sensor(),
@@ -270,18 +273,29 @@ class EscalationFloorTests(unittest.TestCase):
         result = engine.evaluate(state, ai)
         self.assertLess(result.risk_score, engine.danger_min)
         self.assertEqual(result.score_level, "NORMAL")
-        self.assertEqual(result.risk_level, "DANGER")
-        self.assertEqual(result.level_source, "FLOOR")
-        self.assertIn("co2_danger", result.escalation_floors)
+        self.assertEqual(result.risk_level, "NORMAL")
+        self.assertNotIn("co2_danger", result.escalation_floors)
+        self.assertNotIn("HIGH_CO2_DANGER", result.reasons)
         self.assertFalse(result.caution_active)
         self.assertFalse(result.is_emergency)
 
     def test_immediate_danger_co2_is_an_emergency(self):
         engine = SafeNestRiskFormulaV1()
-        state, ai = scene(co2=sensor(values={"ppm": 6000.0}))
-        result = engine.evaluate(state, ai)
+        below = engine.evaluate(*scene(
+            thermal=sensor(),
+            thermal_ai=ai_entry(state="HUMAN_NORMAL", confidence=0.98,
+                                probabilities=(0.01, 0.98, 0.01)),
+            co2=sensor(values={"ppm": 4999.0}),
+            pir=sensor(values={"motion": True}),
+        ))
+        self.assertFalse(below.is_emergency)
+        self.assertNotEqual(below.risk_level, "DANGER")
+        self.assertNotIn("co2_immediate_danger", below.escalation_floors)
+
+        result = engine.evaluate(*scene(co2=sensor(values={"ppm": 5000.0})))
         self.assertTrue(result.is_emergency)
         self.assertEqual(result.risk_level, "DANGER")
+        self.assertIn("co2_immediate_danger", result.escalation_floors)
 
     def test_unverified_apnea_proxy_cannot_raise_caution(self):
         # neural_trust must be TRUSTED for the neural class to score at all.

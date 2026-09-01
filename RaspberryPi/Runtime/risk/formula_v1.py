@@ -553,10 +553,6 @@ class SafeNestRiskFormulaV1:
             if self._emergency.get("co2_immediate_danger"):
                 emergencies.append("co2_immediate_danger")
             state = "CO2_IMMEDIATE_DANGER"
-        elif ppm >= float(self._co2["danger_ppm"]):
-            reasons.append("HIGH_CO2_DANGER")
-            floors.append("co2_danger")
-            state = "CO2_DANGER"
         elif locked and (
             baseline.get("co2_relative_warning") is True
             or (_finite_number(delta) and float(delta) >= self.caution_delta_enter)

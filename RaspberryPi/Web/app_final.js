@@ -202,7 +202,7 @@ function renderSensors(payload) {
   setText("co2Risk", riskComponentText(co2));
   const co2Progress = typeof ppm === "number" ? Math.max(0, Math.min(100, ppm / 3000 * 100)) : 0;
   $("co2Track").style.width = `${co2Progress}%`;
-  $("co2Track").style.background = ppm >= 2500 ? "var(--red)" : ppm >= 1000 ? "var(--yellow)" : "var(--cyan)";
+  $("co2Track").style.background = ppm >= 5000 ? "var(--red)" : ppm >= 1000 ? "var(--yellow)" : "var(--cyan)";
 
   const pir = payload.pir || {};
   const motion = valueAt(pir, "motion");

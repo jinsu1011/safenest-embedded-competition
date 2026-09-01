@@ -65,13 +65,13 @@
     set("tempValue", thermalMax == null ? "수신 대기" : `${Number(thermalMax).toFixed(1)}℃`);
     set("tempFoot", reading.thermal?.fresh ? "80×62 실시간 프레임" : "열화상 프레임 대기");
     set("co2Value", reading.co2 == null ? "수신 대기" : `${Math.round(reading.co2).toLocaleString()} ppm`);
-    set("co2Foot", reading.co2 == null ? "SCD4x 데이터 없음" : reading.co2 >= 1500 ? "주의 기준 초과" : "SCD4x 실시간 수신");
+    set("co2Foot", reading.co2 == null ? "SCD4x 데이터 없음" : "SCD4x 실시간 수신");
     set("motionValue", reading.motion ? "감지됨" : "감지 안 됨");
     set("motionFoot", `PIR · 무움직임 ${reading.motionlessSeconds || 0}초`);
     set("fusionMmwave", reading.breathRate == null ? "수신 대기" : "호흡·심박 수신");
     set("fusionThermal", reading.thermal?.fresh ? "실시간 프레임" : "프레임 대기");
     set("fusionMotion", reading.motion ? "최근 감지" : "미감지");
-    set("fusionCo2", reading.co2 == null ? "수신 대기" : reading.co2 >= 1500 ? "환기 필요" : "정상");
+    set("fusionCo2", reading.co2 == null ? "수신 대기" : "실시간 수신");
     set("confidenceValue", space.bridge?.fresh ? "LIVE" : "대기");
     set("confidenceText", "ESP32 → Raspberry Pi → SafeNest Web");
   }

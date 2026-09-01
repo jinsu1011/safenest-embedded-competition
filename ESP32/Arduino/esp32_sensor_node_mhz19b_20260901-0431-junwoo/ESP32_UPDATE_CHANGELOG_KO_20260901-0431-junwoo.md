@@ -129,3 +129,12 @@ UDP를 꺼도 TCP가 `wrote=97/808 errno=11`로 세션을 닫고, 실패 로그�
 - 펌웨어 id: `safenest-esp32-sensor-node/1.7.6-mhz19b.1`
 - 스케치 폴더: `ESP32/Arduino/esp32_sensor_node_mhz19b_20260901-0431-junwoo/`
 
+## 1.7.7 — AP 업링크 TCP 유지
+
+SafeNest-ESP에서 Pi가 ESP를 −80 dBm으로 듣고 ARP/SYN이 깨진 뒤 `connect_ms=1503 errno=119` 폭풍이 났습니다. 리셋만으로는 같은 패턴이 반복됩니다.
+
+- STA TX를 `WIFI_POWER_19_5dBm`으로 고정. Pi가 ESP를 듣게 하는 방향.
+- connect timeout 1.5 s → 4 s. 실패 후 2.5 s 대기. 5연속 실패 시 `WiFi.reconnect()`.
+- 부분 송신 후 재SYN 대기를 300 ms → 2 s. SYN-RECV 적체 완화.
+- 펌웨어 id: `safenest-esp32-sensor-node/1.7.7-mhz19b.1`
+

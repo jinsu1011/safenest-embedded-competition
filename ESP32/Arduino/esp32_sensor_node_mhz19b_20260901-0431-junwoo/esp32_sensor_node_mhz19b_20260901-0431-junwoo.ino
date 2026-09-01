@@ -95,9 +95,9 @@ constexpr uint32_t PHASE_MAX_AGE_MS = 500;
 // inference rather than asserting an empty room.
 constexpr uint32_t PRESENCE_MAX_AGE_MS = 5000;
 constexpr char NODE_FIRMWARE_VERSION[] =
-    "safenest-esp32-sensor-node/1.7.6-mhz19b.1";
+    "safenest-esp32-sensor-node/1.7.7-mhz19b.1";
 constexpr char DIAGNOSTIC_BUILD_ID[] =
-    "mhz19b-tcp-atomic-mmw-hex-20260901-03";
+    "mhz19b-tcp-txpower-backoff-20260901-04";
 constexpr char MMWAVE_SCHEMA_VERSION[] = "1.3";
 constexpr char CO2_SENSOR_MODEL[] = "MH-Z19B";
 constexpr char CO2_EVENT_IDENTITY_CLASS[] = "INFERRED_UART_SAMPLE";
@@ -144,10 +144,12 @@ constexpr uint32_t TCP_WRITE_WARN_MS = 150;
 constexpr uint32_t TCP_WRITE_SKIP_MS = 40;
 // Some bytes already on the wire: finish or close (partial SNST is fatal).
 constexpr uint32_t TCP_WRITE_DEADLINE_MS = 200;
-constexpr uint32_t TCP_CONNECT_TIMEOUT_MS = 1500;
-// After a partial-write close, wait before SYN. Immediate reconnect is what
-// produced connect_ms=1502 errno=119 and 5-7 s gaps past the Pi deadline.
-constexpr uint32_t TCP_RECONNECT_DELAY_MS = 300;
+constexpr uint32_t TCP_CONNECT_TIMEOUT_MS = 4000;
+// After a partial-write close, wait before SYN. 300 ms was still fast enough
+// to pile SYN-RECV on a weak AP uplink (errno 119 / connect_ms=1503).
+constexpr uint32_t TCP_RECONNECT_DELAY_MS = 2000;
+constexpr uint32_t TCP_CONNECT_FAIL_DELAY_MS = 2500;
+constexpr uint8_t TCP_CONNECT_FAILS_BEFORE_REASSOC = 5;
 constexpr uint32_t SERIAL_ERROR_LOG_PERIOD_MS = 1000;
 constexpr uint32_t TCP_MUTEX_WARN_MS = 100;
 // UDP sendto is O_NONBLOCK, so the mutex should be held for milliseconds.
@@ -1609,11 +1611,14 @@ void telemetryTcpTask(void *parameter) {
   uint32_t sessionStartedMs = 0;
   uint32_t sessionPackets = 0;
   bool sessionOpen = false;
+  uint8_t connectFailStreak = 0;
+  bool wifiRadioTuned = false;
 
   for (;;) {
     uint32_t mutexWaitMs = 0;
 
     if (WiFi.status() != WL_CONNECTED) {
+      wifiRadioTuned = false;
       tcpLinkHealthy = false;
       rpiHostIpValid = false;
       if (sessionOpen) {
@@ -1627,6 +1632,14 @@ void telemetryTcpTask(void *parameter) {
       }
       vTaskDelay(pdMS_TO_TICKS(250));
       continue;
+    }
+
+    if (!wifiRadioTuned) {
+      WiFi.setSleep(false);
+      WiFi.setTxPower(WIFI_POWER_19_5dBm);
+      wifiRadioTuned = true;
+      Serial.printf("[wifi] radio tuned tx=19.5dBm rssi=%d ip=%s\n",
+                    WiFi.RSSI(), WiFi.localIP().toString().c_str());
     }
 
     if (!client.connected()) {
@@ -1662,18 +1675,29 @@ void telemetryTcpTask(void *parameter) {
       }
       if (!connected) {
         tcpConnectionFailures = tcpConnectionFailures + 1;
+        connectFailStreak = connectFailStreak + 1;
         if (tcpErrorLogDue()) {
           Serial.printf(
               "[tcp-connect-fail] mutex_wait_ms=%lu connect_ms=%lu errno=%ld "
-              "failures=%lu\n",
+              "failures=%lu streak=%u\n",
               static_cast<unsigned long>(mutexWaitMs),
               static_cast<unsigned long>(lastConnectDurationMs),
               static_cast<long>(tcpLastErrno),
-              static_cast<unsigned long>(tcpConnectionFailures));
+              static_cast<unsigned long>(tcpConnectionFailures),
+              static_cast<unsigned>(connectFailStreak));
         }
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        if (connectFailStreak >= TCP_CONNECT_FAILS_BEFORE_REASSOC) {
+          Serial.println("[wifi] reassociate after tcp connect streak");
+          WiFi.reconnect();
+          wifiRadioTuned = false;
+          connectFailStreak = 0;
+          vTaskDelay(pdMS_TO_TICKS(4000));
+        } else {
+          vTaskDelay(pdMS_TO_TICKS(TCP_CONNECT_FAIL_DELAY_MS));
+        }
         continue;
       }
+      connectFailStreak = 0;
       client.setNoDelay(true);
       sessionStartedMs = millis();
       sessionPackets = 0;
@@ -2373,8 +2397,10 @@ void setup() {
   initializeThermalCamera();
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);  // lower latency for the continuous thermal stream
+  WiFi.setAutoReconnect(true);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.printf("[wifi] connecting to %s asynchronously\n", WIFI_SSID);
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);
+  Serial.printf("[wifi] connecting to %s asynchronously tx=19.5dBm\n", WIFI_SSID);
 
   // Priority alone cannot preempt datagrams already queued by lwIP, so the
   // per-datagram mutex and TCP critical bit remain required for bounded access.

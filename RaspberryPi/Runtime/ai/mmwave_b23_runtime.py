@@ -87,6 +87,14 @@ class B23TeamRuntime:
         self._phase_seq_delta: int | None = None
         self._missing_phase_event_count = 0
         self._republish_skip_count = 0
+        # 결측/비유한 phase 로 "건너뛴" tick 수. 창을 지운 횟수가 아닙니다.
+        self._skipped_phase_tick_count = 0
+        # 유효 샘플 사이의 물리적 간격이 DEFAULT_MAX_GAP_S 를 넘은 횟수.
+        # 크면 창의 시간축이 실시간보다 압축되어 있다는 뜻입니다.
+        self._bridged_gap_count = 0
+        # 마지막으로 샘플을 admit 한 뒤 null 로 건너뛴 tick 이 있었는가.
+        # 있으면 다음 유효 샘플까지의 시간 공백은 "설명된 공백"입니다.
+        self._skipped_since_admit = 0
         self._r1_index_n = 0
         self._last_physical_t: float | None = None
         # Last explicit ESP occupancy bool. null does not clear this.
@@ -221,6 +229,9 @@ class B23TeamRuntime:
             self._last_nested_seq = None
             self._missing_phase_event_count = 0
             self._republish_skip_count = 0
+            self._skipped_phase_tick_count = 0
+            self._bridged_gap_count = 0
+            self._skipped_since_admit = 0
             self._phase_seq_prev = None
             self._phase_seq_curr = None
             self._phase_seq_delta = None
@@ -230,9 +241,29 @@ class B23TeamRuntime:
             self._last_boot_id = boot_id
 
         if not _finite(phase):
-            if not boot_changed:
-                self._invalidate_source()
-            self._last_ingest_error = "BOOT_BOUNDARY" if boot_changed else "PHASE_MISSING"
+            # null / 결측 / NaN / inf 는 "건너뛴 tick" 이지 세션 단절이 아닙니다.
+            #
+            # 이전 구현은 여기서 _invalidate_source() 를 불러 299개까지 모은 창도
+            # 통째로 버렸습니다. MR60 의 phase 리포트는 원래 간헐적이라, 10 Hz 로
+            # 발행하면 상당수 패킷의 phase 가 null 입니다. 그래서 창이 실제로는
+            # 절대 300 에 도달하지 못했습니다(현장에서 ESP 가 phase 를 2,785개
+            # 만들었는데 Pi 창은 0 에서 안 올라가는 것으로 관측됨).
+            #
+            # 이제는 아무것도 건드리지 않고 그냥 돌아갑니다. 버퍼, write index,
+            # 마지막 admit seq, 마지막 physical timestamp 모두 그대로 둡니다.
+            # 다음에 오는 유한한 phase 가 같은 창에 이어서 쌓입니다.
+            #
+            # 0-fill / hold-last / 보간은 하지 않습니다. null 은 슬롯을 차지하지
+            # 않고, 오직 실제로 도착한 유한 값만 300 에 계상됩니다.
+            if boot_changed:
+                self._last_ingest_error = "BOOT_BOUNDARY"
+                return
+            self._skipped_phase_tick_count += 1
+            self._skipped_since_admit += 1
+            # 버퍼가 비어 있으면 창은 여전히 not ready 입니다. 그건 evaluate()
+            # 가 buffered_count == 0 으로 판단하므로 여기서 오류를 남길 필요가
+            # 없습니다. 비어있지 않은 창을 PHASE_MISSING 으로 오염시키면
+            # 추론이 막히는데, 그것이 바로 고치려는 증상입니다.
             return
         if not phase_age_is_fresh(phase_age_ms):
             if not boot_changed:
@@ -265,10 +296,27 @@ class B23TeamRuntime:
             and self._last_physical_t is not None
         ):
             physical_dt = float(t_physical) - float(self._last_physical_t)
-            if physical_dt <= 0.0 or physical_dt > float(DEFAULT_MAX_GAP_S):
-                # Do not bridge a physical stall onto the 10 Hz index grid.
+            if physical_dt <= 0.0:
+                # 소스 시계가 뒤로 갔습니다. 이건 공백이 아니라 세션 단절이므로
+                # 그대로 창을 버립니다.
                 self._invalidate_source()
                 self._last_nested_seq = None
+            elif physical_dt > float(DEFAULT_MAX_GAP_S):
+                # 공백의 원인을 구분합니다.
+                #
+                #  (a) 그 사이 null phase tick 이 실제로 도착했다면, 노드는 살아서
+                #      계속 발행 중이었고 레이더만 phase 를 못 낸 것입니다. 이건
+                #      "설명된 공백"이라 창을 유지합니다. 그래야 null 을 건너뛰기로
+                #      한 결정이 의미를 갖습니다(널 6틱=600 ms 면 리셋되던 문제).
+                #
+                #  (b) 아무 패킷도 없이 시간만 흘렀다면 소스가 실제로 멈춘 것입니다.
+                #      M-PROT-6 계약대로 창을 버립니다. 2초 정지를 10 Hz 격자에
+                #      이어붙이면 주파수가 왜곡되어 호흡수 추정이 틀어집니다.
+                if self._skipped_since_admit > 0:
+                    self._bridged_gap_count += 1
+                else:
+                    self._invalidate_source()
+                    self._last_nested_seq = None
 
         if self._last_nested_seq is not None:
             delta = int(nested_seq) - int(self._last_nested_seq)
@@ -301,6 +349,7 @@ class B23TeamRuntime:
             self._last_ingest_error = None
             self._last_nested_seq = nested_seq
             self._last_physical_t = float(t_physical)
+            self._skipped_since_admit = 0
             self._r1_index_n += 1
             self._note_seq(nested_seq)
         except MProt3FailClosed as exc:
@@ -324,6 +373,8 @@ class B23TeamRuntime:
             "delta": self._phase_seq_delta,
             "missing_phase_event_count": self._missing_phase_event_count,
             "republish_skip_count": self._republish_skip_count,
+            "skipped_phase_tick_count": self._skipped_phase_tick_count,
+            "bridged_gap_count": self._bridged_gap_count,
         }
 
     def _metadata_extras(self) -> dict:

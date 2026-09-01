@@ -101,6 +101,10 @@
     const connection = document.getElementById("connection");
     let failed = false;
     let emergencyActionPending = false;
+    let warningAcknowledged = false;
+    let previousDisplayState = null;
+    let latestPayload = {};
+    let recoveryHideTimer = null;
 
     const LCD_SENSOR_SHORT = {
       AVAILABLE: "OK",
@@ -339,12 +343,25 @@
     }
 
     function renderEmergencyBanner(payload, stateName) {
+      if (recoveryHideTimer !== null) {
+        clearTimeout(recoveryHideTimer);
+        recoveryHideTimer = null;
+      }
       const emergency = payload?.emergency && typeof payload.emergency === "object"
         ? payload.emergency
         : {};
-      const active = stateName === "emergency" || emergency.active === true;
-      const recovered = !active && emergency.recovery_pending === true;
-      const visible = active || recovered;
+      const active = (stateName === "emergency" || emergency.active === true)
+        && emergency.acknowledged !== true;
+      const warning = stateName === "warning" && !warningAcknowledged;
+      const recoveryClearedAt = Number(emergency.cleared_at);
+      const recoveryRemainingMs = Number.isFinite(recoveryClearedAt)
+        ? Math.max(0, 5000 - (Date.now() - recoveryClearedAt * 1000))
+        : 0;
+      const recovered = stateName !== "warning"
+        && !active
+        && emergency.recovery_pending === true
+        && recoveryRemainingMs > 0;
+      const visible = active || warning || recovered;
       emergencyBanner.hidden = !visible;
       lcd.classList.toggle("has-alert-banner", visible);
       if (!visible) return;
@@ -356,16 +373,21 @@
         emergencyConfirm.dataset.action = "recovery";
         emergencyConfirm.textContent = emergencyActionPending ? "처리 중…" : "종료 확인";
         emergencyConfirm.disabled = emergencyActionPending;
+        recoveryHideTimer = setTimeout(() => {
+          emergencyBanner.hidden = true;
+          lcd.classList.remove("has-alert-banner");
+          recoveryHideTimer = null;
+        }, recoveryRemainingMs);
         return;
       }
 
-      if (emergency.acknowledged === true) {
-        emergencyBanner.dataset.phase = "acknowledged";
-        emergencyBannerTitle.textContent = "✓ 관리자 확인 완료 — 현장 대응을 계속하세요";
-        emergencyBannerTime.textContent = `확인 ${clockText(emergency.acknowledged_at)}`;
-        emergencyConfirm.dataset.action = "acknowledged";
-        emergencyConfirm.textContent = "확인됨";
-        emergencyConfirm.disabled = true;
+      if (warning) {
+        emergencyBanner.dataset.phase = "warning";
+        emergencyBannerTitle.textContent = "⚠ 주의 상황 — 원인 센서와 현장 상태를 확인하세요";
+        emergencyBannerTime.textContent = `발생 ${clockText(payload.updated_at)}`;
+        emergencyConfirm.dataset.action = "warning";
+        emergencyConfirm.textContent = "확인";
+        emergencyConfirm.disabled = false;
         return;
       }
 
@@ -381,6 +403,12 @@
       const safePayload = payload && typeof payload === "object" ? payload : {};
       const stateName = typeof safePayload.state === "string" ? safePayload.state : "offline";
       const scenario = scenarios[stateName] || scenarios.offline;
+      if (stateName === "warning" && previousDisplayState !== "warning") {
+        warningAcknowledged = false;
+      }
+      if (stateName !== "warning") warningAcknowledged = false;
+      previousDisplayState = stateName;
+      latestPayload = safePayload;
       lcd.dataset.state = stateName in scenarios ? stateName : "offline";
       roomName.textContent = safePayload.room || "밀폐공간 A-01";
       statusPill.textContent = scenario.pill;
@@ -407,7 +435,12 @@
 
     emergencyConfirm.addEventListener("click", async () => {
       const action = emergencyConfirm.dataset.action;
-      if (emergencyActionPending || !["emergency", "recovery"].includes(action)) return;
+      if (emergencyActionPending || !["warning", "emergency", "recovery"].includes(action)) return;
+      if (action === "warning") {
+        warningAcknowledged = true;
+        renderEmergencyBanner(latestPayload, previousDisplayState);
+        return;
+      }
       emergencyActionPending = true;
       emergencyConfirm.disabled = true;
       emergencyConfirm.textContent = "처리 중…";

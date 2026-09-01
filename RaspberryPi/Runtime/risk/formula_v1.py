@@ -10,14 +10,18 @@ can actually prove today:
   risk fusion with a bounded score, but cannot assert a real fall or emergency
   until Raspberry Pi and real-fall validation establish that authority.
 * mmWave M-N9 is ``DEVICE_VALIDATED: NO`` and emits an ``APNEA-proxy`` class, so
-  it carries a reduced share and can raise WARNING but never DANGER by itself.
+  it carries a reduced share. Unverified APNEA-proxy cannot publish WARNING.
 * PIR is corroborating only, and becomes *unavailable* rather than 0.0 when
   presence is unconfirmed - scoring it 0.0 would silently lower the total.
+* WARNING/주의 is a CO2-only formula: after the indoor baseline locks, a
+  plus-only rise of 500 ppm from that first value. The fused score still uses
+  every sensor for DANGER/emergency, but a score in the old 30-65 band is not
+  published as WARNING.
 
 Three properties the legacy weighted sum lacked and this one has:
 
-1. ``escalation floors`` - one severe signal cannot be diluted to NORMAL by
-   three calm ones.
+1. ``escalation floors`` - one severe DANGER/emergency signal cannot be diluted
+   to NORMAL by three calm ones. WARNING floors are CO2-relative only.
 2. ``evidence sufficiency`` - NORMAL is only published when the available
    components carry at least ``minimum_effective_weight`` of the total weight;
    otherwise the level is ``INDETERMINATE``.
@@ -44,6 +48,8 @@ from risk.engine import RiskComponent, _ensure_json_safe, _finite_number, _times
 CONFIG_PATH = Path(__file__).resolve().parent / "risk_formula_v1.json"
 SENSOR_ORDER = ("mmwave", "co2", "pir", "thermal")
 LEVEL_ORDER = ("NORMAL", "WARNING", "DANGER")
+# 주의 is CO2-only: the plus-only rise from the localized indoor start.
+CAUTION_FLOOR_LABELS = frozenset({"co2_relative_warning"})
 
 
 @dataclass(frozen=True)
@@ -197,6 +203,8 @@ class SafeNestRiskFormulaV1:
         floor_level = None
         for label in floors:
             candidate = self._floors.get(label)
+            if candidate == "WARNING" and label not in CAUTION_FLOOR_LABELS:
+                continue
             if candidate in LEVEL_ORDER:
                 floor_level = _max_level(floor_level, candidate)
                 reasons.append(f"FLOOR_{label.upper()}")
@@ -219,8 +227,16 @@ class SafeNestRiskFormulaV1:
             )
             score = round(min(100.0, max(0.0, score)), 4)
             score_level = self.classify(score)
-            level = _max_level(score_level, floor_level)
-            level_source = "FLOOR" if floor_level and floor_level == level and floor_level != score_level else "SCORE"
+            # Overall formula: every sensor contributes to R. DANGER stays.
+            # The 30-65 WARNING band is not a display level; 주의 comes only
+            # from the CO2 caution formula (localized plus-only +500 ppm).
+            published_score_level = "NORMAL" if score_level == "WARNING" else score_level
+            level = _max_level(published_score_level, floor_level)
+            level_source = (
+                "FLOOR"
+                if floor_level and floor_level == level and floor_level != published_score_level
+                else "SCORE"
+            )
             health = "DEGRADED" if unavailable or fallback else "HEALTHY"
 
         if emergency:
@@ -254,7 +270,12 @@ class SafeNestRiskFormulaV1:
             component_status=statuses,
             components={name: item.to_dict() for name, item in ordered.items()},
             weights=dict(self.weights),
-            thresholds={"warning_min": self.warning_min, "danger_min": self.danger_min},
+            thresholds={
+                "warning_min": self.warning_min,
+                "danger_min": self.danger_min,
+                "caution_enter_delta_ppm": float(self._co2["baseline_delta_warning_ppm"]),
+                "caution_clear_delta_ppm": float(self._co2["baseline_delta_clear_ppm"]),
+            },
             config_status=self.config_status,
             formula_id=self.formula_id,
             formula_version=self.formula_version,
@@ -379,8 +400,7 @@ class SafeNestRiskFormulaV1:
                     floors.append("mmwave_apnea_hardware_verified")
                     emergencies.append("hardware_verified_apnea")
                 elif self._apnea_streak >= int(self._mmwave["apnea_warning_persistence"]):
-                    # M-N9 is DEVICE_VALIDATED=NO: escalate, but never to DANGER alone.
-                    floors.append("mmwave_apnea_proxy_sustained")
+                    # Recorded for the overall score; 주의 is CO2-only.
                     reasons.append("APNEA_PROXY_UNVERIFIED_NO_EMERGENCY")
                 else:
                     reasons.append("APNEA_PROXY_AWAITING_PERSISTENCE")
@@ -503,10 +523,6 @@ class SafeNestRiskFormulaV1:
             reasons.append("HIGH_CO2_DANGER")
             floors.append("co2_danger")
             state = "CO2_DANGER"
-        elif ppm >= float(self._co2["warning_ppm"]):
-            reasons.append("HIGH_CO2_WARNING")
-            floors.append("co2_warning")
-            state = "CO2_WARNING"
         elif baseline.get("co2_relative_warning") is True:
             reasons.append("CO2_RELATIVE_RISE")
             floors.append("co2_relative_warning")
@@ -523,7 +539,6 @@ class SafeNestRiskFormulaV1:
             if slope >= float(self._co2["slope_danger_ppm_per_min"]):
                 score += float(self._co2["slope_danger_bonus"])
                 reasons.append("VERY_FAST_CO2_RISE")
-                floors.append("co2_fast_rise")
             elif slope >= float(self._co2["slope_warning_ppm_per_min"]):
                 score += float(self._co2["slope_warning_bonus"])
                 reasons.append("FAST_CO2_RISE")
@@ -607,7 +622,6 @@ class SafeNestRiskFormulaV1:
             score, state, reasons = 0.0, "NO_MOTION", ()
         elif elapsed >= danger:
             score, state, reasons = 1.0, "LONG_NO_MOTION", ("LONG_NO_MOTION",)
-            floors.append("pir_long_no_motion")
         else:
             score = (elapsed - grace) / (danger - grace)
             state, reasons = "NO_MOTION_RISING", ("NO_MOTION_DETECTED",)

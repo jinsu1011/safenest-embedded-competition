@@ -99,6 +99,9 @@ class ConfigContractTests(unittest.TestCase):
         self.assertAlmostEqual(sum(engine.weights.values()), 1.0)
         self.assertLess(engine.warning_min, engine.danger_min)
         self.assertEqual(engine.formula_id, "SAFENEST_RISK_V1")
+        self.assertEqual(engine.formula_version, "1.3.0")
+        self.assertEqual(engine.config["co2"]["baseline_delta_warning_ppm"], 500.0)
+        self.assertIs(engine.config["co2"]["warning_ppm_live"], False)
 
     def test_document_is_a_superset_of_the_legacy_contract(self):
         engine = SafeNestRiskFormulaV1()
@@ -219,7 +222,7 @@ class EscalationFloorTests(unittest.TestCase):
         self.assertEqual(result.risk_score, 100.0)
         self.assertIn("EMERGENCY_HUMAN_FALL", result.reasons)
 
-    def test_indoor_air_quality_anchor_raises_warning_even_when_r_is_low(self):
+    def test_retired_absolute_co2_ceiling_does_not_raise_caution(self):
         engine = SafeNestRiskFormulaV1()
         mm = sensor(values={
             "presence": True,
@@ -242,12 +245,11 @@ class EscalationFloorTests(unittest.TestCase):
         self.assertAlmostEqual(result.component_scores["co2"], 0.325)
         self.assertLess(result.risk_score, engine.warning_min)
         self.assertEqual(result.score_level, "NORMAL")
-        self.assertEqual(result.risk_level, "WARNING")
-        self.assertEqual(result.level_source, "FLOOR")
-        self.assertIn("co2_warning", result.escalation_floors)
+        self.assertEqual(result.risk_level, "NORMAL")
+        self.assertNotIn("co2_warning", result.escalation_floors)
         self.assertFalse(result.is_emergency)
 
-    def test_high_co2_is_not_diluted_to_normal_by_calm_peers(self):
+    def test_high_co2_absolute_ceiling_is_danger_not_caution(self):
         engine = SafeNestRiskFormulaV1()
         state, ai = scene(
             thermal=sensor(),
@@ -259,9 +261,10 @@ class EscalationFloorTests(unittest.TestCase):
         result = engine.evaluate(state, ai)
         self.assertLess(result.risk_score, engine.warning_min)
         self.assertEqual(result.score_level, "NORMAL")
-        self.assertEqual(result.risk_level, "WARNING")
+        self.assertEqual(result.risk_level, "DANGER")
         self.assertEqual(result.level_source, "FLOOR")
         self.assertIn("co2_danger", result.escalation_floors)
+        self.assertFalse(result.is_emergency)
 
     def test_immediate_danger_co2_is_an_emergency(self):
         engine = SafeNestRiskFormulaV1()
@@ -270,7 +273,7 @@ class EscalationFloorTests(unittest.TestCase):
         self.assertTrue(result.is_emergency)
         self.assertEqual(result.risk_level, "DANGER")
 
-    def test_unverified_apnea_proxy_raises_warning_but_never_danger(self):
+    def test_unverified_apnea_proxy_does_not_publish_caution(self):
         # neural_trust must be TRUSTED for the neural class to score at all.
         engine = _trusted_engine()
         mm = sensor(values={"presence": True, "presence_available": True,
@@ -283,8 +286,9 @@ class EscalationFloorTests(unittest.TestCase):
         self.assertIn("APNEA_PROXY_AWAITING_PERSISTENCE", first.reasons)
         self.assertFalse(first.is_emergency)
         second = engine.evaluate(state, ai)
-        self.assertIn("mmwave_apnea_proxy_sustained", second.escalation_floors)
-        self.assertEqual(second.risk_level, "WARNING")
+        self.assertNotIn("mmwave_apnea_proxy_sustained", second.escalation_floors)
+        self.assertIn("APNEA_PROXY_UNVERIFIED_NO_EMERGENCY", second.reasons)
+        self.assertNotEqual(second.risk_level, "WARNING")
         self.assertFalse(second.is_emergency)
 
     def test_observe_only_keeps_the_neural_class_out_of_the_score(self):
@@ -429,8 +433,8 @@ class PirSemanticsTests(unittest.TestCase):
         )
         late = engine.evaluate(late_state, late_ai)
         self.assertEqual(late.component_scores["pir"], 1.0)
-        self.assertIn("pir_long_no_motion", late.escalation_floors)
-        self.assertEqual(late.risk_level, "WARNING")
+        self.assertNotIn("pir_long_no_motion", late.escalation_floors)
+        self.assertNotEqual(late.risk_level, "WARNING")
 
 
 class Co2CurveTests(unittest.TestCase):
@@ -454,16 +458,17 @@ class Co2CurveTests(unittest.TestCase):
         self.assertLess(score, 0.25)
         self.assertNotIn("co2_warning", result.escalation_floors)
 
-    def test_table2_default_1000_ppm_is_not_the_live_warning_floor(self):
+    def test_absolute_ppm_is_not_a_caution_floor(self):
         engine = SafeNestRiskFormulaV1()
         at_default = engine.evaluate(*scene(co2=sensor(values={"ppm": 1000.0})))
-        at_exception = engine.evaluate(*scene(co2=sensor(values={"ppm": 1500.0})))
+        at_retired = engine.evaluate(*scene(co2=sensor(values={"ppm": 1500.0})))
         self.assertNotIn("co2_warning", at_default.escalation_floors)
-        self.assertIn("co2_warning", at_exception.escalation_floors)
+        self.assertNotIn("co2_warning", at_retired.escalation_floors)
+        self.assertNotEqual(at_retired.risk_level, "WARNING")
 
 
 class Co2LocalizationTests(unittest.TestCase):
-    def test_relative_rise_warns_below_the_absolute_ceiling(self):
+    def test_relative_rise_from_localized_start_is_the_only_caution(self):
         engine = SafeNestRiskFormulaV1()
         mm = sensor(values={
             "presence": True,
@@ -480,14 +485,14 @@ class Co2LocalizationTests(unittest.TestCase):
             ),
             mmwave=mm,
             pir=sensor(values={"motion": True}),
-            co2=sensor(values={"ppm": 1100.0}),
+            co2=sensor(values={"ppm": 1900.0}),
             co2_ai=ai_entry(
                 available=False,
                 state="FEATURE_UNAVAILABLE_WARMUP",
                 extra={
                     "co2_baseline_status": "CO2_BASELINE_LOCKED",
-                    "co2_baseline_ppm": 400.0,
-                    "co2_delta_plus_ppm": 700.0,
+                    "co2_baseline_ppm": 1400.0,
+                    "co2_delta_plus_ppm": 500.0,
                     "co2_relative_warning": True,
                 },
             ),
@@ -499,6 +504,32 @@ class Co2LocalizationTests(unittest.TestCase):
         self.assertEqual(result.components["co2"]["state"], "CO2_RELATIVE_WARNING")
         self.assertEqual(result.components["co2"]["metadata"]["occupancy_risk_semantic"], "NONE")
         self.assertFalse(result.is_emergency)
+
+    def test_high_idle_baseline_does_not_stick_on_caution(self):
+        engine = SafeNestRiskFormulaV1()
+        state, ai = scene(
+            thermal=sensor(),
+            thermal_ai=ai_entry(
+                state="HUMAN_NORMAL",
+                confidence=0.98,
+                probabilities=(0.01, 0.98, 0.01),
+            ),
+            co2=sensor(values={"ppm": 1500.0}),
+            pir=sensor(values={"motion": True}),
+            co2_ai=ai_entry(
+                available=False,
+                extra={
+                    "co2_baseline_status": "CO2_BASELINE_LOCKED",
+                    "co2_baseline_ppm": 1500.0,
+                    "co2_delta_plus_ppm": 0.0,
+                    "co2_relative_warning": False,
+                },
+            ),
+        )
+        result = engine.evaluate(state, ai)
+        self.assertNotIn("co2_relative_warning", result.escalation_floors)
+        self.assertEqual(result.risk_level, "NORMAL")
+        self.assertEqual(result.components["co2"]["state"], "CO2_NORMAL")
 
     def test_drop_below_baseline_is_not_a_hazard(self):
         engine = SafeNestRiskFormulaV1()

@@ -274,8 +274,8 @@ class CO2BaselineLock:
 
     After ``lock_seconds`` of source-clock span, B is the median of those
     warmup samples and then frozen. Delta is plus-only: a drop below B is
-    ventilation, not a hazard. Relative warning enters at +delta_enter ppm
-    and clears at +delta_exit ppm.
+    ventilation, not a hazard. Relative 주의 enters at +delta_enter ppm
+    from that localized start (default 500) and clears at +delta_exit ppm.
     """
 
     def __init__(
@@ -284,8 +284,8 @@ class CO2BaselineLock:
         lock_seconds: float = 180.0,
         minimum_samples: int = 3,
         max_internal_gap_seconds: float = 90.0,
-        delta_enter_ppm: float = 700.0,
-        delta_exit_ppm: float = 500.0,
+        delta_enter_ppm: float = 500.0,
+        delta_exit_ppm: float = 350.0,
     ) -> None:
         if lock_seconds <= 0 or minimum_samples < 1:
             raise ValueError("invalid CO2 baseline lock window")

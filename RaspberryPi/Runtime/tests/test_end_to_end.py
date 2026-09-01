@@ -60,7 +60,7 @@ class Phase10EndToEndTests(unittest.TestCase):
             publication = harness.evaluate()
             self.assertEqual(publication["risk"]["components"]["co2"]["score"], 1.0)
             self.assertIn("HIGH_CO2_DANGER", publication["risk"]["reasons"])
-            self.assertEqual(publication["risk"]["risk_level"], "WARNING")
+            self.assertEqual(publication["risk"]["risk_level"], "DANGER")
 
     def test_06_mmwave_false_positive_is_blocked_at_protocol_but_risk_rule_exists(self):
         protocol_fields = {field.name for field in fields(TelemetryPayload)}

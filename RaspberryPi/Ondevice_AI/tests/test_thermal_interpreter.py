@@ -19,7 +19,94 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from inference.thermal_interpreter import ThermalInterpreter
+from inference.thermal_interpreter import (
+    ThermalInterpreter,
+    override_posture_from_bbox,
+)
+
+
+C0_CLASS_MAP = {
+    0: "NOT_HUMAN",
+    1: "HUMAN_NORMAL",
+    2: "HUMAN_FALL_PROXY",
+}
+LEGACY_INT8_CLASS_MAP = {
+    0: "NOT_HUMAN",
+    1: "HUMAN_NORMAL",
+    2: "HUMAN_FALL",
+}
+HUMAN_PROBS = np.array([0.05, 0.70, 0.25], dtype=np.float32)
+NOT_HUMAN_PROBS = np.array([0.90, 0.05, 0.05], dtype=np.float32)
+
+
+def _blob(row_slice: slice, col_slice: slice) -> np.ndarray:
+    frame = np.zeros((62, 80), dtype=np.float32)
+    frame[row_slice, col_slice] = 1.0
+    return frame
+
+
+class TestBboxPostureOverride(unittest.TestCase):
+    def test_vertical_blob_is_standing(self):
+        spatial = _blob(slice(10, 50), slice(30, 40))
+        index, name, confidence = override_posture_from_bbox(
+            2, C0_CLASS_MAP, spatial, HUMAN_PROBS
+        )
+        self.assertEqual(index, 1)
+        self.assertEqual(name, "HUMAN_NORMAL")
+        self.assertAlmostEqual(confidence, 0.70, places=5)
+
+    def test_horizontal_blob_is_lying(self):
+        spatial = _blob(slice(20, 30), slice(10, 60))
+        index, name, confidence = override_posture_from_bbox(
+            1, C0_CLASS_MAP, spatial, HUMAN_PROBS
+        )
+        self.assertEqual(index, 2)
+        self.assertEqual(name, "HUMAN_FALL_PROXY")
+        self.assertAlmostEqual(confidence, 0.25, places=5)
+
+    def test_square_blob_counts_as_sitting(self):
+        spatial = _blob(slice(20, 40), slice(30, 50))
+        index, name, confidence = override_posture_from_bbox(
+            2, C0_CLASS_MAP, spatial, HUMAN_PROBS
+        )
+        self.assertEqual(index, 1)
+        self.assertEqual(name, "HUMAN_NORMAL")
+        self.assertAlmostEqual(confidence, 0.70, places=5)
+
+    def test_empty_mask_keeps_model_output(self):
+        spatial = np.zeros((62, 80), dtype=np.float32)
+        index, name, confidence = override_posture_from_bbox(
+            1, C0_CLASS_MAP, spatial, HUMAN_PROBS
+        )
+        self.assertEqual(index, 1)
+        self.assertEqual(name, "HUMAN_NORMAL")
+        self.assertAlmostEqual(confidence, 0.70, places=5)
+
+    def test_too_few_hot_pixels_keeps_model_output(self):
+        spatial = np.zeros((62, 80), dtype=np.float32)
+        spatial[0, :10] = 1.0
+        index, name, _confidence = override_posture_from_bbox(
+            2, C0_CLASS_MAP, spatial, HUMAN_PROBS
+        )
+        self.assertEqual(index, 2)
+        self.assertEqual(name, "HUMAN_FALL_PROXY")
+
+    def test_not_human_is_never_overridden(self):
+        spatial = _blob(slice(10, 50), slice(30, 40))
+        index, name, confidence = override_posture_from_bbox(
+            0, C0_CLASS_MAP, spatial, NOT_HUMAN_PROBS
+        )
+        self.assertEqual(index, 0)
+        self.assertEqual(name, "NOT_HUMAN")
+        self.assertAlmostEqual(confidence, 0.90, places=5)
+
+    def test_legacy_int8_uses_class_map_names(self):
+        spatial = _blob(slice(20, 30), slice(10, 60))
+        index, name, _confidence = override_posture_from_bbox(
+            1, LEGACY_INT8_CLASS_MAP, spatial, HUMAN_PROBS
+        )
+        self.assertEqual(index, 2)
+        self.assertEqual(name, "HUMAN_FALL")
 
 
 class TestThermalInterpreter(unittest.TestCase):

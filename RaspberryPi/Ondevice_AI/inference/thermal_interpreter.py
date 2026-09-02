@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Mapping, Sequence
 import hashlib
 import json
 import time
@@ -61,6 +62,63 @@ class ThermalPrediction:
 
 
 DEFAULT_THERMAL_SELECTOR = "thermal_public_sdt_fp32_active"
+HOT_PIXEL_THRESHOLD = 0.5
+MIN_HOT_PIXELS_FOR_POSTURE = 20
+_NOT_HUMAN_NAMES = frozenset({"NOT_HUMAN", "NO_HUMAN"})
+
+
+def spatial_from_prepared(prepared: np.ndarray) -> np.ndarray:
+    """Take the 62x80 plane from a 0-1 model frame."""
+
+    array = np.asarray(prepared, dtype=np.float32)
+    if array.shape == (62, 80):
+        return array
+    if array.shape == (62, 80, 1):
+        return array[:, :, 0]
+    if array.shape == (1, 62, 80, 1):
+        return array[0, :, :, 0]
+    raise ValueError(
+        f"prepared thermal frame must have shape (62,80), (62,80,1), or (1,62,80,1), got {array.shape}"
+    )
+
+
+def override_posture_from_bbox(
+    class_index: int,
+    class_map: Mapping[int, str],
+    spatial_01: np.ndarray,
+    probabilities: np.ndarray | Sequence[float],
+    *,
+    hot_threshold: float = HOT_PIXEL_THRESHOLD,
+    min_hot_pixels: int = MIN_HOT_PIXELS_FOR_POSTURE,
+) -> tuple[int, str, float]:
+    """Keep model presence; replace standing vs lying with bbox aspect.
+
+    class_map[1] is standing/sitting (HUMAN_NORMAL on C0).
+    class_map[2] is lying (HUMAN_FALL_PROXY on C0, HUMAN_FALL on some INT8 maps).
+    Square bbox counts as sitting / HUMAN_NORMAL.
+    """
+
+    index = int(class_index)
+    probs = np.asarray(probabilities, dtype=np.float32).reshape(-1)
+    original_name = str(class_map.get(index, f"CLASS_{index}"))
+    original_conf = float(probs[index]) if 0 <= index < probs.size else 0.0
+    if original_name in _NOT_HUMAN_NAMES:
+        return index, original_name, original_conf
+
+    spatial = np.asarray(spatial_01, dtype=np.float32)
+    if spatial.ndim != 2:
+        spatial = spatial_from_prepared(spatial)
+    hot = spatial >= float(hot_threshold)
+    if int(np.count_nonzero(hot)) < int(min_hot_pixels):
+        return index, original_name, original_conf
+
+    rows, cols = np.nonzero(hot)
+    height = int(rows.max() - rows.min() + 1)
+    width = int(cols.max() - cols.min() + 1)
+    new_index = 1 if height >= width else 2
+    new_name = str(class_map.get(new_index, f"CLASS_{new_index}"))
+    new_conf = float(probs[new_index]) if 0 <= new_index < probs.size else original_conf
+    return new_index, new_name, new_conf
 
 
 class ThermalInterpreter:
@@ -265,6 +323,7 @@ class ThermalInterpreter:
         return probabilities / total
 
     def predict(self, frame: np.ndarray) -> ThermalPrediction:
+        prepared = self._prepare_model_frame(frame)
         input_tensor = self._encode_input(frame)
 
         started = time.perf_counter()
@@ -280,11 +339,17 @@ class ThermalInterpreter:
 
         probabilities = self._decode_output(raw_output)
         class_index = int(np.argmax(probabilities))
+        class_index, class_name, confidence = override_posture_from_bbox(
+            class_index,
+            self.class_map,
+            spatial_from_prepared(prepared),
+            probabilities,
+        )
 
         return ThermalPrediction(
             class_index=class_index,
-            class_name=self.class_map.get(class_index, f"CLASS_{class_index}"),
-            confidence=float(probabilities[class_index]),
+            class_name=class_name,
+            confidence=confidence,
             probabilities=[float(value) for value in probabilities],
             latency_ms=float(latency_ms),
             model_id=self.model_meta["model_id"],

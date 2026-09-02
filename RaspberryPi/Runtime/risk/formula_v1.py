@@ -16,7 +16,8 @@ can actually prove today:
   presence is unconfirmed - scoring it 0.0 would silently lower the total.
 * WARNING is not a band of R. It is a separate CO2-only caution formula: after
   the room baseline locks, a plus-only rise of 500 ppm from that first value,
-  or a slope of 50 ppm/min, publishes WARNING. Other sensors cannot do that.
+  or a canonical 150 s slope of 50 ppm/min, publishes WARNING. Neither trip
+  fires while the room is still localizing. Other sensors cannot raise caution.
 
 Three properties the legacy weighted sum lacked and this one has:
 
@@ -130,6 +131,9 @@ class SafeNestRiskFormulaV1:
                 "slope_caution_ppm_per_min",
                 self._co2["slope_danger_ppm_per_min"],
             )
+        )
+        self.caution_requires_baseline_lock = bool(
+            self._caution.get("requires_baseline_lock", True)
         )
         caution_sensors = tuple(self._caution.get("sensors", ("co2",)))
         if caution_sensors != ("co2",):
@@ -572,7 +576,8 @@ class SafeNestRiskFormulaV1:
             if slope >= self.caution_slope_ppm_per_min:
                 score += float(self._co2["slope_danger_bonus"])
                 reasons.append("VERY_FAST_CO2_RISE")
-                floors.append("co2_fast_rise")
+                if self._slope_raises_caution(locked, slope_source):
+                    floors.append("co2_fast_rise")
             elif slope >= float(self._co2["slope_warning_ppm_per_min"]):
                 score += float(self._co2["slope_warning_bonus"])
                 reasons.append("FAST_CO2_RISE")
@@ -595,6 +600,17 @@ class SafeNestRiskFormulaV1:
                 **occupancy,
             },
         )
+
+    def _slope_raises_caution(self, locked: bool, slope_source: str) -> bool:
+        """WARNING from slope needs a locked room and the canonical 150 s slope.
+
+        The short RISK_LOCAL_ENDPOINT fallback is score-only. It is the 15 s
+        display-tick slope that produced field false cautions during warmup.
+        """
+
+        if self.caution_requires_baseline_lock and not locked:
+            return False
+        return slope_source != "RISK_LOCAL_ENDPOINT"
 
     @staticmethod
     def _canonical_slope(ai: Any) -> tuple[float | None, str]:

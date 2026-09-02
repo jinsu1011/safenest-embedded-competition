@@ -99,9 +99,11 @@ class ConfigContractTests(unittest.TestCase):
         self.assertAlmostEqual(sum(engine.weights.values()), 1.0)
         self.assertLess(engine.warning_min, engine.danger_min)
         self.assertEqual(engine.formula_id, "SAFENEST_RISK_V1")
-        self.assertEqual(engine.formula_version, "1.3.0")
+        self.assertEqual(engine.formula_version, "1.3.1")
         self.assertEqual(engine.caution_formula_id, "SAFENEST_CAUTION_CO2_V1")
         self.assertEqual(engine.caution_delta_enter, 500.0)
+        self.assertTrue(engine.caution_requires_baseline_lock)
+        self.assertEqual(engine.caution_slope_ppm_per_min, 50.0)
         self.assertNotIn("warning_ppm", engine._co2)
         self.assertNotIn("danger_ppm", engine._co2)
         self.assertEqual(engine._co2["immediate_danger_ppm"], 5000.0)
@@ -692,6 +694,59 @@ class Co2LocalizationTests(unittest.TestCase):
         self.assertEqual(result.components["co2"]["state"], "CO2_LOCALIZING")
         self.assertIn("CO2_BASELINE_UNLOCKED", result.components["co2"]["reasons"])
         self.assertNotIn("co2_relative_warning", result.escalation_floors)
+
+    def test_unlocked_fast_slope_does_not_raise_caution(self):
+        engine = SafeNestRiskFormulaV1()
+        state, ai = scene(
+            co2=sensor(values={"ppm": 1640.0}),
+            co2_ai=ai_entry(
+                available=False,
+                extra={
+                    "co2_baseline_status": "CO2_BASELINE_UNLOCKED_WARMUP",
+                    "co2_relative_warning": False,
+                    "co2_slope_ppm_per_min": 50.0,
+                    "slope_profile_id": "CO2_SLOPE_FEATURE_PROFILE_001",
+                },
+            ),
+        )
+        result = engine.evaluate(state, ai)
+        self.assertEqual(result.components["co2"]["state"], "CO2_LOCALIZING")
+        self.assertIn("VERY_FAST_CO2_RISE", result.reasons)
+        self.assertFalse(result.caution_active)
+        self.assertNotIn("co2_fast_rise", result.escalation_floors)
+        self.assertNotIn("co2_relative_warning", result.escalation_floors)
+
+    def test_local_endpoint_slope_does_not_raise_caution_after_lock(self):
+        engine = SafeNestRiskFormulaV1()
+        state, ai = scene(
+            co2=sensor(
+                values={"ppm": 800.0},
+                last_update=15.0,
+                sequence=2,
+            ),
+            co2_ai=ai_entry(
+                available=False,
+                extra={
+                    "co2_baseline_status": "CO2_BASELINE_LOCKED",
+                    "co2_baseline_ppm": 700.0,
+                    "co2_delta_plus_ppm": 100.0,
+                    "co2_relative_warning": False,
+                },
+            ),
+        )
+        engine._co2_history.clear()
+        engine._co2_history.append((0.0, 675.0))
+        engine._last_co2_sequence = 1
+        result = engine.evaluate(state, ai)
+        self.assertEqual(
+            result.components["co2"]["metadata"]["slope_source"],
+            "RISK_LOCAL_ENDPOINT",
+        )
+        self.assertGreaterEqual(
+            result.components["co2"]["metadata"]["slope_ppm_per_min"], 50.0
+        )
+        self.assertFalse(result.caution_active)
+        self.assertNotIn("co2_fast_rise", result.escalation_floors)
 
 
 if __name__ == "__main__":

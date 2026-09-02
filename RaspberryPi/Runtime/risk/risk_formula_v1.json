@@ -1,6 +1,6 @@
 {
   "formula_id": "SAFENEST_RISK_V1",
-  "formula_version": "1.3.0",
+  "formula_version": "1.3.1",
   "authored_at": "2026-09-01",
   "owner": "integration repository (not the frozen sources/ondevice_ai snapshot)",
   "status": "contest_report_aligned",
@@ -11,14 +11,14 @@
     "The retired absolute caution trip was warning_ppm 1500 (Indoor Air Quality Control Act enforcement-rule Table 2 footnote). A sealed room can idle near or above 1500 ppm, so that ceiling produced all-day WARNING. Table 2 default 1000 ppm was already not a live trip; field idle is about 1184 ppm.",
     "The only remaining absolute CO2 ppm trip is immediate_danger_ppm 5000, the emergency override (OSHA PEL / NIOSH REL / ACGIH TLV 8-hour TWA number used as a team instantaneous emergency, not a certified occupational average). danger_ppm 2500 is retired; it no longer floors DANGER or WARNING.",
     "After the 180 s source-clock median lock, caution enters when plus-only delta from the locked first value B reaches 500 ppm and clears at 350 ppm. Occupancy C-B6 stays risk_semantic NONE.",
-    "Caution also accepts the canonical CO2 slope: 50 ppm/min raises co2_fast_rise. 15 ppm/min remains a score bonus on R only.",
+    "After lock, caution also accepts the canonical 150 s CO2 slope: 50 ppm/min raises co2_fast_rise. Slope caution does not fire while localizing, and the short local endpoint fallback cannot raise WARNING. 15 ppm/min remains a score bonus on R only.",
     "The active public-SDT FP32 thermal model contributes bounded HUMAN_FALL_PROXY risk and cannot assert a real fall or emergency.",
     "mmWave neural output is OBSERVE_ONLY. Unverified APNEA-proxy may score when TRUSTED, but it cannot raise caution. Only hardware-verified apnea is DANGER.",
     "PIR is corroborating only and is unavailable, not zero, when presence is unconfirmed. Long no-motion scores R but does not raise caution.",
     "A weighted sum alone dilutes a single severe hazard, so per-signal escalation floors are applied on top of the score.",
     "Reporting NORMAL from a small fraction of the sensor set is unsafe, so an evidence-sufficiency gate emits INDETERMINATE instead."
   ],
-  "formula": "R = 100 * sum(w_i * s_i for available i) / sum(w_i for available i); overall = DANGER if R >= danger_min else NORMAL; caution = WARNING if CO2 locked-delta>=500 or slope>=50; level = max(overall, caution, danger_floors, emergency)",
+  "formula": "R = 100 * sum(w_i * s_i for available i) / sum(w_i for available i); overall = DANGER if R >= danger_min else NORMAL; caution = WARNING if locked and (delta>=500 or canonical-slope>=50); level = max(overall, caution, danger_floors, emergency)",
   "weights": {
     "mmwave": 0.25,
     "co2": 0.3,
@@ -135,7 +135,7 @@
     "baseline_delta_enter_ppm": 500.0,
     "baseline_delta_clear_ppm": 350.0,
     "slope_caution_ppm_per_min": 50.0,
-    "comment": "WARNING is produced only by this formula. The only absolute CO2 ppm trip is 5000, which is emergency in the overall formula, never caution."
+    "comment": "WARNING is produced only by this formula after the room baseline locks. The only absolute CO2 ppm trip is 5000, which is emergency in the overall formula, never caution."
   },
   "pir": {
     "no_motion_grace_seconds": 30.0,

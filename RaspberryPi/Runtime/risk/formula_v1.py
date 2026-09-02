@@ -6,9 +6,10 @@ can actually prove today:
 
 * CO2 is the only continuously trustworthy live signal and is the primary
   enclosed-space hazard, so it carries a full share.
-* The active public-SDT FP32 selector is software-only. Its posture proxy enters
-  risk fusion with a bounded score, but cannot assert a real fall or emergency
-  until Raspberry Pi and real-fall validation establish that authority.
+* The active public-SDT FP32 thermal model decides person vs empty only.
+  Standing vs lying for risk is the bbox overlay on that presence bit.
+  ``HUMAN_FALL_PROXY`` scores a bounded 0.4 and cannot assert a real fall
+  or emergency.
 * mmWave M-N9 is ``DEVICE_VALIDATED: NO`` and emits an ``APNEA-proxy`` class, so
   it carries a reduced share. Unverified proxy cannot raise caution and never
   raises DANGER by itself.

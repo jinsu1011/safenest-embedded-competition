@@ -1,6 +1,6 @@
 {
   "formula_id": "SAFENEST_RISK_V1",
-  "formula_version": "1.3.2",
+  "formula_version": "1.3.3",
   "authored_at": "2026-09-02",
   "owner": "integration repository (not the frozen sources/ondevice_ai snapshot)",
   "status": "contest_report_aligned",
@@ -13,7 +13,7 @@
     "DANGER and EMERGENCY require risk.presence_detected == true. Unconfirmed (presence_available is not true, presence_source UNCONFIRMED, or presence_detected is not true) and vacant rooms may only publish NORMAL or CO2 WARNING. Occupancy C-B6 does not gate this: localizing sets occupancy_available false and must not hide a confirmed person. Person-side floors (thermal fall, mmWave apnea, R>=65) are suppressed until presence is true.",
     "After the 180 s source-clock median lock, caution enters when plus-only delta from the locked first value B reaches 500 ppm and clears at 350 ppm. Occupancy C-B6 stays risk_semantic NONE.",
     "After lock, caution also accepts the canonical 150 s CO2 slope: 50 ppm/min raises co2_fast_rise. Slope caution does not fire while localizing, and the short local endpoint fallback cannot raise WARNING. 15 ppm/min remains a score bonus on R only.",
-    "The active public-SDT FP32 thermal model contributes bounded HUMAN_FALL_PROXY risk and cannot assert a real fall or emergency.",
+    "The active public-SDT FP32 thermal model only decides person vs empty. Standing/sitting vs lying is the bbox overlay (taller-or-square → HUMAN_NORMAL score 0.0, wider → HUMAN_FALL_PROXY score 0.4). Neural pose is not a risk input. HUMAN_FALL_PROXY remains a bounded posture proxy and cannot assert a real fall or emergency.",
     "mmWave neural output is OBSERVE_ONLY. Unverified APNEA-proxy may score when TRUSTED, but it cannot raise caution. Only hardware-verified apnea is DANGER.",
     "PIR is corroborating only and is unavailable, not zero, when presence is unconfirmed. Long no-motion scores R but does not raise caution.",
     "A weighted sum alone dilutes a single severe hazard, so per-signal escalation floors are applied on top of the score.",

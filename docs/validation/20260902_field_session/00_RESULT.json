@@ -1,0 +1,994 @@
+{
+  "_schema": "safenest.report.result.v1",
+  "_note": "값이 없으면 null. 추정으로 채우지 말 것. 단위는 키 이름에 있다.",
+  "session": {
+    "id": "20260902",
+    "date": "2026-09-02",
+    "start_hhmm": "22:49",
+    "end_hhmm": "23:37",
+    "place": "밀폐공간 A-01",
+    "power": null,
+    "firmware_folder": "safenest-team-main",
+    "sensor_height_m": null,
+    "subject_distance_m": 1.5,
+    "operators": [],
+    "evaluation_interval_s": 1.0,
+    "pi_clock_offset_s": -0.567
+  },
+  "v0": {
+    "pass": true,
+    "co2_sensor_model": "MH-Z19B",
+    "thermal_model_id": "thermal_public_sdt_pooled_mlp_fp32_tflite_v1",
+    "thermal_sha256": "f88d65d76dbb21862e1f3cdff17cefb038a432047ded6ac8d5563bc8bc8c52ff",
+    "co2_model_id": "C_B6_REDUCED_CO2_SLOPE_CANDIDATE_001",
+    "mmwave_model_id": "M-PV2_FAMILY_B_TRACE_TCN_BREATHING_RR_QUALITY",
+    "mmwave_sha256": "8f7de6f50d6ff62ff9b0ebfaed0b1fccd8d194c7e33781bc5b93366fae251a2c",
+    "formula_id": "SAFENEST_RISK_V1",
+    "formula_version": "1.3.1",
+    "weights": {
+      "mmwave": 0.25,
+      "co2": 0.3,
+      "pir": 0.15,
+      "thermal": 0.3
+    },
+    "failed_gates": []
+  },
+  "s1_soak": {
+    "duration_s": 1818.698,
+    "polled_snapshots": 1784,
+    "all4_live_total_s": 1032.263,
+    "all4_live_longest_s": 603.188,
+    "all4_live_ratio_pct": 56.758,
+    "channel_live_pct": {
+      "mmwave": 87.444,
+      "thermal": 59.081,
+      "co2": 89.126,
+      "pir": 89.126
+    },
+    "reconnect_count": 220,
+    "boot_id_changes": 0,
+    "effective_weight_min": 0.0,
+    "thermal_seq_gap_pct": 47.252747,
+    "co2": {
+      "min_ppm": 682.0,
+      "max_ppm": 3011.0,
+      "missing_pct": 0.0,
+      "baseline_ppm": 1590.0,
+      "max_delta_plus_ppm": 1538.0
+    },
+    "inference": {
+      "thermal": {
+        "distinct_count": 1037,
+        "p50_ms": 0.192091,
+        "p95_ms": 0.222803,
+        "mean_ms": 0.237547
+      },
+      "co2": {
+        "distinct_count": 1560,
+        "p50_ms": 0.165593,
+        "p95_ms": 0.460874,
+        "mean_ms": 0.184766
+      },
+      "mmwave": {
+        "distinct_count": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "mean_ms": null
+      }
+    },
+    "risk": {
+      "distinct_evaluations": 1751,
+      "level_counts": {
+        "NORMAL": 946,
+        "WARNING": 588,
+        "DANGER": 1,
+        "INDETERMINATE": 56,
+        "null": 160
+      }
+    },
+    "system_health_transitions": [
+      {
+        "at": "2026-09-02T23:03:35.6156530+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:03:37.6448404+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:03:40.6742700+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:03:41.6804989+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:04:01.8969847+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:04:02.9108950+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:04:03.9297429+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:04:05.9341878+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:04:11.9981538+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:04:13.0011454+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:04:17.0868793+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:04:24.6679880+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:04:30.7394820+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:04:32.7472783+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:04:39.7918089+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:04:40.8011885+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:04:55.9083724+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:04:56.9245585+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:04:58.9429254+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:05:03.0188993+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:05:09.0749797+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:05:10.0751190+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:05:13.0931981+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:05:14.1063063+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:05:28.2166848+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:05:29.2264541+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:05:48.3753179+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:05:50.3934667+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:05:58.4785846+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:05:59.4797970+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:06:08.5437684+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:06:11.5838277+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:06:20.6443710+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:06:23.6736844+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:06:57.8804921+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:06:58.8962490+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:07:05.9398441+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:07:08.9537123+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:07:16.9915173+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:07:17.9927834+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:07:25.0387150+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:07:26.0420703+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:07:36.1033287+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:07:37.1145457+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:07:44.2108924+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:07:45.2246687+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:07:50.2719907+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:07:51.2743083+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:08:01.3402552+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:08:02.3559629+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:08:20.5745223+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:08:21.5876161+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:08:29.6560769+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:08:30.6703684+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:08:40.7735053+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:08:41.7738689+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:08:47.8387750+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:08:48.8390664+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:09:00.9205742+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:09:01.9200481+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:09:09.9809578+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:09:12.0063172+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:09:18.0549515+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:09:19.0600064+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:09:28.1059766+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:09:29.1070603+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:09:32.1169843+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:09:33.1184699+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:09:50.2559657+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:09:51.2705018+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:09:53.2880074+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:09:54.2893109+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:09:57.3209794+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:09:58.3223380+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:10:16.4710608+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:10:17.4709023+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:10:23.4924506+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:10:25.5226485+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:10:30.5540397+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:10:31.5595247+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:10:34.5679987+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:10:39.6193254+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:10:50.7152196+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:10:51.7279669+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:10:58.8407913+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:10:59.8564721+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:11:23.0739631+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:11:24.0860614+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:11:40.2193626+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:11:41.2368465+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:11:53.3579486+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:11:54.3581638+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:11:59.3859863+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:12:00.3839152+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:12:14.6496482+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:12:15.6681132+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:12:18.6807513+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:12:19.6820256+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:12:21.6888778+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:12:22.6909304+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:12:25.7121722+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:12:26.7143877+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:12:27.7226022+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:12:28.7327371+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:12:37.8343278+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:12:38.8356049+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:12:40.8388170+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:12:41.8540988+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:12:43.8762559+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:12:44.8865716+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:12:49.9331558+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:12:53.9996584+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:12:59.0655084+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:13:00.0779518+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:13:04.1159462+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:13:05.1224898+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:13:07.1391155+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:13:08.1551427+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:13:12.1795470+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:13:14.1788583+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:13:22.2318041+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:13:23.2313196+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:13:33.3327314+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:13:36.3522257+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:13:39.3720792+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:13:40.3748460+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:13:45.4520829+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:13:46.4645568+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:13:53.5354073+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:13:55.5546542+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:13:59.5733864+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:14:02.5975563+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:14:07.6399631+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:14:08.6460462+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:14:11.6589263+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:14:12.6632177+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:14:19.7337151+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:14:21.7418389+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:14:28.7772009+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:14:29.7898128+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:14:34.8940631+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:14:35.9149408+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:14:41.9603054+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:14:42.9738158+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:14:53.0257662+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:14:54.0382222+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:15:03.1263372+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:15:04.1437350+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:15:23.2884312+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:15:25.3076708+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:15:27.3208018+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:15:30.3266543+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:15:48.4790318+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:15:55.5373664+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:15:59.5432731+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:16:00.5472355+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:16:04.5569851+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:16:05.5617771+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:16:11.6055867+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:16:12.6047510+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:16:23.6995049+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:16:24.7114223+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:16:27.7257525+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:16:28.7378448+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:16:43.8437095+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:17:10.0460090+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      },
+      {
+        "at": "2026-09-02T23:17:17.0891075+09:00",
+        "from": "DEGRADED",
+        "to": "FAILED"
+      },
+      {
+        "at": "2026-09-02T23:17:29.1609483+09:00",
+        "from": "FAILED",
+        "to": "DEGRADED"
+      }
+    ]
+  },
+  "s2_co2_transition": {
+    "enter": {
+      "performed": true,
+      "at_hhmmss": "23:23:02",
+      "delta_plus_ppm": 781.0,
+      "ppm": 1857.0
+    },
+    "clear": {
+      "performed": false,
+      "at_hhmmss": null,
+      "delta_plus_ppm": null,
+      "ppm": null
+    },
+    "enter_to_clear_s": null,
+    "max_slope_ppm_per_min": 132.9227360955484
+  },
+  "s3_failclosed": {
+    "one_removed": {
+      "channel": "pir",
+      "samples": 40,
+      "system_health": "FAILED",
+      "risk_score_present": false
+    },
+    "one_restored_recovery_s": 0.114,
+    "all_removed": {
+      "samples": 40,
+      "system_health": "DEGRADED",
+      "risk_score_null": false,
+      "display_state": "offline",
+      "channels_unavailable": {
+        "mmwave": [
+          "LIVE"
+        ],
+        "thermal": [
+          "LIVE",
+          "STALE"
+        ],
+        "co2": [
+          "LIVE"
+        ],
+        "pir": [
+          "LIVE"
+        ]
+      }
+    },
+    "all_restored_recovery_excluding_co2_s": 127.8082753,
+    "all_restored_recovery_all_s": 127.8088997,
+    "indeterminate_observed": true,
+    "indeterminate_effective_weight": 0.3
+  },
+  "photos": [],
+  "not_performed": [
+    "S2 CO2 true-to-false clear transition was not observed",
+    "S3 single PIR UNAVAILABLE condition was not observed",
+    "S3 all-removed FAILED/null condition was not observed inside the all-removed mark"
+  ],
+  "anomalies": [
+    "S0 ventilation ended at 1552.0 ppm, above the 900 ppm target",
+    "S1 transport was unstable: receiver connection counter increased by 220",
+    "S1 capture process was resumed once to mute connection-status voice; original phase boundary was preserved",
+    "The expected all-sensors fail-closed state appeared after the s3_all_restored mark, indicating delayed disconnect propagation or delayed physical removal"
+  ]
+}

@@ -30,6 +30,9 @@ Three properties the legacy weighted sum lacked and this one has:
 3. ``decisiveness gating`` - a 3-class INT8 head whose top two probabilities are
    within ``minimum_top_two_margin`` is treated as no decision at all, instead
    of being scored as if it had decided.
+4. ``occupancy gate`` - DANGER/EMERGENCY require ``presence_detected is True``.
+   Vacant or unconfirmed rooms keep only NORMAL and CO2 WARNING. C-B6 occupancy
+   does not drive this gate. An empty-room 5000 ppm trip is demoted to WARNING.
 
 The output document is a superset of the legacy one, so ``backend.store``,
 ``backend.views`` and ``database.repository`` consume it unchanged.
@@ -51,6 +54,12 @@ CONFIG_PATH = Path(__file__).resolve().parent / "risk_formula_v1.json"
 SENSOR_ORDER = ("mmwave", "co2", "pir", "thermal")
 LEVEL_ORDER = ("NORMAL", "WARNING", "DANGER")
 CAUTION_FLOOR_LABELS = frozenset({"co2_relative_warning", "co2_fast_rise"})
+PERSON_DANGER_FLOOR_LABELS = frozenset({
+    "thermal_fall_confident",
+    "mmwave_apnea_hardware_verified",
+    "mmwave_apnea_proxy_sustained",
+    "co2_immediate_danger",
+})
 
 
 @dataclass(frozen=True)
@@ -226,13 +235,29 @@ class SafeNestRiskFormulaV1:
         for item in ordered.values():
             reasons.extend(item.reasons)
 
+        occupied = presence_detected is True
+        working_floors = list(floors)
+        working_emergencies = list(emergencies)
+        vacant_co2_extreme = False
+        if not occupied:
+            vacant_co2_extreme = "co2_immediate_danger" in working_floors
+            stripped = [
+                label for label in working_floors if label in PERSON_DANGER_FLOOR_LABELS
+            ]
+            working_floors = [
+                label for label in working_floors if label not in PERSON_DANGER_FLOOR_LABELS
+            ]
+            working_emergencies = []
+            if stripped:
+                reasons.append("VACANT_DANGER_SUPPRESSED")
+
         effective_weight = sum(self.weights[name] for name in available)
         evidence_sufficient = effective_weight >= self.minimum_effective_weight
 
         overall_floor = None
         caution_level = None
         caution_reasons: list[str] = []
-        for label in floors:
+        for label in working_floors:
             candidate = self._floors.get(label)
             if candidate == "WARNING":
                 caution_level = "WARNING"
@@ -242,8 +267,13 @@ class SafeNestRiskFormulaV1:
                 overall_floor = _max_level(overall_floor, candidate)
                 reasons.append(f"FLOOR_{label.upper()}")
 
-        emergency = bool(emergencies)
-        for label in emergencies:
+        if vacant_co2_extreme:
+            caution_level = "WARNING"
+            caution_reasons.append("co2_immediate_danger")
+            reasons.append("VACANT_CO2_EMERGENCY_DEMOTED")
+
+        emergency = bool(working_emergencies)
+        for label in working_emergencies:
             reasons.insert(0, f"EMERGENCY_{label.upper()}")
 
         if not available:
@@ -266,6 +296,9 @@ class SafeNestRiskFormulaV1:
             )
             score = round(min(100.0, max(0.0, score)), 4)
             score_level = self.classify(score)
+            if not occupied and score_level == "DANGER":
+                score_level = "NORMAL"
+                reasons.append("VACANT_SCORE_DANGER_SUPPRESSED")
             overall_level = _max_level(score_level, overall_floor)
             level = _max_level(overall_level, caution_level)
             if overall_floor and overall_floor == level and overall_floor != score_level:
@@ -315,7 +348,9 @@ class SafeNestRiskFormulaV1:
             level_source=level_source,
             effective_weight=round(effective_weight, 4),
             evidence_sufficient=evidence_sufficient,
-            escalation_floors=tuple(dict.fromkeys(floors)),
+            escalation_floors=tuple(dict.fromkeys(
+                [*working_floors, *(("co2_immediate_danger",) if vacant_co2_extreme else ())]
+            )),
             caution_formula_id=self.caution_formula_id,
             caution_active=caution_level == "WARNING",
             caution_reasons=tuple(dict.fromkeys(caution_reasons)),

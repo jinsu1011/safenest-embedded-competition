@@ -99,7 +99,7 @@ class ConfigContractTests(unittest.TestCase):
         self.assertAlmostEqual(sum(engine.weights.values()), 1.0)
         self.assertLess(engine.warning_min, engine.danger_min)
         self.assertEqual(engine.formula_id, "SAFENEST_RISK_V1")
-        self.assertEqual(engine.formula_version, "1.3.1")
+        self.assertEqual(engine.formula_version, "1.3.2")
         self.assertEqual(engine.caution_formula_id, "SAFENEST_CAUTION_CO2_V1")
         self.assertEqual(engine.caution_delta_enter, 500.0)
         self.assertTrue(engine.caution_requires_baseline_lock)
@@ -294,7 +294,19 @@ class EscalationFloorTests(unittest.TestCase):
         self.assertNotEqual(below.risk_level, "DANGER")
         self.assertNotIn("co2_immediate_danger", below.escalation_floors)
 
-        result = engine.evaluate(*scene(co2=sensor(values={"ppm": 5000.0})))
+        result = engine.evaluate(*scene(
+            mmwave=sensor(values={
+                "presence": True,
+                "presence_available": True,
+                "respiration_rate_bpm": 16.0,
+                "respiration_valid": True,
+            }),
+            thermal=sensor(),
+            thermal_ai=ai_entry(state="HUMAN_NORMAL", confidence=0.98,
+                                probabilities=(0.01, 0.98, 0.01)),
+            co2=sensor(values={"ppm": 5000.0}),
+            pir=sensor(values={"motion": True}),
+        ))
         self.assertTrue(result.is_emergency)
         self.assertEqual(result.risk_level, "DANGER")
         self.assertIn("co2_immediate_danger", result.escalation_floors)
@@ -747,6 +759,160 @@ class Co2LocalizationTests(unittest.TestCase):
         )
         self.assertFalse(result.caution_active)
         self.assertNotIn("co2_fast_rise", result.escalation_floors)
+
+
+class OccupancyDangerGateTests(unittest.TestCase):
+    def _vacant_mmwave(self):
+        return sensor(values={
+            "presence": False,
+            "presence_available": True,
+            "respiration_rate_bpm": 16.0,
+            "respiration_valid": True,
+        })
+
+    def _occupied_mmwave(self):
+        return sensor(values={
+            "presence": True,
+            "presence_available": True,
+            "respiration_rate_bpm": 16.0,
+            "respiration_valid": True,
+        })
+
+    def _locked_co2_ai(self, **extra):
+        payload = {
+            "co2_baseline_status": "CO2_BASELINE_LOCKED",
+            "co2_baseline_ppm": 400.0,
+            "co2_delta_plus_ppm": 100.0,
+            "co2_relative_warning": False,
+        }
+        payload.update(extra)
+        return ai_entry(available=False, extra=payload)
+
+    def test_vacant_thermal_fall_is_not_danger(self):
+        engine = SafeNestRiskFormulaV1()
+        state, ai = scene(
+            mmwave=self._vacant_mmwave(),
+            thermal=sensor(),
+            thermal_ai=ai_entry(
+                state="HUMAN_FALL",
+                confidence=0.95,
+                probabilities=(0.01, 0.04, 0.95),
+            ),
+            co2=sensor(values={"ppm": 500.0}),
+            pir=sensor(values={"motion": False}),
+        )
+        result = engine.evaluate(state, ai)
+        self.assertFalse(result.presence_detected)
+        self.assertFalse(result.is_emergency)
+        self.assertNotEqual(result.risk_level, "DANGER")
+        self.assertIn(result.risk_level, {"NORMAL", "WARNING"})
+        self.assertIn("VACANT_DANGER_SUPPRESSED", result.reasons)
+
+    def test_vacant_score_in_danger_band_is_not_danger(self):
+        from risk.engine import RiskComponent
+
+        engine = SafeNestRiskFormulaV1()
+        parts = {
+            name: RiskComponent(name, True, 1.0, "rule", "HIGH", 1000.0)
+            for name in ("mmwave", "co2", "pir", "thermal")
+        }
+        result = engine.fuse(
+            parts,
+            timestamp=1000.0,
+            presence_detected=False,
+            presence_source="MMWAVE",
+        )
+        self.assertGreaterEqual(result.risk_score, engine.danger_min)
+        self.assertEqual(result.score_level, "NORMAL")
+        self.assertNotEqual(result.risk_level, "DANGER")
+        self.assertFalse(result.is_emergency)
+        self.assertIn("VACANT_SCORE_DANGER_SUPPRESSED", result.reasons)
+
+    def test_vacant_locked_delta_500_is_warning(self):
+        engine = SafeNestRiskFormulaV1()
+        state, ai = scene(
+            mmwave=self._vacant_mmwave(),
+            co2=sensor(values={"ppm": 900.0}),
+            co2_ai=self._locked_co2_ai(
+                co2_delta_plus_ppm=500.0,
+                co2_relative_warning=True,
+            ),
+        )
+        result = engine.evaluate(state, ai)
+        self.assertFalse(result.presence_detected)
+        self.assertTrue(result.caution_active)
+        self.assertEqual(result.risk_level, "WARNING")
+        self.assertFalse(result.is_emergency)
+
+    def test_vacant_locked_canonical_slope_50_is_warning(self):
+        engine = SafeNestRiskFormulaV1()
+        state, ai = scene(
+            mmwave=self._vacant_mmwave(),
+            co2=sensor(values={"ppm": 800.0}),
+            co2_ai=self._locked_co2_ai(
+                co2_slope_ppm_per_min=50.0,
+                slope_profile_id="CO2_SLOPE_FEATURE_PROFILE_001",
+            ),
+        )
+        result = engine.evaluate(state, ai)
+        self.assertFalse(result.presence_detected)
+        self.assertTrue(result.caution_active)
+        self.assertEqual(result.risk_level, "WARNING")
+        self.assertFalse(result.is_emergency)
+
+    def test_vacant_5000_ppm_is_warning_not_emergency(self):
+        engine = SafeNestRiskFormulaV1()
+        state, ai = scene(
+            mmwave=self._vacant_mmwave(),
+            co2=sensor(values={"ppm": 5000.0}),
+        )
+        result = engine.evaluate(state, ai)
+        self.assertFalse(result.presence_detected)
+        self.assertFalse(result.is_emergency)
+        self.assertEqual(result.risk_level, "WARNING")
+        self.assertTrue(result.caution_active)
+        self.assertIn("co2_immediate_danger", result.caution_reasons)
+        self.assertIn("VACANT_CO2_EMERGENCY_DEMOTED", result.reasons)
+
+    def test_occupied_thermal_fall_stays_emergency(self):
+        engine = SafeNestRiskFormulaV1()
+        state, ai = scene(
+            mmwave=self._occupied_mmwave(),
+            thermal=sensor(),
+            thermal_ai=ai_entry(
+                state="HUMAN_FALL",
+                confidence=0.95,
+                probabilities=(0.01, 0.04, 0.95),
+            ),
+            co2=sensor(values={"ppm": 500.0}),
+            pir=sensor(values={"motion": True}),
+        )
+        result = engine.evaluate(state, ai)
+        self.assertTrue(result.presence_detected)
+        self.assertTrue(result.is_emergency)
+        self.assertEqual(result.risk_level, "DANGER")
+
+    def test_occupied_locked_delta_500_is_warning(self):
+        engine = SafeNestRiskFormulaV1()
+        state, ai = scene(
+            mmwave=self._occupied_mmwave(),
+            thermal=sensor(),
+            thermal_ai=ai_entry(
+                state="HUMAN_NORMAL",
+                confidence=0.98,
+                probabilities=(0.01, 0.98, 0.01),
+            ),
+            pir=sensor(values={"motion": True}),
+            co2=sensor(values={"ppm": 900.0}),
+            co2_ai=self._locked_co2_ai(
+                co2_delta_plus_ppm=500.0,
+                co2_relative_warning=True,
+            ),
+        )
+        result = engine.evaluate(state, ai)
+        self.assertTrue(result.presence_detected)
+        self.assertEqual(result.risk_level, "WARNING")
+        self.assertFalse(result.is_emergency)
 
 
 if __name__ == "__main__":

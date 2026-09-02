@@ -99,7 +99,7 @@ class ConfigContractTests(unittest.TestCase):
         self.assertAlmostEqual(sum(engine.weights.values()), 1.0)
         self.assertLess(engine.warning_min, engine.danger_min)
         self.assertEqual(engine.formula_id, "SAFENEST_RISK_V1")
-        self.assertEqual(engine.formula_version, "1.3.2")
+        self.assertEqual(engine.formula_version, "1.3.3")
         self.assertEqual(engine.caution_formula_id, "SAFENEST_CAUTION_CO2_V1")
         self.assertEqual(engine.caution_delta_enter, 500.0)
         self.assertTrue(engine.caution_requires_baseline_lock)
@@ -189,6 +189,61 @@ class EscalationFloorTests(unittest.TestCase):
         self.assertFalse(result.is_emergency)
         self.assertNotEqual(result.risk_level, "DANGER")
         self.assertIn("THERMAL_FALL_PROXY_LIMITED_RISK_NO_EMERGENCY", result.reasons)
+
+    def test_bbox_lying_overlay_is_the_thermal_risk_input(self):
+        engine = SafeNestRiskFormulaV1()
+        state, ai = scene(
+            thermal=sensor(),
+            thermal_ai=ai_entry(
+                state="HUMAN_FALL_PROXY",
+                confidence=0.95,
+                probabilities=(0.05, 0.70, 0.25),
+                extra={
+                    "safety_authority": False,
+                    "risk_authority": "LIMITED_POSTURE_PROXY",
+                    "model_selector": "thermal_public_sdt_fp32_active",
+                    "thermal_overlay_applied": True,
+                    "thermal_posture_source": "BBOX",
+                    "thermal_model_class_name": "HUMAN_NORMAL",
+                    "thermal_bbox_height": 10,
+                    "thermal_bbox_width": 50,
+                },
+            ),
+            co2=sensor(values={"ppm": 500.0}),
+            pir=sensor(values={"motion": True}),
+        )
+        result = engine.evaluate(state, ai)
+        thermal = result.components["thermal"]
+        self.assertEqual(thermal["state"], "HUMAN_FALL_PROXY")
+        self.assertEqual(thermal["score"], 0.4)
+        self.assertEqual(thermal["metadata"]["thermal_posture_source"], "BBOX")
+        self.assertTrue(thermal["metadata"]["thermal_overlay_applied"])
+        self.assertFalse(result.is_emergency)
+
+    def test_presence_only_thermal_does_not_use_model_fall(self):
+        engine = SafeNestRiskFormulaV1()
+        state, ai = scene(
+            thermal=sensor(),
+            thermal_ai=ai_entry(
+                state="HUMAN_NORMAL",
+                confidence=0.70,
+                probabilities=(0.05, 0.70, 0.25),
+                extra={
+                    "safety_authority": False,
+                    "risk_authority": "LIMITED_POSTURE_PROXY",
+                    "model_selector": "thermal_public_sdt_fp32_active",
+                    "thermal_overlay_applied": False,
+                    "thermal_posture_source": "PRESENCE_ONLY",
+                    "thermal_model_class_name": "HUMAN_FALL_PROXY",
+                },
+            ),
+        )
+        result = engine.evaluate(state, ai)
+        thermal = result.components["thermal"]
+        self.assertEqual(thermal["state"], "HUMAN_NORMAL")
+        self.assertEqual(thermal["score"], 0.0)
+        self.assertNotIn("THERMAL_FALL_PROXY_LIMITED_RISK_NO_EMERGENCY", result.reasons)
+        self.assertFalse(result.is_emergency)
 
     def test_unscoped_non_authoritative_thermal_model_remains_unavailable(self):
         engine = SafeNestRiskFormulaV1()

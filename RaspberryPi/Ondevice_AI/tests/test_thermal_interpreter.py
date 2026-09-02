@@ -48,65 +48,82 @@ def _blob(row_slice: slice, col_slice: slice) -> np.ndarray:
 class TestBboxPostureOverride(unittest.TestCase):
     def test_vertical_blob_is_standing(self):
         spatial = _blob(slice(10, 50), slice(30, 40))
-        index, name, confidence = override_posture_from_bbox(
+        result = override_posture_from_bbox(
             2, C0_CLASS_MAP, spatial, HUMAN_PROBS
         )
-        self.assertEqual(index, 1)
-        self.assertEqual(name, "HUMAN_NORMAL")
-        self.assertAlmostEqual(confidence, 0.70, places=5)
+        self.assertEqual(result.class_index, 1)
+        self.assertEqual(result.class_name, "HUMAN_NORMAL")
+        self.assertTrue(result.overlay_applied)
+        self.assertEqual(result.posture_source, "BBOX")
+        self.assertEqual(result.model_class_name, "HUMAN_FALL_PROXY")
+        self.assertGreater(result.bbox_height, result.bbox_width)
+        self.assertAlmostEqual(result.confidence, 0.70, places=5)
 
     def test_horizontal_blob_is_lying(self):
         spatial = _blob(slice(20, 30), slice(10, 60))
-        index, name, confidence = override_posture_from_bbox(
+        result = override_posture_from_bbox(
             1, C0_CLASS_MAP, spatial, HUMAN_PROBS
         )
-        self.assertEqual(index, 2)
-        self.assertEqual(name, "HUMAN_FALL_PROXY")
-        self.assertAlmostEqual(confidence, 0.25, places=5)
+        self.assertEqual(result.class_index, 2)
+        self.assertEqual(result.class_name, "HUMAN_FALL_PROXY")
+        self.assertTrue(result.overlay_applied)
+        self.assertEqual(result.posture_source, "BBOX")
+        self.assertEqual(result.model_class_name, "HUMAN_NORMAL")
+        self.assertGreater(result.bbox_width, result.bbox_height)
+        self.assertAlmostEqual(result.confidence, 0.25, places=5)
 
     def test_square_blob_counts_as_sitting(self):
         spatial = _blob(slice(20, 40), slice(30, 50))
-        index, name, confidence = override_posture_from_bbox(
+        result = override_posture_from_bbox(
             2, C0_CLASS_MAP, spatial, HUMAN_PROBS
         )
-        self.assertEqual(index, 1)
-        self.assertEqual(name, "HUMAN_NORMAL")
-        self.assertAlmostEqual(confidence, 0.70, places=5)
+        self.assertEqual(result.class_index, 1)
+        self.assertEqual(result.class_name, "HUMAN_NORMAL")
+        self.assertTrue(result.overlay_applied)
+        self.assertAlmostEqual(result.confidence, 0.70, places=5)
 
-    def test_empty_mask_keeps_model_output(self):
+    def test_empty_mask_is_presence_only_not_model_pose(self):
         spatial = np.zeros((62, 80), dtype=np.float32)
-        index, name, confidence = override_posture_from_bbox(
+        result = override_posture_from_bbox(
             1, C0_CLASS_MAP, spatial, HUMAN_PROBS
         )
-        self.assertEqual(index, 1)
-        self.assertEqual(name, "HUMAN_NORMAL")
-        self.assertAlmostEqual(confidence, 0.70, places=5)
+        self.assertEqual(result.class_index, 1)
+        self.assertEqual(result.class_name, "HUMAN_NORMAL")
+        self.assertFalse(result.overlay_applied)
+        self.assertEqual(result.posture_source, "PRESENCE_ONLY")
+        self.assertAlmostEqual(result.confidence, 0.70, places=5)
 
-    def test_too_few_hot_pixels_keeps_model_output(self):
+    def test_too_few_hot_pixels_does_not_keep_model_fall(self):
         spatial = np.zeros((62, 80), dtype=np.float32)
         spatial[0, :10] = 1.0
-        index, name, _confidence = override_posture_from_bbox(
+        result = override_posture_from_bbox(
             2, C0_CLASS_MAP, spatial, HUMAN_PROBS
         )
-        self.assertEqual(index, 2)
-        self.assertEqual(name, "HUMAN_FALL_PROXY")
+        self.assertEqual(result.class_index, 1)
+        self.assertEqual(result.class_name, "HUMAN_NORMAL")
+        self.assertFalse(result.overlay_applied)
+        self.assertEqual(result.posture_source, "PRESENCE_ONLY")
+        self.assertEqual(result.model_class_name, "HUMAN_FALL_PROXY")
 
     def test_not_human_is_never_overridden(self):
         spatial = _blob(slice(10, 50), slice(30, 40))
-        index, name, confidence = override_posture_from_bbox(
+        result = override_posture_from_bbox(
             0, C0_CLASS_MAP, spatial, NOT_HUMAN_PROBS
         )
-        self.assertEqual(index, 0)
-        self.assertEqual(name, "NOT_HUMAN")
-        self.assertAlmostEqual(confidence, 0.90, places=5)
+        self.assertEqual(result.class_index, 0)
+        self.assertEqual(result.class_name, "NOT_HUMAN")
+        self.assertEqual(result.posture_source, "NOT_HUMAN")
+        self.assertFalse(result.overlay_applied)
+        self.assertAlmostEqual(result.confidence, 0.90, places=5)
 
     def test_legacy_int8_uses_class_map_names(self):
         spatial = _blob(slice(20, 30), slice(10, 60))
-        index, name, _confidence = override_posture_from_bbox(
+        result = override_posture_from_bbox(
             1, LEGACY_INT8_CLASS_MAP, spatial, HUMAN_PROBS
         )
-        self.assertEqual(index, 2)
-        self.assertEqual(name, "HUMAN_FALL")
+        self.assertEqual(result.class_index, 2)
+        self.assertEqual(result.class_name, "HUMAN_FALL")
+        self.assertTrue(result.overlay_applied)
 
 
 class TestThermalInterpreter(unittest.TestCase):
